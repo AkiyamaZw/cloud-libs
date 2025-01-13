@@ -1,0 +1,5 @@
+SET(PROJECT_SOURCE_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/example)
+
+
