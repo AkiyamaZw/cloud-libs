@@ -5,5 +5,5 @@ file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/public/*.cpp
                                 ${CMAKE_CURRENT_SOURCE_DIR}/private/*.cpp)
 
 add_library(CloudJob STATIC ${HEAD_FILES} ${SOURCE_FILES})
-target_include_directories(CloudJob PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public
+target_include_directories(CloudJob PUBLIC ${CJOB_PROJECT_SOURCE_FOLDER}/public
                                     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

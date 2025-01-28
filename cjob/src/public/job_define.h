@@ -1,8 +1,13 @@
 #pragma once
 #include <cstdint>
+#include <atomic>
 
 namespace cloud
 {
+/**
+ * @brief define the priority of job
+ *
+ */
 enum class JobPriority
 {
     High,
@@ -11,12 +16,20 @@ enum class JobPriority
     Count
 };
 
+/**
+ * @brief job execute context
+ *
+ */
 struct JobContext
 {
-    volatile long counter{0};
+    std::atomic_long counter{0};
     JobPriority priority{JobPriority::High};
 };
 
+/**
+ * @brief the args of job needed while join to the job system.
+ *
+ */
 struct JobArgs
 {
     uint32_t job_index;
@@ -26,4 +39,5 @@ struct JobArgs
     bool is_last_job_in_group;
     void *shared_memory;
 };
+
 } // namespace cloud

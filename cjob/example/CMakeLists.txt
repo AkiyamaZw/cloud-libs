@@ -2,9 +2,9 @@ file(GLOB_RECURSE HEAD_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_executable(TEST_CJOB ${HEAD_FILES} ${SOURCE_FILES})
-target_link_libraries(TEST_CECS PRIVATE CloudJob)
-target_include_directories(CloudJob PRIVATE "${PROJECT_SOURCE_FOLDER}")
-
+target_link_libraries(TEST_CJOB PRIVATE CloudJob)
+target_include_directories(CloudJob PRIVATE "${CJOB_PROJECT_SOURCE_FOLDER}")
+message(STATUS ${CJOB_PROJECT_SOURCE_FOLDER})
 
 
 
