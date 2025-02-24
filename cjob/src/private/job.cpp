@@ -39,7 +39,7 @@ bool JobQueue::PopFront(Job &job)
     return true;
 }
 
-void PriorityResource::Work(uint32_t starting_queue)
+void PriorityWorker::Work(uint32_t starting_queue)
 {
     Job job;
     for (uint32_t i = 0; i < num_thread; ++i)

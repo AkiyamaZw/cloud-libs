@@ -33,7 +33,7 @@ class JobSystem final
 
   private:
     uint32_t num_core{0};
-    PriorityResource resources[int(JobPriority::Count)];
+    PriorityWorker resources[int(JobPriority::Count)];
     std::atomic_bool alive{true};
 };
 } // namespace cloud

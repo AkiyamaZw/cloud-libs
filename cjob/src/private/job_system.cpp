@@ -18,15 +18,16 @@ void JobSystem::Active(uint32_t max_thread_count)
     for (int i = 0; i < int(JobPriority::Count); ++i)
     {
         const JobPriority priority = static_cast<JobPriority>(i);
-        PriorityResource &res = resources[i];
+        PriorityWorker &res = resources[i];
 
+        // n - 2 for high priority, 1 for main thread, 1 for stream thread
         if (priority == JobPriority::High)
         {
-            res.num_thread = num_core - 1; // -1 for main thread
+            res.num_thread = num_core - 2; // -1 for main thread
         }
         else if (priority == JobPriority::Low)
         {
-            res.num_thread = num_core - 2; // -2 for main thread, -1 for stream
+            res.num_thread = 1; // -2 for main thread, -1 for stream
         }
         else if (priority == JobPriority::Streaming)
         {
@@ -54,12 +55,12 @@ void JobSystem::Active(uint32_t max_thread_count)
                         res.wake_condition.wait(lock);
                     }
                 });
-            auto handle = worker.native_handle();
-            int core = thread_id + 1;
-            if (priority == JobPriority::Streaming)
-            {
-                core = num_core - 1 - thread_id;
-            }
+            // auto handle = worker.native_handle();
+            // int core = thread_id + 1;
+            // if (priority == JobPriority::Streaming)
+            // {
+            //     core = num_core - 1 - thread_id;
+            // }
         }
     }
 }
@@ -103,7 +104,7 @@ void JobSystem::Wait(const JobContext &context)
 {
     if (IsBusy(context))
     {
-        PriorityResource &res = resources[int(context.priority)];
+        PriorityWorker &res = resources[int(context.priority)];
         res.wake_condition.notify_all();
         res.Work(res.next_queue.fetch_add(1) % res.num_thread);
         while (IsBusy(context))
@@ -116,7 +117,7 @@ void JobSystem::Wait(const JobContext &context)
 void JobSystem::Execute(JobContext &context,
                         const std::function<void(JobArgs)> &task)
 {
-    PriorityResource &res = resources[int(context.priority)];
+    PriorityWorker &res = resources[int(context.priority)];
     context.counter.fetch_add(1);
     Job job;
     job.context = &context;
@@ -146,7 +147,7 @@ void JobSystem::Dispatch(JobContext &context,
     {
         return;
     }
-    PriorityResource &res = resources[int(context.priority)];
+    PriorityWorker &res = resources[int(context.priority)];
     const uint32_t group_count = DispatchGroupCount(job_count, group_size);
 
     std::atomic_fetch_add(&context.counter, group_count);

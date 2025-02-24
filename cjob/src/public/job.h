@@ -29,7 +29,7 @@ struct Job
     uint32_t group_job_end;
     uint32_t shared_memory_size;
 
-    inline void Execute();
+    void Execute();
 };
 
 class JobQueue
@@ -43,7 +43,7 @@ class JobQueue
     std::mutex queue_mutex;
 };
 
-class PriorityResource
+class PriorityWorker
 {
   public:
     uint32_t num_thread{0};
