@@ -5,65 +5,25 @@
 namespace cloud
 {
 
-JobSystem::~JobSystem() { Shutdown(); }
-
-void JobSystem::Active(uint32_t max_thread_count)
+JobSystem::JobSystem(uint32_t max_thread_count)
 {
-    if (num_core > 0)
-    {
-        return;
-    }
-    max_thread_count = std::max(1u, max_thread_count);
-    num_core = std::thread::hardware_concurrency();
-    for (int i = 0; i < int(JobPriority::Count); ++i)
-    {
-        const JobPriority priority = static_cast<JobPriority>(i);
-        PriorityWorker &res = resources[i];
+    workers = std::make_unique<WorkerThreads>(calc_core_num(max_thread_count));
 
-        // n - 2 for high priority, 1 for main thread, 1 for stream thread
-        if (priority == JobPriority::High)
-        {
-            res.num_thread = num_core - 2; // -1 for main thread
-        }
-        else if (priority == JobPriority::Low)
-        {
-            res.num_thread = 1; // -2 for main thread, -1 for stream
-        }
-        else if (priority == JobPriority::Streaming)
-        {
-            res.num_thread = 1;
-        }
-        else
-        {
-            assert(false);
-        }
-        res.num_thread = std::clamp(res.num_thread, 1u, max_thread_count);
-        for (int thread_id = 0; thread_id < res.num_thread; ++thread_id)
-        {
-            res.job_queues_per_thread.push_back(std::make_shared<JobQueue>());
-        }
-        res.threads.reserve(res.num_thread);
-
-        for (uint32_t thread_id = 0; thread_id < res.num_thread; ++thread_id)
-        {
-            std::thread &worker =
-                res.threads.emplace_back([this, thread_id, &res]() {
-                    while (alive.load())
-                    {
-                        res.Work(thread_id);
-                        std::unique_lock<std::mutex> lock(res.wake_mutex);
-                        res.wake_condition.wait(lock);
-                    }
-                });
-            // auto handle = worker.native_handle();
-            // int core = thread_id + 1;
-            // if (priority == JobPriority::Streaming)
-            // {
-            //     core = num_core - 1 - thread_id;
-            // }
-        }
+    for (uint32_t thread_id = 0; thread_id < workers->num_thread_; ++thread_id)
+    {
+        std::thread &worker =
+            workers->threads.emplace_back([this, thread_id]() {
+                while (alive.load())
+                {
+                    workers->Work(thread_id);
+                    std::unique_lock<std::mutex> lock(workers->wake_mutex);
+                    workers->wake_condition.wait(lock);
+                }
+            });
     }
 }
+
+JobSystem::~JobSystem() { Shutdown(); }
 
 void JobSystem::Shutdown()
 {
@@ -77,36 +37,26 @@ void JobSystem::Shutdown()
     std::thread waker([&]() {
         while (wake_loop)
         {
-            for (auto &x : resources)
-            {
-                x.wake_condition.notify_all();
-            }
+            workers->wake_condition.notify_all();
         }
     });
-    for (auto &x : resources)
+
+    for (auto &thread : workers->threads)
     {
-        for (auto &thread : x.threads)
-        {
-            thread.join();
-        }
+        thread.join();
     }
+
     wake_loop = false;
     waker.join();
-    for (auto &x : resources)
-    {
-        x.job_queues_per_thread.clear();
-        x.threads.clear();
-        x.num_thread = 0;
-    }
 }
 
 void JobSystem::Wait(const JobContext &context)
 {
     if (IsBusy(context))
     {
-        PriorityWorker &res = resources[int(context.priority)];
-        res.wake_condition.notify_all();
-        res.Work(res.next_queue.fetch_add(1) % res.num_thread);
+
+        workers->wake_condition.notify_all();
+        workers->Work(workers->next_queue.fetch_add(1) % workers->num_thread_);
         while (IsBusy(context))
         {
             std::this_thread::yield();
@@ -117,7 +67,7 @@ void JobSystem::Wait(const JobContext &context)
 void JobSystem::Execute(JobContext &context,
                         const std::function<void(JobArgs)> &task)
 {
-    PriorityWorker &res = resources[int(context.priority)];
+
     context.counter.fetch_add(1);
     Job job;
     job.context = &context;
@@ -127,14 +77,16 @@ void JobSystem::Execute(JobContext &context,
     job.group_job_end = 1;
     job.shared_memory_size = 0;
 
-    if (res.num_thread < 1)
+    if (workers->num_thread_ < 1)
     {
         job.Execute();
         return;
     }
-    res.job_queues_per_thread[res.next_queue.fetch_add(1) % res.num_thread]
+    workers
+        ->job_queues_per_thread[workers->next_queue.fetch_add(1) %
+                                workers->num_thread_]
         ->PushBack(job);
-    res.wake_condition.notify_one();
+    workers->wake_condition.notify_one();
 }
 
 void JobSystem::Dispatch(JobContext &context,
@@ -147,7 +99,7 @@ void JobSystem::Dispatch(JobContext &context,
     {
         return;
     }
-    PriorityWorker &res = resources[int(context.priority)];
+
     const uint32_t group_count = DispatchGroupCount(job_count, group_size);
 
     std::atomic_fetch_add(&context.counter, group_count);
@@ -163,20 +115,21 @@ void JobSystem::Dispatch(JobContext &context,
         job.group_job_end =
             std::min(job.group_job_offset + group_size, job_count);
 
-        if (res.num_thread < 1)
+        if (workers->num_thread_ < 1)
         {
             job.Execute();
         }
         else
         {
-            res.job_queues_per_thread[res.next_queue.fetch_add(1) %
-                                      res.num_thread]
+            workers
+                ->job_queues_per_thread[workers->next_queue.fetch_add(1) %
+                                        workers->num_thread_]
                 ->PushBack(job);
         }
     }
-    if (res.num_thread > 1)
+    if (workers->num_thread_ > 1)
     {
-        res.wake_condition.notify_all();
+        workers->wake_condition.notify_all();
     }
 }
 
@@ -191,5 +144,13 @@ uint32_t JobSystem::DispatchGroupCount(uint32_t job_count,
                                        uint32_t group_size) const
 {
     return (job_count + group_size - 1) / group_size;
+}
+
+uint32_t JobSystem::calc_core_num(uint32_t max_core_num) const
+{
+
+    max_core_num = std::max(1u, max_core_num);
+    uint32_t num_core = std::thread::hardware_concurrency();
+    return std::clamp(num_core - 1, 1u, max_core_num);
 }
 } // namespace cloud

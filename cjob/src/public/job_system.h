@@ -10,10 +10,9 @@ namespace cloud
 class JobSystem final
 {
   public:
-    JobSystem() = default;
+    JobSystem(uint32_t max_thread_count = 0);
     ~JobSystem();
 
-    void Active(uint32_t max_thread_count = 0);
     void Shutdown();
 
     void Wait(const JobContext &context);
@@ -30,10 +29,11 @@ class JobSystem final
 
   protected:
     uint32_t DispatchGroupCount(uint32_t job_count, uint32_t group_size) const;
+    uint32_t calc_core_num(uint32_t core_num) const;
 
   private:
     uint32_t num_core{0};
-    PriorityWorker resources[int(JobPriority::Count)];
+    std::unique_ptr<WorkerThreads> workers{nullptr};
     std::atomic_bool alive{true};
 };
 } // namespace cloud

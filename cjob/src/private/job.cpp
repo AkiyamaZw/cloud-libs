@@ -39,12 +39,27 @@ bool JobQueue::PopFront(Job &job)
     return true;
 }
 
-void PriorityWorker::Work(uint32_t starting_queue)
+WorkerThreads::WorkerThreads(uint32_t max_thread_count)
+    : num_thread_(max_thread_count)
+{
+    for (int i = 0; i < num_thread_; ++i)
+        job_queues_per_thread.push_back(std::make_shared<JobQueue>());
+    threads.reserve(num_thread_);
+}
+
+WorkerThreads::~WorkerThreads()
+{
+    job_queues_per_thread.clear();
+    threads.clear();
+    num_thread_ = 0;
+}
+
+void WorkerThreads::Work(uint32_t starting_queue)
 {
     Job job;
-    for (uint32_t i = 0; i < num_thread; ++i)
+    for (uint32_t i = 0; i < num_thread_; ++i)
     {
-        auto job_queue = job_queues_per_thread[starting_queue % num_thread];
+        auto job_queue = job_queues_per_thread[starting_queue % num_thread_];
         while (job_queue->PopFront(job))
         {
             job.Execute();

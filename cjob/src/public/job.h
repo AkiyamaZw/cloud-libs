@@ -43,10 +43,12 @@ class JobQueue
     std::mutex queue_mutex;
 };
 
-class PriorityWorker
+class WorkerThreads
 {
   public:
-    uint32_t num_thread{0};
+    WorkerThreads(uint32_t max_thread_count);
+    ~WorkerThreads();
+    uint32_t num_thread_{0};
     std::vector<std::thread> threads;
     std::vector<std::shared_ptr<JobQueue>> job_queues_per_thread;
     std::atomic<uint32_t> next_queue{0};

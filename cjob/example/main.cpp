@@ -109,8 +109,7 @@ void SimpleAddSample()
         BenchMark();
     }
     {
-        cloud::JobSystem job_sys;
-        job_sys.Active(std::thread::hardware_concurrency());
+        cloud::JobSystem job_sys(std::thread::hardware_concurrency());
         std::cout << "core count:" << std::thread::hardware_concurrency()
                   << std::endl;
 
