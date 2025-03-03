@@ -6,7 +6,7 @@
 
 namespace cloud
 {
-
+class WorkerThreads;
 class JobSystem final
 {
   public:
@@ -16,11 +16,11 @@ class JobSystem final
     void Shutdown();
 
     void Wait(const JobContext &context);
-    void Execute(JobContext &context, const std::function<void(JobArgs)> &task);
+    void Execute(JobContext &context, const JobFunc &task);
     void Dispatch(JobContext &context,
                   uint32_t job_count,
                   uint32_t group_size,
-                  const std::function<void(JobArgs)> &task,
+                  const JobFunc &task,
                   size_t shared_memory_size);
 
     bool IsActive() const;
@@ -28,12 +28,12 @@ class JobSystem final
     uint32_t GetNumCore() const { return num_core; }
 
   protected:
-    uint32_t DispatchGroupCount(uint32_t job_count, uint32_t group_size) const;
+    uint32_t dispatch_group_count(uint32_t job_count,
+                                  uint32_t group_size) const;
     uint32_t calc_core_num(uint32_t core_num) const;
 
   private:
     uint32_t num_core{0};
     std::unique_ptr<WorkerThreads> workers{nullptr};
-    std::atomic_bool alive{true};
 };
 } // namespace cloud

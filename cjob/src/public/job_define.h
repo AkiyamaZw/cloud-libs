@@ -1,9 +1,12 @@
 #pragma once
 #include <cstdint>
 #include <atomic>
-
+#include <functional>
 namespace cloud
 {
+struct JobArgs;
+using JobFunc = std::function<void(JobArgs)>;
+
 /**
  * @brief define the priority of job
  *

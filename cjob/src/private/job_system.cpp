@@ -1,6 +1,7 @@
 #include "job_system.h"
 #include <cassert>
 #include <algorithm>
+#include "worker_threads.h"
 
 namespace cloud
 {
@@ -8,19 +9,6 @@ namespace cloud
 JobSystem::JobSystem(uint32_t max_thread_count)
 {
     workers = std::make_unique<WorkerThreads>(calc_core_num(max_thread_count));
-
-    for (uint32_t thread_id = 0; thread_id < workers->num_thread_; ++thread_id)
-    {
-        std::thread &worker =
-            workers->threads.emplace_back([this, thread_id]() {
-                while (alive.load())
-                {
-                    workers->Work(thread_id);
-                    std::unique_lock<std::mutex> lock(workers->wake_mutex);
-                    workers->wake_condition.wait(lock);
-                }
-            });
-    }
 }
 
 JobSystem::~JobSystem() { Shutdown(); }
@@ -32,22 +20,7 @@ void JobSystem::Shutdown()
         return;
     }
 
-    alive.store(false);
-    bool wake_loop = true;
-    std::thread waker([&]() {
-        while (wake_loop)
-        {
-            workers->wake_condition.notify_all();
-        }
-    });
-
-    for (auto &thread : workers->threads)
-    {
-        thread.join();
-    }
-
-    wake_loop = false;
-    waker.join();
+    workers->toggle_alive(false);
 }
 
 void JobSystem::Wait(const JobContext &context)
@@ -64,8 +37,7 @@ void JobSystem::Wait(const JobContext &context)
     }
 }
 
-void JobSystem::Execute(JobContext &context,
-                        const std::function<void(JobArgs)> &task)
+void JobSystem::Execute(JobContext &context, const JobFunc &task)
 {
 
     context.counter.fetch_add(1);
@@ -92,7 +64,7 @@ void JobSystem::Execute(JobContext &context,
 void JobSystem::Dispatch(JobContext &context,
                          uint32_t job_count,
                          uint32_t group_size,
-                         const std::function<void(JobArgs)> &task,
+                         const JobFunc &task,
                          size_t shared_memory_size)
 {
     if (job_count == 0 || group_size == 0)
@@ -100,7 +72,7 @@ void JobSystem::Dispatch(JobContext &context,
         return;
     }
 
-    const uint32_t group_count = DispatchGroupCount(job_count, group_size);
+    const uint32_t group_count = dispatch_group_count(job_count, group_size);
 
     std::atomic_fetch_add(&context.counter, group_count);
 
@@ -133,15 +105,15 @@ void JobSystem::Dispatch(JobContext &context,
     }
 }
 
-bool JobSystem::IsActive() const { return alive.load(); }
+bool JobSystem::IsActive() const { return workers->get_alive(); }
 
 bool JobSystem::IsBusy(const JobContext &context) const
 {
     return context.counter.load() > 0;
 }
 
-uint32_t JobSystem::DispatchGroupCount(uint32_t job_count,
-                                       uint32_t group_size) const
+uint32_t JobSystem::dispatch_group_count(uint32_t job_count,
+                                         uint32_t group_size) const
 {
     return (job_count + group_size - 1) / group_size;
 }
