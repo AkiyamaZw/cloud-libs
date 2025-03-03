@@ -16,16 +16,14 @@ class JobSystem final
     void Shutdown();
 
     void Wait(const JobContext &context);
-    void Execute(JobContext &context, const JobFunc &task);
-    void Dispatch(JobContext &context,
-                  uint32_t job_count,
-                  uint32_t group_size,
-                  const JobFunc &task,
-                  size_t shared_memory_size);
 
     bool IsActive() const;
     bool IsBusy(const JobContext &context) const;
-    uint32_t GetNumCore() const { return num_core; }
+    uint32_t get_num_core() const;
+
+    Job *create(Job *parent, const JobFunc &sub_task);
+    Job *create_parent_job(Job *parent);
+    void run(Job *job);
 
   protected:
     uint32_t dispatch_group_count(uint32_t job_count,
@@ -33,7 +31,6 @@ class JobSystem final
     uint32_t calc_core_num(uint32_t core_num) const;
 
   private:
-    uint32_t num_core{0};
     std::unique_ptr<WorkerThreads> workers{nullptr};
 };
 } // namespace cloud

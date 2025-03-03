@@ -42,24 +42,24 @@ void task1(long *result)
 
 void task2(long *result, cloud::JobSystem &job_sys, int job_count)
 {
-    cloud::JobContext ctx;
-    Timer timer(std::format("job System with split count: {}", job_count));
-    job_sys.Dispatch(
-        ctx,
-        job_count,
-        1,
-        [&result, job_count](cloud::JobArgs args) {
-            int group_size = array_size / job_count;
-            for (int i = 0; i < group_size; ++i)
-            {
-                for (long j = 0; j < target_num; j++)
-                {
-                    result[args.group_id * (group_size) + i] += 1;
-                }
-            }
-        },
-        0);
-    job_sys.Wait(ctx);
+    // cloud::JobContext ctx;
+    // Timer timer(std::format("job System with split count: {}", job_count));
+    // job_sys.Dispatch(
+    //     ctx,
+    //     job_count,
+    //     1,
+    //     [&result, job_count](cloud::JobArgs args) {
+    //         int group_size = array_size / job_count;
+    //         for (int i = 0; i < group_size; ++i)
+    //         {
+    //             for (long j = 0; j < target_num; j++)
+    //             {
+    //                 result[args.group_id * (group_size) + i] += 1;
+    //             }
+    //         }
+    //     },
+    //     0);
+    // job_sys.Wait(ctx);
 }
 
 void TestInit(long *data)
@@ -121,8 +121,26 @@ void SimpleAddSample()
     }
 }
 
+void print_job(std::string name) { std::cout << name << std::endl; }
+
+int test_system_2()
+{
+    cloud::JobSystem job_sys(std::thread::hardware_concurrency());
+    std::cout << "core count:" << std::thread::hardware_concurrency()
+              << std::endl;
+    cloud::Job *root_job = job_sys.create_parent_job(nullptr);
+    cloud::Job *sub_job1 = job_sys.create(
+        root_job, [](cloud::JobArgs &args) { print_job("sub_job1"); });
+    cloud::Job *sub_job2 = job_sys.create(
+        root_job, [](cloud::JobArgs &args) { print_job("sub_job2"); });
+
+    job_sys.run(sub_job1);
+    job_sys.run(sub_job2);
+    job_sys.run_and_wait(root_job);
+}
+
 int main()
 {
-    SimpleAddSample();
+    // SimpleAddSample();
     return 0;
 }
