@@ -7,28 +7,26 @@
 #include <mutex>
 #include <condition_variable>
 #include <unordered_map>
+#include <random>
 #include "job_define.h"
 
 namespace cloud
 {
 struct Job;
 
+struct Worker
+{
+    JobQueue job_queue;
+    std::thread worker;
+};
+
 class WorkerThreads
 {
-  protected:
-    struct Worker
-    {
-        JobQueue job_queue;
-        std::thread worker;
-    };
-
   public:
-    WorkerThreads(uint32_t max_thread_count);
+    WorkerThreads(uint32_t max_thread_count,
+                  uint32_t max_adopt_thread_count,
+                  std::function<bool(Worker &)> callback);
     ~WorkerThreads();
-    uint32_t num_thread_{0};
-    std::atomic<uint32_t> next_queue{0};
-    std::condition_variable wake_condition;
-    std::mutex wake_mutex;
 
     std::vector<Worker> workers_;
     std::unordered_map<std::thread::id, Worker *> worker_map_;
@@ -36,17 +34,23 @@ class WorkerThreads
 
     void toggle_alive(bool value);
     bool get_alive() const { return alive_.load(); }
+    Worker *get_worker();
 
-    void put(Worker &worker, Job *job);
-    bool pop(JobQueue &queue, Job &job);
-    Worker &get_worker();
+    void try_wake_up(int32_t active_job);
+    Worker *random_select(Worker &from);
 
   private:
     void worker_loop(Worker *worker);
-    bool execute_job(Worker &worker);
 
   protected:
     std::atomic_bool alive_{true};
-    std::atomic<int32_t> active_jobs_{0};
+    std::function<bool(Worker &)> callback_;
+    uint32_t num_thread_{0};
+    std::condition_variable wake_condition;
+    std::mutex wake_mutex;
+    // have queue but is not a processor
+    std::atomic<uint16_t> adopt_threads_num_{0};
+
+    std::default_random_engine rand_generator;
 };
 } // namespace cloud

@@ -1,17 +1,23 @@
 #include "worker_threads.h"
 #include "job.h"
 #include <cassert>
+#include <stdlib.h>
 
 namespace cloud
 {
-WorkerThreads::WorkerThreads(uint32_t max_thread_count)
+WorkerThreads::WorkerThreads(uint32_t max_thread_count,
+                             uint32_t max_adopt_thread_count,
+                             std::function<bool(Worker &)> callback)
     : num_thread_(max_thread_count)
+    , callback_(callback)
 {
-    workers_.resize(num_thread_);
-    for (int i = 0; i < num_thread_; ++i)
+    workers_.resize(num_thread_ + max_adopt_thread_count);
+    for (int i = 0; i < workers_.size(); ++i)
     {
         auto &worker = workers_[i];
-        worker.worker = std::thread(&WorkerThreads::worker_loop, this, &worker);
+        if (i < max_thread_count)
+            worker.worker =
+                std::thread(&WorkerThreads::worker_loop, this, &worker);
     }
 }
 
@@ -50,35 +56,6 @@ void WorkerThreads::toggle_alive(bool value)
     waker.join();
 }
 
-void WorkerThreads::put(Worker &worker, Job *job)
-{
-    // single thread
-    if (num_thread_ < 1)
-    {
-        job->Execute();
-    }
-    else
-    {
-        worker.job_queue.push(*job);
-        auto value = active_jobs_.fetch_add(1, std::memory_order_relaxed);
-        std::lock_guard lock(wake_mutex);
-        if (value == 1)
-        {
-            wake_condition.notify_one();
-        }
-        else
-        {
-            wake_condition.notify_all();
-        }
-    }
-}
-
-bool WorkerThreads::pop(JobQueue &queue, Job &job)
-{
-    active_jobs_.fetch_sub(1, std::memory_order_relaxed);
-    return queue.pop(job);
-}
-
 void WorkerThreads::worker_loop(Worker *worker)
 {
 
@@ -87,7 +64,7 @@ void WorkerThreads::worker_loop(Worker *worker)
     assert(check);
     while (alive_.load())
     {
-        if (!execute_job(*worker))
+        if (!callback_(*worker))
         {
             std::unique_lock<std::mutex> lock(wake_mutex);
             wake_condition.wait(lock);
@@ -95,30 +72,35 @@ void WorkerThreads::worker_loop(Worker *worker)
     }
 }
 
-bool WorkerThreads::execute_job(Worker &worker)
-{
-    Job job;
-    bool succ = pop(*worker.job_queue, job);
-    if (!succ)
-    {
-        // steal
-    }
-    if (succ)
-    {
-        if (job.task != nullptr)
-        {
-            job.Execute();
-        }
-    }
-    return succ;
-}
-
-WorkerThreads::Worker &WorkerThreads::get_worker()
+Worker *WorkerThreads::get_worker()
 {
     std::lock_guard<std::mutex> lock(map_locker_);
     auto iter = worker_map_.find(std::this_thread::get_id());
     assert(iter->second);
-    return *iter->second;
+    return iter->second;
+}
+
+void WorkerThreads::try_wake_up(int32_t active_job)
+{
+    std::lock_guard lock(wake_mutex);
+    if (active_job == 1)
+        wake_condition.notify_one();
+    else
+        wake_condition.notify_all();
+}
+
+Worker *WorkerThreads::random_select(Worker &from)
+{
+    uint16_t const adopt_thread_num =
+        adopt_threads_num_.load(std::memory_order_relaxed);
+    uint16_t const thread_count = thread_count + adopt_thread_num;
+    Worker *worker = nullptr;
+
+    if (thread_count >= 2)
+    {
+        // todo random select
+    }
+    return worker;
 }
 
 } // namespace cloud
