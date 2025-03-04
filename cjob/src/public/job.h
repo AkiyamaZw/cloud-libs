@@ -18,10 +18,12 @@ enum class JobState
 };
 
 class JobPool;
+
 struct JobHandle
 {
     uint32_t index;
 };
+
 struct Job
 {
   public:

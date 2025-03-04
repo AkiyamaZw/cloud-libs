@@ -139,6 +139,8 @@ int test_system_2()
     job_sys.run(sub_job1);
     job_sys.run(sub_job2);
     // job_sys.run_and_wait(root_job);
+
+    return 0;
 }
 
 int main()
