@@ -21,7 +21,7 @@ class JobSystem final
     bool IsBusy(const JobContext &context) const;
     uint32_t get_num_core() const;
 
-    Job *create(Job *parent, const JobFunc &sub_task);
+    Job *create(Job *parent, JobFunc sub_task);
     Job *create_parent_job(Job *parent);
     void run(Job *job);
 

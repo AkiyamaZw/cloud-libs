@@ -7,10 +7,10 @@
 #include <mutex>
 #include <condition_variable>
 #include <unordered_map>
+#include "job_define.h"
 
 namespace cloud
 {
-struct JobQueue;
 struct Job;
 
 class WorkerThreads
@@ -18,7 +18,7 @@ class WorkerThreads
   protected:
     struct Worker
     {
-        std::unique_ptr<JobQueue> job_queue;
+        JobQueue job_queue;
         std::thread worker;
     };
 

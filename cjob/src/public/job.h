@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include "job_define.h"
+#include "stealable_queue.h"
 
 namespace cloud
 {
@@ -17,6 +18,10 @@ enum class JobState
 };
 
 class JobPool;
+struct JobHandle
+{
+    uint32_t index;
+};
 struct Job
 {
   public:
@@ -31,8 +36,10 @@ struct Job
 
     // a count flag for dependency. means how much sub job in this job.
     std::atomic<uint16_t> running_job_count_{1};
-
+    // ref count
     std::atomic<uint16_t> ref_count = {1};
+    // handle use in outer
+    JobHandle handle_;
 
     static Job *create() { return new Job(); }
 
@@ -40,22 +47,11 @@ struct Job
 
     bool is_completed() const
     {
-        running_job_count_.load(std::memory_order_acquire) <= 0;
+        return running_job_count_.load(std::memory_order_acquire) <= 0u;
     }
 
   private:
     JobPool *job_pool_;
-};
-
-class JobQueue
-{
-  public:
-    void PushBack(Job &job);
-    bool PopFront(Job &job);
-
-  private:
-    std::deque<Job> queue;
-    std::mutex queue_mutex;
 };
 
 // class JobPool

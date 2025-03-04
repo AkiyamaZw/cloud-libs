@@ -2,6 +2,8 @@
 #include "job_system.h"
 #include <iostream>
 #include <format>
+#include <thread>
+
 class Timer
 {
   public:
@@ -136,7 +138,7 @@ int test_system_2()
 
     job_sys.run(sub_job1);
     job_sys.run(sub_job2);
-    job_sys.run_and_wait(root_job);
+    // job_sys.run_and_wait(root_job);
 }
 
 int main()

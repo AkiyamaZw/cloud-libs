@@ -49,7 +49,7 @@ uint32_t JobSystem::get_num_core() const
     return workers ? workers->num_thread_ : 0u;
 }
 
-Job *JobSystem::create(Job *parent, const JobFunc &sub_task)
+Job *JobSystem::create(Job *parent, JobFunc sub_task)
 {
     assert(parent != nullptr);
     if (parent == nullptr)
@@ -91,11 +91,6 @@ uint32_t JobSystem::calc_core_num(uint32_t max_core_num) const
     max_core_num = std::max(1u, max_core_num);
     uint32_t num_core = std::thread::hardware_concurrency();
     return std::clamp(num_core - 1, 1u, max_core_num);
-}
-
-void JobSystem::wait(std::unique_lock<std::mutex> &lock, Job *job)
-{
-    workers->wake_condition.wait(lock);
 }
 
 } // namespace cloud

@@ -2,10 +2,12 @@
 #include <cstdint>
 #include <atomic>
 #include <functional>
+#include "stealable_queue.h"
+
 namespace cloud
 {
 struct JobArgs;
-using JobFunc = std::function<void(JobArgs)>;
+using JobFunc = std::function<void(JobArgs &)>;
 
 /**
  * @brief define the priority of job
@@ -41,5 +43,9 @@ struct JobArgs
     bool is_last_job_in_group;
     void *shared_memory;
 };
+
+static constexpr size_t MAX_JOB_COUNT = 16384;
+static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT is 16384");
+using JobQueue = StealableQueue<uint16_t, MAX_JOB_COUNT>;
 
 } // namespace cloud

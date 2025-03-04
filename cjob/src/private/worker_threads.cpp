@@ -11,7 +11,6 @@ WorkerThreads::WorkerThreads(uint32_t max_thread_count)
     for (int i = 0; i < num_thread_; ++i)
     {
         auto &worker = workers_[i];
-        worker.job_queue = std::make_unique<JobQueue>();
         worker.worker = std::thread(&WorkerThreads::worker_loop, this, &worker);
     }
 }
@@ -60,7 +59,7 @@ void WorkerThreads::put(Worker &worker, Job *job)
     }
     else
     {
-        worker.job_queue->PushBack(*job);
+        worker.job_queue.push(*job);
         auto value = active_jobs_.fetch_add(1, std::memory_order_relaxed);
         std::lock_guard lock(wake_mutex);
         if (value == 1)
@@ -77,7 +76,7 @@ void WorkerThreads::put(Worker &worker, Job *job)
 bool WorkerThreads::pop(JobQueue &queue, Job &job)
 {
     active_jobs_.fetch_sub(1, std::memory_order_relaxed);
-    return queue.PopFront(job);
+    return queue.pop(job);
 }
 
 void WorkerThreads::worker_loop(Worker *worker)
