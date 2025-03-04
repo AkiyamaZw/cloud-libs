@@ -15,6 +15,7 @@ class StealableQueue
     using index_type = int64_t;
 
   public:
+    StealableQueue() = default;
     void push(T t);
     T pop();
     T steal();

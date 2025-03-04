@@ -9,16 +9,17 @@ namespace cloud
 JobSystem::JobSystem(uint32_t max_thread_count, uint32_t max_adopt_thread)
 {
     job_pool_ = std::make_unique<JobPool>();
-    workers_ = std::make_unique<WorkerThreads>(
+    workers_ = new WorkerThreads();
+    workers_->init(
         calc_core_num(max_thread_count),
         max_adopt_thread,
-        std::bind(JobSystem::execute_job, this, std::placeholders::_1));
+        std::bind(&JobSystem::execute_job, this, std::placeholders::_1));
 }
 
 JobSystem::~JobSystem()
 {
     shutdown();
-    workers_.reset();
+    delete workers_;
     job_pool_.reset();
 }
 
@@ -36,7 +37,7 @@ bool JobSystem::is_active() const { return workers_->get_alive(); }
 
 uint32_t JobSystem::get_num_core() const
 {
-    return workers_ ? workers_->num_thread_ : 0u;
+    return workers_ ? workers_->get_thread_num() : 0u;
 }
 
 bool JobSystem::has_active_job() const
@@ -44,27 +45,23 @@ bool JobSystem::has_active_job() const
     return active_jobs_.load(std::memory_order_relaxed) > 0;
 }
 
+void JobSystem::adopt() { workers_->attach(); }
+
+void JobSystem::emancipate() { workers_->detach(); }
+
 Job *JobSystem::create(Job *parent, JobFunc sub_task)
 {
-    assert(parent != nullptr);
-    if (parent == nullptr)
-        return nullptr;
-
     // check parent is finished first!
-    if (parent->is_completed())
+    if (parent != nullptr && parent->is_completed())
         return nullptr;
 
     Job *sub_job = job_pool_->get();
     if (parent)
+    {
         parent->running_job_count_.fetch_add(1, std::memory_order_relaxed);
+        sub_job->parent_ = parent->handle_;
+    }
     sub_job->task = sub_task;
-    return sub_job;
-}
-
-Job *JobSystem::create_parent_job(Job *parent)
-{
-    Job *sub_job = job_pool_->get();
-    parent->running_job_count_.fetch_add(1, std::memory_order_relaxed);
     return sub_job;
 }
 
@@ -72,7 +69,6 @@ void JobSystem::run(Job *job)
 {
     auto worker = workers_->get_worker();
     push_job(worker->job_queue, job);
-    job = nullptr;
 }
 
 void JobSystem::wait_and_release(Job *job)
@@ -80,11 +76,66 @@ void JobSystem::wait_and_release(Job *job)
     assert(job);
     assert(job->handle_.is_valid());
     auto worker = workers_->get_worker();
-    assert(worker);
+    assert(worker != nullptr);
     do
     {
-
+        if (!execute_job(*worker))
+        {
+            if (job->is_completed())
+            {
+                break;
+            }
+            // this section means the job is running in other processor
+            if (!job->is_completed() && !has_active_job() && is_active())
+            {
+                workers_->wait(job);
+            }
+        }
     } while (!job->is_completed() && is_active());
+    job_pool_->release(job);
+}
+
+void JobSystem::run_and_wait(Job *job)
+{
+    assert(job != nullptr);
+    run(job);
+    wait_and_release(job);
+    job = nullptr;
+}
+
+JobHandle JobSystem::create(JobHandle parent, JobFunc sub_task)
+{
+    Job *parent_job = parent.is_valid() ? job_pool_->at(parent) : nullptr;
+    Job *new_job = create(parent_job, sub_task);
+    return new_job ? new_job->handle_ : Job::INVALID_HANDLE;
+}
+
+JobHandle JobSystem::create(JobFunc sub_task)
+{
+    return create(Job::INVALID_HANDLE, sub_task);
+}
+
+void JobSystem::run(JobHandle job_handle)
+{
+    if (!job_handle.is_valid())
+        return;
+    run(job_pool_->at(job_handle));
+}
+
+void JobSystem::wait_and_release(JobHandle job_handle)
+{
+    if (!job_handle.is_valid())
+        return;
+    wait_and_release(job_pool_->at(job_handle));
+}
+
+void JobSystem::run_and_wait(JobHandle job_handle)
+{
+    if (!job_handle.is_valid())
+    {
+        return;
+    }
+    run_and_wait(job_pool_->at(job_handle));
 }
 
 uint32_t JobSystem::dispatch_group_count(uint32_t job_count,
@@ -115,8 +166,10 @@ bool JobSystem::execute_job(Worker &worker)
         // 1. check job is running?
         if (!job->is_completed() && job->task)
         {
-            job->Execute();
+            JobArgs args{};
+            job->task(args);
         }
+        finish_job(job);
     }
     return job != nullptr;
 }
@@ -175,6 +228,7 @@ Job *JobSystem::steal(Worker &worker)
     Job *job{nullptr};
     do
     {
+        assert(workers_ != nullptr);
         auto target_worker = workers_->random_select(worker);
         if (target_worker)
         {
@@ -182,6 +236,32 @@ Job *JobSystem::steal(Worker &worker)
         }
     } while (job == nullptr && has_active_job());
     return job;
+}
+
+void JobSystem::finish_job(Job *job)
+{
+    bool notify = false;
+    do
+    {
+        auto runing_job_count =
+            job->running_job_count_.fetch_sub(1, std::memory_order_acq_rel);
+        assert(runing_job_count > 0);
+        if (runing_job_count == 1)
+        {
+            notify = true;
+            Job *parent =
+                job->parent_.is_valid() ? job_pool_->at(job->parent_) : nullptr;
+            job = parent;
+        }
+        else
+        {
+            break;
+        }
+    } while (job);
+    if (notify)
+    {
+        workers_->try_wake_up_all();
+    }
 }
 
 } // namespace cloud

@@ -123,28 +123,71 @@ void SimpleAddSample()
     }
 }
 
-void print_job(std::string name) { std::cout << name << std::endl; }
+void print_job(std::string name)
+{
+    uint64_t k = 0;
+    uint64_t max_num = 1000000000;
+    for (uint64_t i = 0; i < max_num; ++i)
+    {
+        k += 1;
+    }
+    std::cout << name << " " << (max_num == k) << std::endl;
+}
 
 int test_system_2()
 {
     cloud::JobSystem job_sys(std::thread::hardware_concurrency());
+    job_sys.adopt();
     std::cout << "core count:" << std::thread::hardware_concurrency()
               << std::endl;
-    cloud::Job *root_job = job_sys.create_parent_job(nullptr);
-    cloud::Job *sub_job1 = job_sys.create(
-        root_job, [](cloud::JobArgs &args) { print_job("sub_job1"); });
-    cloud::Job *sub_job2 = job_sys.create(
-        root_job, [](cloud::JobArgs &args) { print_job("sub_job2"); });
+
+    auto simulate_job = job_sys.create(nullptr);
+    auto sub_job1 = job_sys.create(
+        simulate_job, [](cloud::JobArgs &args) { print_job("sub_job1"); });
+    auto sub_job2 = job_sys.create(
+        simulate_job, [](cloud::JobArgs &args) { print_job("sub_job2"); });
+    auto sub_job3 = job_sys.create(
+        sub_job2, [](cloud::JobArgs &args) { print_job("sub_job3"); });
+
+    auto vis_job = job_sys.create(nullptr);
+    auto vis_job1 = job_sys.create(
+        vis_job, [](cloud::JobArgs &args) { print_job("vis_job1"); });
+    auto vis_job2 = job_sys.create(
+        vis_job, [](cloud::JobArgs &args) { print_job("vis_job2"); });
+
+    auto extract_job = job_sys.create(nullptr);
+    auto extract_job1 = job_sys.create(
+        extract_job, [](cloud::JobArgs &args) { print_job("extract_job1"); });
+    auto extract_job2 = job_sys.create(
+        extract_job, [](cloud::JobArgs &args) { print_job("extract_job2"); });
+
+    auto render_job = job_sys.create(nullptr);
+    auto render_job1 = job_sys.create(
+        render_job, [](cloud::JobArgs &args) { print_job("render_job1"); });
+    auto render_job2 = job_sys.create(
+        render_job, [](cloud::JobArgs &args) { print_job("render_job2"); });
 
     job_sys.run(sub_job1);
     job_sys.run(sub_job2);
-    // job_sys.run_and_wait(root_job);
+    job_sys.run(sub_job3);
+    job_sys.run_and_wait(simulate_job);
+    job_sys.run(vis_job1);
+    job_sys.run(vis_job2);
+    job_sys.run_and_wait(vis_job);
+    job_sys.run(extract_job1);
+    job_sys.run(extract_job2);
+    job_sys.run_and_wait(extract_job);
 
+    job_sys.run(render_job1);
+    job_sys.run(render_job2);
+    job_sys.run_and_wait(render_job);
+
+    job_sys.emancipate();
     return 0;
 }
 
 int main()
 {
-    // SimpleAddSample();
+    test_system_2();
     return 0;
 }

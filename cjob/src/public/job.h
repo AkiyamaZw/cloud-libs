@@ -8,22 +8,15 @@
 
 namespace cloud
 {
-enum class JobState
-{
-    Setup,
-    Started,
-    Pending,
-    Processing,
-    Syspended
-};
 
 class JobPool;
 
 struct JobHandle
 {
-    static constexpr uint32_t INVALID_HANDLE = uint32_t(-1);
-    uint32_t index{INVALID_HANDLE};
-    bool is_valid() const { return index != INVALID_HANDLE; }
+    static constexpr uint32_t INVALID_HANDLE_INDEX = uint32_t(-1);
+    uint32_t index{INVALID_HANDLE_INDEX};
+    bool is_valid() const { return index != INVALID_HANDLE_INDEX; }
+    operator uint32_t() { return index; }
 };
 
 class Job
@@ -36,17 +29,13 @@ class Job
     Job &operator=(Job &&) = delete;
 
     JobFunc task;
-    JobState state{JobState::Setup};
-    JobContext *context{nullptr};
+    // handle use in outer
+    JobHandle handle_;
+    JobHandle parent_;
 
     // a count flag for dependency. means how much sub job in this job.
     std::atomic<uint16_t> running_job_count_{1};
-    // // ref count
-    // std::atomic<uint16_t> ref_count = {1};
-    // handle use in outer
-    JobHandle handle_;
-
-    void Execute();
+    static constexpr JobHandle INVALID_HANDLE{};
 
     bool is_completed() const
     {
@@ -57,9 +46,6 @@ class Job
     friend class JobPool;
     Job() = default;
     void reset();
-
-  private:
-    JobPool *job_pool_;
 };
 
 class JobPool
@@ -70,6 +56,7 @@ class JobPool
 
     Job *get();
     Job *at(uint32_t index);
+    Job *at(const JobHandle &handle);
     void release(Job *job);
 
   protected:
