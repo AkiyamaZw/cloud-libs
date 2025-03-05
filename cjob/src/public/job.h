@@ -14,9 +14,9 @@ class JobPool;
 struct JobHandle
 {
     static constexpr uint32_t INVALID_HANDLE_INDEX = uint32_t(-1);
+    // index in job pool
     uint32_t index{INVALID_HANDLE_INDEX};
     bool is_valid() const { return index != INVALID_HANDLE_INDEX; }
-    operator uint32_t() { return index; }
 };
 
 class Job

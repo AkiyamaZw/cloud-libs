@@ -145,7 +145,7 @@ int test_system_2()
     auto sub_job1 = job_sys.create(
         simulate_job, [](cloud::JobArgs &args) { print_job("sub_job1"); });
     auto sub_job2 = job_sys.create(
-        simulate_job, [](cloud::JobArgs &args) { print_job("sub_job2"); });
+        sub_job1, [](cloud::JobArgs &args) { print_job("sub_job2"); });
     auto sub_job3 = job_sys.create(
         sub_job2, [](cloud::JobArgs &args) { print_job("sub_job3"); });
 
