@@ -3,6 +3,7 @@
 #include <iostream>
 #include <format>
 #include <thread>
+#include "counter.h"
 
 class Timer
 {
@@ -42,27 +43,7 @@ void task1(long *result)
     }
 }
 
-void task2(long *result, cloud::JobSystem &job_sys, int job_count)
-{
-    // cloud::JobContext ctx;
-    // Timer timer(std::format("job System with split count: {}", job_count));
-    // job_sys.Dispatch(
-    //     ctx,
-    //     job_count,
-    //     1,
-    //     [&result, job_count](cloud::JobArgs args) {
-    //         int group_size = array_size / job_count;
-    //         for (int i = 0; i < group_size; ++i)
-    //         {
-    //             for (long j = 0; j < target_num; j++)
-    //             {
-    //                 result[args.group_id * (group_size) + i] += 1;
-    //             }
-    //         }
-    //     },
-    //     0);
-    // job_sys.Wait(ctx);
-}
+void task2(long *result, cloud::JobSystem &job_sys, int job_count) {}
 
 void TestInit(long *data)
 {
@@ -186,8 +167,27 @@ int test_system_2()
     return 0;
 }
 
+void test_counter()
+{
+    cloud::Counter counter;
+    cloud::JobBuilder builder;
+    builder.dispatch("first_job",
+                     []() { std::cout << "first_job" << std::endl; });
+    counter += builder.extract_wait_counter();
+    cloud::JobBuilder builder2;
+    builder2.dispatch("second_job",
+                      []() { std::cout << "second_job" << std::endl; });
+    counter += builder2.extract_wait_counter();
+
+    cloud::JobBuilder builder3;
+    builder3.dispatch_wait(counter);
+    builder3.dispatch("third_job",
+                      []() { std::cout << "third_job" << std::endl; });
+    std::cout << counter.get_cnt() << " " << counter.get_ref() << " "
+              << std::endl;
+}
 int main()
 {
-    test_system_2();
+    test_counter();
     return 0;
 }
