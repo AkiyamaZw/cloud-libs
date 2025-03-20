@@ -57,11 +57,15 @@ Counter &Counter::operator+=(const Counter &rhs)
     return *this;
 }
 
+void Counter::add_dep_task(CJob *job) const { entry_->add_dep_jobs(job); }
+
 Counter JobBuilder::extract_wait_counter()
 {
     assert(wait_counter_.is_valid());
     return std::move(wait_counter_);
 }
+
+JobBuilder::JobBuilder() {}
 
 JobBuilder::~JobBuilder() {}
 
@@ -69,7 +73,7 @@ void JobBuilder::dispatch(const std::string &name, JobBuilder::JobFunc func)
 {
     assert(wait_counter_.is_valid());
     accumulate_counter_.add();
-    // todo
+    wait_counter_.add_dep_task(&CJob(func));
 }
 
 void JobBuilder::dispatch_wait(const Counter &counter)

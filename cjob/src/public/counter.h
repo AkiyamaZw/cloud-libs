@@ -5,10 +5,41 @@
 #include <functional>
 #include <string>
 #include <set>
+#include <queue>
+#include <atomic>
 
 namespace cloud
 {
-struct CJob;
+using CJobFunc = std::function<void()>;
+
+struct JobInner
+{
+    static JobInner *create(CJobFunc func)
+    {
+        JobInner *task = new JobInner();
+        task->ref.fetch_add(1);
+        return task;
+    }
+    static void release(JobInner *job)
+    {
+        auto ref_last = job->ref.fetch_sub(1);
+        if (ref_last == 1)
+        {
+            delete job;
+            job = nullptr;
+        }
+    }
+    CJobFunc task;
+    std::atomic_uint16_t ref{0};
+};
+
+struct CJob
+{
+    CJob(CJobFunc task) { JobInner::create(task); };
+    ~CJob() { JobInner::release(job); }
+    JobInner *job;
+};
+
 class JobCounterEntry
 {
     friend class Counter;
@@ -62,6 +93,7 @@ class Counter
     constexpr bool is_valid() const { return entry_ != nullptr; }
     uint32_t get_cnt() const { return is_valid() ? entry_->cnt_.load() : 0; }
     uint32_t get_ref() const { return is_valid() ? entry_->ref_.load() : 0; }
+    void add_dep_task(CJob *job) const;
     void add(uint32_t i = 1) { entry_->cnt_.fetch_add(1); }
     void sub(uint32_t i = 0) { entry_->cnt_.fetch_sub(1); }
 
@@ -69,11 +101,12 @@ class Counter
     JobCounterEntry *entry_{nullptr};
 };
 
+class RunContext;
 class JobBuilder
 {
   public:
     using JobFunc = std::function<void()>;
-
+    JobBuilder();
     ~JobBuilder();
     // new job to dispatch
     void dispatch(const std::string &name, JobFunc func);
@@ -87,5 +120,18 @@ class JobBuilder
   private:
     Counter wait_counter_;
     Counter accumulate_counter_;
+};
+
+class RunContext
+{
+  public:
+    static RunContext *get_context()
+    {
+        static RunContext context;
+        return &context;
+    }
+
+  private:
+    std::queue<Counter> wait_counter_queue_;
 };
 } // namespace cloud
