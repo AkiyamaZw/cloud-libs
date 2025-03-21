@@ -171,9 +171,15 @@ void test_counter()
 {
     cloud::Counter counter;
     cloud::JobBuilder builder;
-    builder.dispatch("first_job",
+    builder.dispatch("first_job1",
                      []() { std::cout << "first_job" << std::endl; });
+    builder.dispatch("first_job2",
+                     []() { std::cout << "first_job" << std::endl; });
+    builder.dispatch("first_job3",
+                     []() { std::cout << "first_job" << std::endl; });
+
     counter += builder.extract_wait_counter();
+
     cloud::JobBuilder builder2;
     builder2.dispatch("second_job",
                       []() { std::cout << "second_job" << std::endl; });
@@ -185,7 +191,10 @@ void test_counter()
                       []() { std::cout << "third_job" << std::endl; });
     std::cout << counter.get_cnt() << " " << counter.get_ref() << " "
               << std::endl;
+
+    cloud::RunContext::get_context()->export_grapviz("./graph.dot");
 }
+
 int main()
 {
     test_counter();
