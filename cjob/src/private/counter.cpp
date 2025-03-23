@@ -200,7 +200,6 @@ void RunContext::export_grapviz(const std::string &path)
 
     for (const auto &[id, counter] : wait_counter_queue_)
     {
-        auto id = counter.get_id();
         out << "NCOUNTER" << id << "-> {";
 
         auto job_list_ptr = counter.get_jobs();

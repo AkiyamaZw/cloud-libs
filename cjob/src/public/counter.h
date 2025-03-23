@@ -7,11 +7,13 @@
 #include <vector>
 #include <deque>
 #include <atomic>
+#include <thread>
 
 namespace cloud
 {
 using CJobFunc = std::function<void()>;
 struct JobWaitListEntry;
+class Counter;
 
 struct JobInner
 {
