@@ -28,6 +28,7 @@ class JobSystemExtension
   protected:
     JobSystem *js_;
 };
+
 class JobQueueProxy : public JobSystemExtension
 {
   public:
@@ -39,17 +40,16 @@ class JobQueueProxy : public JobSystemExtension
     JobWaitListEntry *steal(Worker &worker);
 };
 
-// todo
-// class JobSystemExporter : public JobSystemExtension
-// {
-//   public:
-//     using Super::JobSystemExtension;
-//     void export_grapviz(const std::string &path);
+class JobSystemExporter : public JobSystemExtension
+{
+  public:
+    using Super::JobSystemExtension;
+    void export_grapviz(const std::string &path);
 
-//   private:
-//     std::string counter_grapviz(const JobWaitListEntry *counter);
-//     std::string job_graphviz(const Job &job) const;
-// };
+  private:
+    std::string counter_grapviz(const JobWaitListEntry *counter);
+    std::string job_graphviz(const Job &job) const;
+};
 
 class JobSystem final
 {

@@ -36,7 +36,7 @@ void JobBuilder::dispatch_fence_explicitly()
     wait_counter_.finish_submit_job();
     wait_counter_ = accumulate_counter_;
     accumulate_counter_ = Counter::create(js_);
-    accumulate_counter_.add();
+    disptach_empty_job();
 }
 
 void JobBuilder::dispatch_wait(const Counter &counter)

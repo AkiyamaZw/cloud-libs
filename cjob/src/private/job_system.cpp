@@ -228,12 +228,12 @@ void JobSystem::try_dispatch(JobCounterEntry *counter)
     {
         std::lock_guard lock(counter->dep_jobs_lock_);
         for (uint32_t i = counter->next_runable_jobs_.load();
-             i < counter->wait_list_head_.size();
+             i < counter->wait_job_list_.size();
              ++i)
         {
-            run(counter->wait_list_head_[i]);
+            run(counter->wait_job_list_[i]);
         }
-        counter->next_runable_jobs_.store(counter->wait_list_head_.size());
+        counter->next_runable_jobs_.store(counter->wait_job_list_.size());
     }
 }
 

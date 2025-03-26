@@ -31,19 +31,28 @@ class JobCounterEntry
     JobCounterEntry &operator=(const JobCounterEntry &) = delete;
     JobCounterEntry &operator=(JobCounterEntry &&) = delete;
 
+    /* add job packet that waiting this counter */
     void add_dep_jobs(JobWaitListEntry *entry);
+    /* add counters that waiting this counter */
     void add_dep_counters(JobCounterEntry *counter);
-    void init();
-    void reset() override;
-    bool ready_to_release() const;
-    std::mutex dep_jobs_lock_;
-    std::vector<JobWaitListEntry *> wait_list_head_;
-    std::atomic<uint32_t> next_runable_jobs_{0};
 
+    /* used while get from pool*/
+    void init();
+    /* called by the pool */
+    void reset() override;
+    // a helper function to judge whether the count should be delete.
+    bool ready_to_release() const;
+
+    /* wait_job_list records [job, accumulate_counter] collection, which will be
+    add to workers queue while cnt go to 0. */
+    std::mutex dep_jobs_lock_;
+    std::vector<JobWaitListEntry *> wait_job_list_;
+    std::atomic<uint32_t> next_runable_jobs_{0};
+    /* wait_counter_list records counters that waitting current counters.*/
     std::mutex dep_counter_lock_;
     std::vector<JobCounterEntry *> wait_counter_list_;
-
-    std::atomic<State> finish_submit_{State::Released};
+    /* just the state of counter.*/
+    std::atomic<State> state_{State::Released};
 };
 
 class Counter
@@ -66,7 +75,7 @@ class Counter
     uint32_t get_id() const { return entry_->get_index(); }
     const std::vector<JobWaitListEntry *> get_jobs() const
     {
-        return entry_->wait_list_head_;
+        return entry_->wait_job_list_;
     }
     void finish_submit_job();
     JobCounterEntry *get_entry() const { return entry_; };

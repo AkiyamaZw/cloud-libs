@@ -182,26 +182,21 @@ void test_counter()
     js.adopt();
 
     cloud::Counter counter = cloud::Counter::create(js);
-    {
-        cloud::JobBuilder builder(js);
-        builder.dispatch("first_job1", [](cloud::JobArgs &) {
-            massive_job();
-            std::cout << "first_job1" << std::endl;
-        });
-        builder.dispatch("first_job2", [](cloud::JobArgs &) {
-            massive_job();
-            std::cout << "first_job2" << std::endl;
-        });
-        builder.dispatch("first_job3", [](cloud::JobArgs &) {
-            massive_job();
-            std::cout << "first_job3" << std::endl;
-        });
 
-        counter += builder.extract_wait_counter();
-    }
+    cloud::JobBuilder builder(js);
+    builder.dispatch("first_job1", [](cloud::JobArgs &) {
+        std::cout << "first_job1" << std::endl;
+    });
+    builder.dispatch("first_job2", [](cloud::JobArgs &) {
+        std::cout << "first_job2" << std::endl;
+    });
+    builder.dispatch("first_job3", [](cloud::JobArgs &) {
+        std::cout << "first_job3" << std::endl;
+    });
+    counter += builder.extract_wait_counter();
+
     cloud::JobBuilder builder2(js);
     builder2.dispatch("second_job", [](cloud::JobArgs &) {
-        massive_job();
         std::cout << "second_job" << std::endl;
     });
     counter += builder2.extract_wait_counter();
@@ -209,12 +204,16 @@ void test_counter()
     cloud::JobBuilder builder3(js);
     builder3.dispatch_wait(counter);
     builder3.dispatch("third_job", [](cloud::JobArgs &) {
-        massive_job();
         std::cout << "third_job" << std::endl;
     });
-    // std::cout << counter.get_cnt() << " " << counter.get_ref() << " "
-    //           << std::endl;
-
+    builder3.dispatch_fence_explicitly();
+    builder3.dispatch("third_job2", [](cloud::JobArgs &) {
+        std::cout << "third_job2" << std::endl;
+    });
+    builder3.dispatch_fence_explicitly();
+    builder3.dispatch("third_job3", [](cloud::JobArgs &) {
+        std::cout << "third_job3" << std::endl;
+    });
     // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
     js.spin_wait(builder3.extract_wait_counter().get_entry());
     js.emancipate();
@@ -225,11 +224,6 @@ int main()
     {
         Timer t("job system");
         test_counter();
-    }
-    {
-        Timer t{"single system"};
-        for (int i = 0; i < 5; ++i)
-            massive_job();
     }
     return 0;
 }

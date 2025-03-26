@@ -11,14 +11,14 @@ JobCounterEntry::JobCounterEntry() {}
 
 JobCounterEntry::~JobCounterEntry()
 {
-    wait_list_head_.clear();
+    wait_job_list_.clear();
     next_runable_jobs_ = 0;
 }
 
 void JobCounterEntry::add_dep_jobs(JobWaitListEntry *entry)
 {
     std::lock_guard lock(dep_jobs_lock_);
-    wait_list_head_.push_back(entry);
+    wait_job_list_.push_back(entry);
 }
 
 void JobCounterEntry::add_dep_counters(JobCounterEntry *counter)
@@ -29,23 +29,23 @@ void JobCounterEntry::add_dep_counters(JobCounterEntry *counter)
 
 void JobCounterEntry::init()
 {
-    assert(finish_submit_.load() == State::Released);
-    finish_submit_.store(State::Setupped);
+    assert(state_.load() == State::Released);
+    state_.store(State::Setupped);
 }
 
 void JobCounterEntry::reset()
 {
-    assert(finish_submit_.load() != State::Released);
-    wait_list_head_.clear();
+    assert(state_.load() != State::Released);
+    wait_job_list_.clear();
     next_runable_jobs_ = 0;
-    finish_submit_.store(State::Released);
+    state_.store(State::Released);
     set_cnt(0);
     wait_counter_list_.clear();
 }
 
 bool JobCounterEntry::ready_to_release() const
 {
-    return finish_submit_.load() == State::FinishAddDepend && get_cnt() == 0;
+    return state_.load() == State::FinishAddDepend && get_cnt() == 0;
 }
 
 Counter::Counter(JobCounterEntry *entry) { entry_ = entry; }
@@ -95,7 +95,7 @@ void Counter::finish_submit_job()
 {
     if (is_valid())
     {
-        entry_->finish_submit_.store(JobCounterEntry::State::FinishAddDepend);
+        entry_->state_.store(JobCounterEntry::State::FinishAddDepend);
     }
 }
 
