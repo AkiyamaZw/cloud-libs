@@ -158,7 +158,7 @@ Worker *WorkerThreads::random_select(Worker &from)
     return worker;
 }
 
-void WorkerThreads::wait(Job *job)
+void WorkerThreads::wait()
 {
     std::unique_lock lock(wake_mutex);
     wake_condition.wait(lock);

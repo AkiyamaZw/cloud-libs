@@ -3,7 +3,7 @@
 #include <iostream>
 #include <format>
 #include <thread>
-#include "counter.h"
+#include "job_builder.h"
 
 class Timer
 {
@@ -122,81 +122,114 @@ int test_system_2()
     std::cout << "core count:" << std::thread::hardware_concurrency()
               << std::endl;
 
-    auto simulate_job = job_sys.create(nullptr);
-    auto sub_job1 = job_sys.create(
-        simulate_job, [](cloud::JobArgs &args) { print_job("sub_job1"); });
-    auto sub_job2 = job_sys.create(
-        sub_job1, [](cloud::JobArgs &args) { print_job("sub_job2"); });
-    auto sub_job3 = job_sys.create(
-        sub_job2, [](cloud::JobArgs &args) { print_job("sub_job3"); });
+    // auto simulate_job = job_sys.create(nullptr);
+    // auto sub_job1 = job_sys.create(
+    //     simulate_job, [](cloud::JobArgs &args) { print_job("sub_job1"); });
+    // auto sub_job2 = job_sys.create(
+    //     sub_job1, [](cloud::JobArgs &args) { print_job("sub_job2"); });
+    // auto sub_job3 = job_sys.create(
+    //     sub_job2, [](cloud::JobArgs &args) { print_job("sub_job3"); });
 
-    auto vis_job = job_sys.create(nullptr);
-    auto vis_job1 = job_sys.create(
-        vis_job, [](cloud::JobArgs &args) { print_job("vis_job1"); });
-    auto vis_job2 = job_sys.create(
-        vis_job, [](cloud::JobArgs &args) { print_job("vis_job2"); });
+    // auto vis_job = job_sys.create(nullptr);
+    // auto vis_job1 = job_sys.create(
+    //     vis_job, [](cloud::JobArgs &args) { print_job("vis_job1"); });
+    // auto vis_job2 = job_sys.create(
+    //     vis_job, [](cloud::JobArgs &args) { print_job("vis_job2"); });
 
-    auto extract_job = job_sys.create(nullptr);
-    auto extract_job1 = job_sys.create(
-        extract_job, [](cloud::JobArgs &args) { print_job("extract_job1"); });
-    auto extract_job2 = job_sys.create(
-        extract_job, [](cloud::JobArgs &args) { print_job("extract_job2"); });
+    // auto extract_job = job_sys.create(nullptr);
+    // auto extract_job1 = job_sys.create(
+    //     extract_j/ob, [](cloud::JobArgs &args) { print_job("extract_job1");
+    //     });
+    // auto extract_job2 = job_sys.create(
+    //     extract_job, [](cloud::JobArgs &args) { print_job("extract_job2");
+    //     });
 
-    auto render_job = job_sys.create(nullptr);
-    auto render_job1 = job_sys.create(
-        render_job, [](cloud::JobArgs &args) { print_job("render_job1"); });
-    auto render_job2 = job_sys.create(
-        render_job, [](cloud::JobArgs &args) { print_job("render_job2"); });
+    // auto render_job = job_sys.create(nullptr);
+    // auto render_job1 = job_sys.create(
+    //     render_job, [](cloud::JobArgs &args) { print_job("render_job1"); });
+    // auto render_job2 = job_sys.create(
+    //     render_job, [](cloud::JobArgs &args) { print_job("render_job2"); });
 
-    job_sys.run(sub_job1);
-    job_sys.run(sub_job2);
-    job_sys.run(sub_job3);
-    job_sys.run_and_wait(simulate_job);
-    job_sys.run(vis_job1);
-    job_sys.run(vis_job2);
-    job_sys.run_and_wait(vis_job);
-    job_sys.run(extract_job1);
-    job_sys.run(extract_job2);
-    job_sys.run_and_wait(extract_job);
+    // job_sys.run(sub_job1);
+    // job_sys.run(sub_job2);
+    // job_sys.run(sub_job3);
+    // job_sys.run_and_wait(simulate_job);
+    // job_sys.run(vis_job1);
+    // job_sys.run(vis_job2);
+    // job_sys.run_and_wait(vis_job);
+    // job_sys.run(extract_job1);
+    // job_sys.run(extract_job2);
+    // job_sys.run_and_wait(extract_job);
 
-    job_sys.run(render_job1);
-    job_sys.run(render_job2);
-    job_sys.run_and_wait(render_job);
+    // job_sys.run(render_job1);
+    // job_sys.run(render_job2);
+    // job_sys.run_and_wait(render_job);
 
     job_sys.emancipate();
     return 0;
 }
-
+void massive_job()
+{
+    uint64_t c = 0;
+    for (uint64_t i = 0; i < 1000000000; ++i)
+    {
+        c = i / 2;
+    }
+}
 void test_counter()
 {
-    cloud::Counter counter;
-    cloud::JobBuilder builder;
-    builder.dispatch("first_job1",
-                     []() { std::cout << "first_job" << std::endl; });
-    builder.dispatch("first_job2",
-                     []() { std::cout << "first_job" << std::endl; });
-    builder.dispatch("first_job3",
-                     []() { std::cout << "first_job" << std::endl; });
+    cloud::JobSystem js(5);
+    js.adopt();
 
-    counter += builder.extract_wait_counter();
+    cloud::Counter counter = cloud::Counter::create(js);
+    {
+        cloud::JobBuilder builder(js);
+        builder.dispatch("first_job1", [](cloud::JobArgs &) {
+            massive_job();
+            std::cout << "first_job1" << std::endl;
+        });
+        builder.dispatch("first_job2", [](cloud::JobArgs &) {
+            massive_job();
+            std::cout << "first_job2" << std::endl;
+        });
+        builder.dispatch("first_job3", [](cloud::JobArgs &) {
+            massive_job();
+            std::cout << "first_job3" << std::endl;
+        });
 
-    cloud::JobBuilder builder2;
-    builder2.dispatch("second_job",
-                      []() { std::cout << "second_job" << std::endl; });
+        counter += builder.extract_wait_counter();
+    }
+    cloud::JobBuilder builder2(js);
+    builder2.dispatch("second_job", [](cloud::JobArgs &) {
+        massive_job();
+        std::cout << "second_job" << std::endl;
+    });
     counter += builder2.extract_wait_counter();
 
-    cloud::JobBuilder builder3;
+    cloud::JobBuilder builder3(js);
     builder3.dispatch_wait(counter);
-    builder3.dispatch("third_job",
-                      []() { std::cout << "third_job" << std::endl; });
-    std::cout << counter.get_cnt() << " " << counter.get_ref() << " "
-              << std::endl;
+    builder3.dispatch("third_job", [](cloud::JobArgs &) {
+        massive_job();
+        std::cout << "third_job" << std::endl;
+    });
+    // std::cout << counter.get_cnt() << " " << counter.get_ref() << " "
+    //           << std::endl;
 
-    cloud::RunContext::get_context()->export_grapviz("./graph.dot");
+    // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
+    js.spin_wait(builder3.extract_wait_counter().get_entry());
+    js.emancipate();
 }
 
 int main()
 {
-    test_counter();
+    {
+        Timer t("job system");
+        test_counter();
+    }
+    {
+        Timer t{"single system"};
+        for (int i = 0; i < 5; ++i)
+            massive_job();
+    }
     return 0;
 }

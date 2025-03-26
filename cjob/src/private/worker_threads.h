@@ -42,7 +42,7 @@ class WorkerThreads
     Worker *random_select(Worker &from);
     uint32_t get_thread_num() const { return num_thread_; }
 
-    void wait(Job *job);
+    void wait();
 
   private:
     void worker_loop(Worker *worker);
