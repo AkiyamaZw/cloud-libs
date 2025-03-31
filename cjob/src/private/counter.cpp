@@ -4,6 +4,7 @@
 #include <format>
 #include <set>
 #include "job_system.h"
+#include <iostream>
 
 namespace cloud
 {
@@ -11,8 +12,10 @@ JobCounterEntry::JobCounterEntry() {}
 
 JobCounterEntry::~JobCounterEntry()
 {
+    assert(wait_job_list_.empty());
     wait_job_list_.clear();
-    next_runable_jobs_ = 0;
+    assert(wait_counter_list_.empty());
+    wait_counter_list_.clear();
 }
 
 void JobCounterEntry::add_dep_jobs(JobWaitListEntry *entry)
@@ -37,7 +40,6 @@ void JobCounterEntry::reset()
 {
     assert(state_.load() != State::Released);
     wait_job_list_.clear();
-    next_runable_jobs_ = 0;
     state_.store(State::Released);
     set_cnt(0);
     wait_counter_list_.clear();
@@ -47,6 +49,18 @@ bool JobCounterEntry::ready_to_release() const
 {
     return state_.load() == State::FinishAddDepend && get_cnt() == 0;
 }
+
+void JobCounterEntry::on_counter_signal()
+{
+    // auto info =
+    //     std::format("counter {} signaled=> {} jobs and {} counter waitting",
+    //                 get_index(),
+    //                 wait_job_list_.size(),
+    //                 wait_counter_list_.size());
+    // std::cout << info << std::endl;
+}
+
+void JobCounterEntry::on_counter_destroyed() {}
 
 Counter::Counter(JobCounterEntry *entry) { entry_ = entry; }
 

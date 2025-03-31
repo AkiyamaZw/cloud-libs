@@ -42,15 +42,20 @@ class JobCounterEntry
     void reset() override;
     // a helper function to judge whether the count should be delete.
     bool ready_to_release() const;
+    // event callback
+    void on_counter_signal();
+    void on_counter_destroyed();
 
-    /* wait_job_list records [job, accumulate_counter] collection, which will be
-    add to workers queue while cnt go to 0. */
+    /* wait_job_list records [job, accumulate_counter] collection, which
+    will be add to workers queue while cnt go to 0. */
     std::mutex dep_jobs_lock_;
-    std::vector<JobWaitListEntry *> wait_job_list_;
-    std::atomic<uint32_t> next_runable_jobs_{0};
+    std::deque<JobWaitListEntry *> wait_job_list_;
+    // std::vector<JobWaitListEntry *> wait_job_list_;
+    // std::atomic<uint32_t> next_runable_jobs_{0};
     /* wait_counter_list records counters that waitting current counters.*/
     std::mutex dep_counter_lock_;
-    std::vector<JobCounterEntry *> wait_counter_list_;
+    std::deque<JobCounterEntry *> wait_counter_list_;
+    // std::atomic<uint32_t> next_signable_counter_{0};
     /* just the state of counter.*/
     std::atomic<State> state_{State::Released};
 };
@@ -73,10 +78,6 @@ class Counter
     void sub(uint32_t i = 1) { entry_->sub_cnt(i); }
     void set_cnt(uint32_t i) { entry_->set_cnt(i); }
     uint32_t get_id() const { return entry_->get_index(); }
-    const std::vector<JobWaitListEntry *> get_jobs() const
-    {
-        return entry_->wait_job_list_;
-    }
     void finish_submit_job();
     JobCounterEntry *get_entry() const { return entry_; };
     void set_entry(JobCounterEntry *entry) { entry_ = entry; }

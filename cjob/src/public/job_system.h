@@ -38,6 +38,10 @@ class JobQueueProxy : public JobSystemExtension
     void push_job(JobQueue &queue, JobWaitListEntry *job_pack);
     JobWaitListEntry *steal_job(JobQueue &queue);
     JobWaitListEntry *steal(Worker &worker);
+    int32_t get_active_jobs() const { return active_jobs_.load(); };
+
+  private:
+    std::atomic<int32_t> active_jobs_{0};
 };
 
 class JobSystemExporter : public JobSystemExtension
@@ -102,7 +106,6 @@ class JobSystem final
   private:
     friend class JobQueueProxy;
     WorkerThreads *workers_{nullptr};
-    std::atomic<int32_t> active_jobs_{0};
     std::unique_ptr<JobQueueProxy> queue_proxy_;
 };
 } // namespace cloud

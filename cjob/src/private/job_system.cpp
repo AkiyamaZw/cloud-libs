@@ -19,14 +19,13 @@ JobWaitListEntry *JobQueueProxy::pop_job(JobQueue &queue)
 {
     JobWaitListEntry *entry = nullptr;
 
-    js_->active_jobs_.fetch_sub(1, std::memory_order_relaxed);
+    active_jobs_.fetch_sub(1, std::memory_order_relaxed);
     auto index = queue.pop();
 
     entry = !index ? nullptr : js_->entry_pool_->at(index - 1);
     if (entry == nullptr)
     {
-        auto old_jobs =
-            js_->active_jobs_.fetch_add(1, std::memory_order_relaxed);
+        auto old_jobs = active_jobs_.fetch_add(1, std::memory_order_relaxed);
         if (old_jobs >= 0)
         {
             js_->workers_->try_wake_up(old_jobs);
@@ -40,7 +39,7 @@ void JobQueueProxy::push_job(JobQueue &queue, JobWaitListEntry *job_pack)
     assert(job_pack != nullptr);
     // this means left 0 to invalid default.
     queue.push(job_pack->get_index() + 1);
-    auto old_value = js_->active_jobs_.fetch_add(1, std::memory_order_relaxed);
+    auto old_value = active_jobs_.fetch_add(1, std::memory_order_relaxed);
     if (old_value >= 0)
     {
         js_->workers_->try_wake_up(old_value + 1);
@@ -50,13 +49,12 @@ void JobQueueProxy::push_job(JobQueue &queue, JobWaitListEntry *job_pack)
 JobWaitListEntry *JobQueueProxy::steal_job(JobQueue &queue)
 {
     JobWaitListEntry *job_pkt{nullptr};
-    js_->active_jobs_.fetch_sub(1, std::memory_order_relaxed);
+    active_jobs_.fetch_sub(1, std::memory_order_relaxed);
     auto index = queue.steal();
     job_pkt = !index ? nullptr : js_->entry_pool_->at(index - 1);
     if (job_pkt == nullptr)
     {
-        auto old_jobs =
-            js_->active_jobs_.fetch_add(1, std::memory_order_relaxed);
+        auto old_jobs = active_jobs_.fetch_add(1, std::memory_order_relaxed);
         if (old_jobs >= 0)
         {
             js_->workers_->try_wake_up(old_jobs);
@@ -122,7 +120,7 @@ uint32_t JobSystem::get_num_core() const
 
 bool JobSystem::has_active_job() const
 {
-    return active_jobs_.load(std::memory_order_relaxed) > 0;
+    return queue_proxy_->get_active_jobs() > 0;
 }
 
 void JobSystem::adopt() { workers_->attach(); }
@@ -183,14 +181,15 @@ void JobSystem::try_signal(JobCounterEntry *counter)
     // signal other counters
     {
         std::lock_guard lock(counter->dep_counter_lock_);
-        for (auto &wait_counter : counter->wait_counter_list_)
+        while (!counter->wait_counter_list_.empty())
         {
-            wait_counter->sub_cnt();
-            try_dispatch(wait_counter);
+            auto entry = counter->wait_counter_list_.front();
+            counter->wait_counter_list_.pop_front();
+            entry->sub_cnt();
+            try_dispatch(entry);
         }
     }
     try_dispatch(counter);
-    release_counter(counter);
 }
 
 JobWaitListEntry *JobSystem::create_job_packet(const std::string &name,
@@ -218,23 +217,27 @@ JobCounterEntry *JobSystem::create_entry_counter()
 void JobSystem::release_counter(JobCounterEntry *counter)
 {
     if (counter->ready_to_release())
+    {
+        counter->on_counter_destroyed();
         counter_pool_->release(counter);
+    }
 }
 
 void JobSystem::try_dispatch(JobCounterEntry *counter)
 {
     if (counter->get_cnt() != 0)
         return;
+    counter->on_counter_signal();
     {
         std::lock_guard lock(counter->dep_jobs_lock_);
-        for (uint32_t i = counter->next_runable_jobs_.load();
-             i < counter->wait_job_list_.size();
-             ++i)
+        while (!counter->wait_job_list_.empty())
         {
-            run(counter->wait_job_list_[i]);
+            auto pkt = counter->wait_job_list_.front();
+            counter->wait_job_list_.pop_front();
+            run(pkt);
         }
-        counter->next_runable_jobs_.store(counter->wait_job_list_.size());
     }
+    release_counter(counter);
 }
 
 void JobSystem::spin_wait(JobCounterEntry *counter)
@@ -285,6 +288,7 @@ bool JobSystem::execute_job(Worker &worker)
 
         job_pkt->accumulate_counter->sub_cnt(1);
         try_signal(job_pkt->accumulate_counter);
+        release_job(job_pkt);
     }
     return valid_job;
 }

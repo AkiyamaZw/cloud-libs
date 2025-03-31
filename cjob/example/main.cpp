@@ -178,7 +178,7 @@ void massive_job()
 }
 void test_counter()
 {
-    cloud::JobSystem js(5);
+    cloud::JobSystem js(1);
     js.adopt();
 
     cloud::Counter counter = cloud::Counter::create(js);
@@ -215,6 +215,40 @@ void test_counter()
         std::cout << "third_job3" << std::endl;
     });
     // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
+
+    js.spin_wait(counter.get_entry());
+    js.spin_wait(builder3.extract_wait_counter().get_entry());
+    js.emancipate();
+}
+
+void test_counter_2()
+{
+    cloud::JobSystem js(5);
+    js.adopt();
+    cloud::Counter counter = cloud::Counter::create(js);
+    cloud::JobBuilder builder(js);
+    builder.dispatch(
+        "job_a", [](cloud::JobArgs &) { std::cout << "job_a" << std::endl; });
+    builder.dispatch(
+        "job_b", [](cloud::JobArgs &) { std::cout << "job_b" << std::endl; });
+    counter += builder.extract_wait_counter();
+
+    cloud::JobBuilder builder3(js);
+    builder3.dispatch(
+        "job_e", [](cloud::JobArgs &) { std::cout << "job_e" << std::endl; });
+    counter += builder3.extract_wait_counter();
+
+    cloud::JobBuilder builder2(js);
+    builder2.dispatch_wait(counter);
+    builder2.dispatch(
+        "job_c", [](cloud::JobArgs &) { std::cout << "job_c" << std::endl; });
+
+    cloud::JobBuilder builder4(js);
+    builder4.dispatch_wait(counter);
+    builder4.dispatch(
+        "job_d", [](cloud::JobArgs &) { std::cout << "job_d" << std::endl; });
+
+    js.spin_wait(builder4.extract_wait_counter().get_entry());
     js.spin_wait(builder3.extract_wait_counter().get_entry());
     js.emancipate();
 }
@@ -224,6 +258,10 @@ int main()
     {
         Timer t("job system");
         test_counter();
+    }
+    {
+        Timer t("job system counter test 2");
+        test_counter_2();
     }
     return 0;
 }

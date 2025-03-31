@@ -12,7 +12,7 @@ JobBuilder::JobBuilder(JobSystem &js)
     accumulate_counter_.set_entry(js.create_entry_counter());
 }
 
-JobBuilder::~JobBuilder() { js_.release_counter(wait_counter_.get_entry()); }
+JobBuilder::~JobBuilder() { wait_counter_.finish_submit_job(); }
 
 Counter JobBuilder::extract_wait_counter()
 {
@@ -43,6 +43,7 @@ void JobBuilder::dispatch_wait(const Counter &counter)
 {
     assert(wait_counter_.get_cnt() == 0);
     wait_counter_ = counter;
+
     disptach_empty_job();
 }
 
