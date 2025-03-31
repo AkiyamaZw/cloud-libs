@@ -181,7 +181,7 @@ void test_counter()
     cloud::JobSystem js(1);
     js.adopt();
 
-    cloud::Counter counter = cloud::Counter::create(js);
+    cloud::Counter counter = js.create_counter();
 
     cloud::JobBuilder builder(js);
     builder.dispatch("first_job1", [](cloud::JobArgs &) {
@@ -225,7 +225,7 @@ void test_counter_2()
 {
     cloud::JobSystem js(5);
     js.adopt();
-    cloud::Counter counter = cloud::Counter::create(js);
+    cloud::Counter counter = js.create_counter();
     cloud::JobBuilder builder(js);
     builder.dispatch(
         "job_a", [](cloud::JobArgs &) { std::cout << "job_a" << std::endl; });
@@ -248,8 +248,8 @@ void test_counter_2()
     builder4.dispatch(
         "job_d", [](cloud::JobArgs &) { std::cout << "job_d" << std::endl; });
 
-    js.spin_wait(builder4.extract_wait_counter().get_entry());
-    js.spin_wait(builder3.extract_wait_counter().get_entry());
+    js.spin_wait(builder4.extract_wait_counter());
+    js.spin_wait(builder3.extract_wait_counter());
     js.emancipate();
 }
 

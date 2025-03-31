@@ -53,14 +53,4 @@ static constexpr size_t MAX_JOB_COUNT = 16384;
 static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT is 16384");
 using JobQueue = StealableQueue<uint16_t, MAX_JOB_COUNT>;
 
-struct ICountable
-{
-    ICountable() {}
-    ~ICountable() { assert(cnt.load() == 0); }
-    std::atomic_uint16_t cnt{0};
-    uint16_t add_cnt(uint16_t i = 1) { return cnt.fetch_add(i); }
-    uint16_t sub_cnt(uint16_t i = 1) { return cnt.fetch_sub(i); }
-    void set_cnt(uint16_t i = 0) { cnt.store(i); }
-    uint16_t get_cnt() const { return cnt.load(); }
-};
 } // namespace cloud

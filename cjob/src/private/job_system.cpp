@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "worker_threads.h"
 #include "counter.h"
+#include "job_counter_entry.h"
 #include <iostream>
 
 namespace cloud
@@ -15,9 +16,9 @@ JobSystemExtension::JobSystemExtension(JobSystem *js)
 
 JobSystemExtension::~JobSystemExtension() { js_ = nullptr; }
 
-JobWaitListEntry *JobQueueProxy::pop_job(JobQueue &queue)
+JobWaitEntry *JobQueueProxy::pop_job(JobQueue &queue)
 {
-    JobWaitListEntry *entry = nullptr;
+    JobWaitEntry *entry = nullptr;
 
     active_jobs_.fetch_sub(1, std::memory_order_relaxed);
     auto index = queue.pop();
@@ -34,7 +35,7 @@ JobWaitListEntry *JobQueueProxy::pop_job(JobQueue &queue)
     return entry;
 }
 
-void JobQueueProxy::push_job(JobQueue &queue, JobWaitListEntry *job_pack)
+void JobQueueProxy::push_job(JobQueue &queue, JobWaitEntry *job_pack)
 {
     assert(job_pack != nullptr);
     // this means left 0 to invalid default.
@@ -46,9 +47,9 @@ void JobQueueProxy::push_job(JobQueue &queue, JobWaitListEntry *job_pack)
     }
 }
 
-JobWaitListEntry *JobQueueProxy::steal_job(JobQueue &queue)
+JobWaitEntry *JobQueueProxy::steal_job(JobQueue &queue)
 {
-    JobWaitListEntry *job_pkt{nullptr};
+    JobWaitEntry *job_pkt{nullptr};
     active_jobs_.fetch_sub(1, std::memory_order_relaxed);
     auto index = queue.steal();
     job_pkt = !index ? nullptr : js_->entry_pool_->at(index - 1);
@@ -63,9 +64,9 @@ JobWaitListEntry *JobQueueProxy::steal_job(JobQueue &queue)
     return job_pkt;
 }
 
-JobWaitListEntry *JobQueueProxy::steal(Worker &worker)
+JobWaitEntry *JobQueueProxy::steal(Worker &worker)
 {
-    JobWaitListEntry *job_pkt{nullptr};
+    JobWaitEntry *job_pkt{nullptr};
     do
     {
         assert(js_->workers_ != nullptr);
@@ -80,7 +81,6 @@ JobWaitListEntry *JobQueueProxy::steal(Worker &worker)
 
 JobSystem::JobSystem(uint32_t max_thread_count, uint32_t max_adopt_thread)
 {
-    job_pool_ = std::make_unique<JobPool>();
     counter_pool_ = std::make_unique<CounterPool>();
     entry_pool_ = std::make_unique<JobWaitListEntryPool>();
     queue_proxy_ = std::make_unique<JobQueueProxy>(this);
@@ -98,7 +98,6 @@ JobSystem::~JobSystem()
     delete workers_;
     entry_pool_.reset();
     counter_pool_.reset();
-    job_pool_.reset();
 }
 
 void JobSystem::shutdown()
@@ -127,7 +126,7 @@ void JobSystem::adopt() { workers_->attach(); }
 
 void JobSystem::emancipate() { workers_->detach(); }
 
-void JobSystem::run(JobWaitListEntry *job_pkt)
+void JobSystem::commit_job(JobWaitEntry *job_pkt)
 {
     auto worker = workers_->get_worker();
     if (job_pkt->job != nullptr && !job_pkt->job->is_empty())
@@ -140,38 +139,6 @@ void JobSystem::run(JobWaitListEntry *job_pkt)
         job_pkt->accumulate_counter->sub_cnt(1);
         try_signal(job_pkt->accumulate_counter);
     }
-}
-
-void JobSystem::wait_and_release(JobWaitListEntry *job_pkt)
-{
-    assert(job_pkt);
-    auto worker = workers_->get_worker();
-    assert(worker != nullptr);
-    do
-    {
-        if (!execute_job(*worker))
-        {
-            if (job_pkt->job->is_completed())
-            {
-                break;
-            }
-            // this section means the job is running in other processor
-            if (!job_pkt->job->is_completed() && !has_active_job() &&
-                is_active())
-            {
-                workers_->wait();
-            }
-        }
-    } while (!job_pkt->job->is_completed() && is_active());
-    release_job(job_pkt);
-}
-
-void JobSystem::run_and_wait(JobWaitListEntry *job_pkt)
-{
-    assert(job_pkt != nullptr);
-    run(job_pkt);
-    wait_and_release(job_pkt);
-    job_pkt = nullptr;
 }
 
 void JobSystem::try_signal(JobCounterEntry *counter)
@@ -192,15 +159,15 @@ void JobSystem::try_signal(JobCounterEntry *counter)
     try_dispatch(counter);
 }
 
-JobWaitListEntry *JobSystem::create_job_packet(const std::string &name,
-                                               JobFunc task,
-                                               JobCounterEntry *wait_counter,
-                                               JobCounterEntry *acc_counter)
+Counter JobSystem::create_counter() { return Counter(create_entry_counter()); }
+
+JobWaitEntry *JobSystem::create_job(const std::string &name,
+                                    JobFunc task,
+                                    JobCounterEntry *wait_counter,
+                                    JobCounterEntry *acc_counter)
 {
-    Job *job = job_pool_->get();
-    job->init(name, task);
-    JobWaitListEntry *entry = entry_pool_->get();
-    entry->job = job;
+    JobWaitEntry *entry = entry_pool_->get();
+    entry->job->init(name, task);
     entry->accumulate_counter = acc_counter;
     wait_counter->add_dep_jobs(entry);
     acc_counter->add_cnt();
@@ -227,6 +194,7 @@ void JobSystem::try_dispatch(JobCounterEntry *counter)
 {
     if (counter->get_cnt() != 0)
         return;
+
     counter->on_counter_signal();
     {
         std::lock_guard lock(counter->dep_jobs_lock_);
@@ -234,7 +202,7 @@ void JobSystem::try_dispatch(JobCounterEntry *counter)
         {
             auto pkt = counter->wait_job_list_.front();
             counter->wait_job_list_.pop_front();
-            run(pkt);
+            commit_job(pkt);
         }
     }
     release_counter(counter);
@@ -247,6 +215,11 @@ void JobSystem::spin_wait(JobCounterEntry *counter)
     {
         /* workers_->try_wake_up_all();*/
     }
+}
+
+void JobSystem::spin_wait(const Counter &counter)
+{
+    spin_wait(counter.get_entry());
 }
 
 uint32_t JobSystem::dispatch_group_count(uint32_t job_count,
@@ -263,9 +236,8 @@ uint32_t JobSystem::calc_core_num(uint32_t max_core_num) const
     return std::clamp(num_core - 1, 1u, max_core_num);
 }
 
-void JobSystem::release_job(JobWaitListEntry *job_pkt)
+void JobSystem::release_job(JobWaitEntry *job_pkt)
 {
-    job_pool_->release(job_pkt->job);
     entry_pool_->release(job_pkt);
 }
 

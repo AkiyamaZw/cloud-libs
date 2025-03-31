@@ -3,6 +3,7 @@
 #include <functional>
 #include "job_define.h"
 #include "job.h"
+#include "counter.h"
 
 namespace cloud::internal
 {
@@ -16,7 +17,7 @@ class WorkerThreads;
 struct Worker;
 class JobCounterEntry;
 class JobSystem;
-struct JobWaitListEntry;
+struct JobWaitEntry;
 
 class JobSystemExtension
 {
@@ -34,10 +35,10 @@ class JobQueueProxy : public JobSystemExtension
   public:
     using Super::JobSystemExtension;
 
-    JobWaitListEntry *pop_job(JobQueue &queue);
-    void push_job(JobQueue &queue, JobWaitListEntry *job_pack);
-    JobWaitListEntry *steal_job(JobQueue &queue);
-    JobWaitListEntry *steal(Worker &worker);
+    JobWaitEntry *pop_job(JobQueue &queue);
+    void push_job(JobQueue &queue, JobWaitEntry *job_pack);
+    JobWaitEntry *steal_job(JobQueue &queue);
+    JobWaitEntry *steal(Worker &worker);
     int32_t get_active_jobs() const { return active_jobs_.load(); };
 
   private:
@@ -51,7 +52,7 @@ class JobSystemExporter : public JobSystemExtension
     void export_grapviz(const std::string &path);
 
   private:
-    std::string counter_grapviz(const JobWaitListEntry *counter);
+    std::string counter_grapviz(const JobWaitEntry *counter);
     std::string job_graphviz(const Job &job) const;
 };
 
@@ -71,41 +72,35 @@ class JobSystem final
     void emancipate();
 
     // wait counter
-    JobWaitListEntry *create_job_packet(const std::string &name,
-                                        JobFunc task,
-                                        JobCounterEntry *wait_counter,
-                                        JobCounterEntry *acc_counter);
+    JobWaitEntry *create_job(const std::string &name,
+                             JobFunc task,
+                             JobCounterEntry *wait_counter,
+                             JobCounterEntry *acc_counter);
     JobCounterEntry *create_entry_counter();
 
-    void try_dispatch(JobCounterEntry *counter);
     void spin_wait(JobCounterEntry *counter);
+    void spin_wait(const Counter &counter);
     void release_counter(JobCounterEntry *counter);
     void try_signal(JobCounterEntry *counter);
+    Counter create_counter();
 
   protected:
     uint32_t dispatch_group_count(uint32_t job_count,
                                   uint32_t group_size) const;
     uint32_t calc_core_num(uint32_t core_num) const;
 
-    void run(JobWaitListEntry *job_pkt);
-    void release_job(JobWaitListEntry *job_pkt);
-
+    void commit_job(JobWaitEntry *job_pkt);
+    void release_job(JobWaitEntry *job_pkt);
     bool execute_job(Worker &worker);
-
-    void wait_and_release(JobWaitListEntry *job_pkt);
-    void run_and_wait(JobWaitListEntry *job_pkt);
-
-  public:
-    using JobPool = internal::ResourcePool<Job>;
-    std::unique_ptr<JobPool> job_pool_{nullptr};
-    using CounterPool = internal::ResourcePool<JobCounterEntry>;
-    std::unique_ptr<CounterPool> counter_pool_{nullptr};
-    using JobWaitListEntryPool = internal::ResourcePool<JobWaitListEntry>;
-    std::unique_ptr<JobWaitListEntryPool> entry_pool_{nullptr};
+    void try_dispatch(JobCounterEntry *counter);
 
   private:
     friend class JobQueueProxy;
     WorkerThreads *workers_{nullptr};
     std::unique_ptr<JobQueueProxy> queue_proxy_;
+    using CounterPool = internal::ResourcePool<JobCounterEntry>;
+    std::unique_ptr<CounterPool> counter_pool_{nullptr};
+    using JobWaitListEntryPool = internal::ResourcePool<JobWaitEntry>;
+    std::unique_ptr<JobWaitListEntryPool> entry_pool_{nullptr};
 };
 } // namespace cloud

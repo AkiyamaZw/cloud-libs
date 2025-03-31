@@ -16,8 +16,6 @@ JobBuilder::~JobBuilder() { wait_counter_.finish_submit_job(); }
 
 Counter JobBuilder::extract_wait_counter()
 {
-    assert(accumulate_counter_.is_valid());
-
     wait_counter_.finish_submit_job();
 
     return accumulate_counter_;
@@ -25,8 +23,7 @@ Counter JobBuilder::extract_wait_counter()
 
 void JobBuilder::dispatch(const std::string &name, JobFunc func)
 {
-    assert(wait_counter_.is_valid());
-    js_.create_job_packet(
+    js_.create_job(
         name, func, wait_counter_.get_entry(), accumulate_counter_.get_entry());
     js_.try_signal(wait_counter_.get_entry());
 }
@@ -35,7 +32,7 @@ void JobBuilder::dispatch_fence_explicitly()
 {
     wait_counter_.finish_submit_job();
     wait_counter_ = accumulate_counter_;
-    accumulate_counter_ = Counter::create(js_);
+    accumulate_counter_ = js_.create_counter();
     disptach_empty_job();
 }
 
