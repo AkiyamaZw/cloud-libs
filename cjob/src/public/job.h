@@ -2,7 +2,7 @@
 #include "job_define.h"
 #include "resource_pool.h"
 
-namespace cloud
+namespace cloud::js
 {
 
 class Job
@@ -45,7 +45,7 @@ class Job
 
 class JobCounterEntry;
 
-struct JobWaitEntry : public internal::IPoolableObject
+struct JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 {
 
     JobWaitEntry() { job = new Job(); }
@@ -61,4 +61,4 @@ struct JobWaitEntry : public internal::IPoolableObject
     Job *job{nullptr};
 };
 
-} // namespace cloud
+} // namespace cloud::js

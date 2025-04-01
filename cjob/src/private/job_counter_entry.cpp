@@ -1,8 +1,17 @@
 #include "job_counter_entry.h"
 
-namespace cloud
+namespace cloud::js
 {
-JobCounterEntry::JobCounterEntry() {}
+JobCounterEntry::JobCounterEntry()
+{
+    ref_counter_.set_signal_callback(0, [this](Countable &cc) {
+        if (ready_to_release())
+        {
+            on_counter_destroyed();
+            pool_->release(this);
+        }
+    });
+}
 
 JobCounterEntry::~JobCounterEntry()
 {
@@ -26,25 +35,48 @@ void JobCounterEntry::add_dep_counters(JobCounterEntry *counter)
 
 void JobCounterEntry::init()
 {
-    assert(state_.load() == State::Released);
-    state_.store(State::Setupped);
+    set_state(State::Setupped);
+    ref_counter_.set_cnt(0);
 }
 
 void JobCounterEntry::reset()
 {
-    assert(state_.load() != State::Released);
+    set_state(State::Released);
     wait_job_list_.clear();
-    state_.store(State::Released);
-    set_cnt(0);
+    wait_counter_.set_cnt(0);
     wait_counter_list_.clear();
+    ref_counter_.set_cnt(0);
 }
 
 bool JobCounterEntry::ready_to_release() const
 {
-    return state_.load() == State::FinishAddDepend && get_cnt() == 0;
+    return wait_counter_.get_cnt() == 0 && ref_counter_.get_cnt() == 0;
 }
 
 void JobCounterEntry::on_counter_signal() {}
 
 void JobCounterEntry::on_counter_destroyed() {}
-} // namespace cloud
+void JobCounterEntry::set_state(State state)
+{
+    if (state_.load() == State::Released && state == State::FinishAddDepend)
+    {
+        assert(false);
+    }
+    if (state_.load() != State::Released && state == State::Setupped)
+    {
+        assert(false);
+    }
+    if (state_.load() == State::Released && state == State::Released)
+    {
+        assert(false);
+    }
+    state_.store(state);
+}
+
+void JobCounterEntry::accumulate() { wait_counter_.add_cnt(1); }
+
+void JobCounterEntry::signal() { wait_counter_.sub_cnt(1); }
+
+uint32_t JobCounterEntry::get_waits() const { return wait_counter_.get_cnt(); }
+
+} // namespace cloud::js

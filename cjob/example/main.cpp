@@ -5,6 +5,7 @@
 #include <thread>
 #include "job_builder.h"
 
+using namespace cloud::js;
 class Timer
 {
   public:
@@ -38,78 +39,183 @@ void massive_job()
 }
 void test_counter()
 {
-    cloud::JobSystem js(1);
+    JobSystem js(1);
     js.adopt();
 
-    cloud::Counter counter = js.create_counter();
+    {
+        Counter counter(js);
+        JobBuilder builder(js);
+        builder.dispatch("first_job1", [](JobArgs &) {
+            std::cout << "first_job1" << std::endl;
+        });
+        builder.dispatch("first_job2", [](JobArgs &) {
+            std::cout << "first_job2" << std::endl;
+        });
+        builder.dispatch("first_job3", [](JobArgs &) {
+            std::cout << "first_job3" << std::endl;
+        });
+        counter += builder.extract_wait_counter();
 
-    cloud::JobBuilder builder(js);
-    builder.dispatch("first_job1", [](cloud::JobArgs &) {
-        std::cout << "first_job1" << std::endl;
-    });
-    builder.dispatch("first_job2", [](cloud::JobArgs &) {
-        std::cout << "first_job2" << std::endl;
-    });
-    builder.dispatch("first_job3", [](cloud::JobArgs &) {
-        std::cout << "first_job3" << std::endl;
-    });
-    counter += builder.extract_wait_counter();
+        JobBuilder builder2(js);
+        builder2.dispatch("second_job", [](JobArgs &) {
+            std::cout << "second_job" << std::endl;
+        });
+        counter += builder2.extract_wait_counter();
 
-    cloud::JobBuilder builder2(js);
-    builder2.dispatch("second_job", [](cloud::JobArgs &) {
-        std::cout << "second_job" << std::endl;
-    });
-    counter += builder2.extract_wait_counter();
+        JobBuilder builder3(js);
+        builder3.dispatch_wait(counter);
+        builder3.dispatch("third_job", [](JobArgs &) {
+            std::cout << "third_job" << std::endl;
+        });
+        builder3.dispatch_fence_explicitly();
+        builder3.dispatch("third_job2", [](JobArgs &) {
+            std::cout << "third_job2" << std::endl;
+        });
+        builder3.dispatch_fence_explicitly();
+        builder3.dispatch("third_job3", [](JobArgs &) {
+            std::cout << "third_job3" << std::endl;
+        });
+        // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
 
-    cloud::JobBuilder builder3(js);
-    builder3.dispatch_wait(counter);
-    builder3.dispatch("third_job", [](cloud::JobArgs &) {
-        std::cout << "third_job" << std::endl;
-    });
-    builder3.dispatch_fence_explicitly();
-    builder3.dispatch("third_job2", [](cloud::JobArgs &) {
-        std::cout << "third_job2" << std::endl;
-    });
-    builder3.dispatch_fence_explicitly();
-    builder3.dispatch("third_job3", [](cloud::JobArgs &) {
-        std::cout << "third_job3" << std::endl;
-    });
-    // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
-
-    js.spin_wait(counter.get_entry());
-    js.spin_wait(builder3.extract_wait_counter().get_entry());
+        js.spin_wait(counter.get_entry());
+        js.spin_wait(builder3.extract_wait_counter().get_entry());
+    }
     js.emancipate();
 }
 
 void test_counter_2()
 {
-    cloud::JobSystem js(5);
+    JobSystem js(5);
     js.adopt();
-    cloud::Counter counter = js.create_counter();
-    cloud::JobBuilder builder(js);
-    builder.dispatch(
-        "job_a", [](cloud::JobArgs &) { std::cout << "job_a" << std::endl; });
-    builder.dispatch(
-        "job_b", [](cloud::JobArgs &) { std::cout << "job_b" << std::endl; });
-    counter += builder.extract_wait_counter();
+    Counter counter(js);
+    {
 
-    cloud::JobBuilder builder3(js);
-    builder3.dispatch(
-        "job_e", [](cloud::JobArgs &) { std::cout << "job_e" << std::endl; });
-    counter += builder3.extract_wait_counter();
+        JobBuilder builder(js);
+        builder.dispatch("job_a",
+                         [](JobArgs &) { std::cout << "job_a" << std::endl; });
+        builder.dispatch("job_b",
+                         [](JobArgs &) { std::cout << "job_b" << std::endl; });
+        counter += builder.extract_wait_counter();
 
-    cloud::JobBuilder builder2(js);
-    builder2.dispatch_wait(counter);
-    builder2.dispatch(
-        "job_c", [](cloud::JobArgs &) { std::cout << "job_c" << std::endl; });
+        JobBuilder builder3(js);
+        builder3.dispatch("job_e",
+                          [](JobArgs &) { std::cout << "job_e" << std::endl; });
+        counter += builder3.extract_wait_counter();
 
-    cloud::JobBuilder builder4(js);
-    builder4.dispatch_wait(counter);
-    builder4.dispatch(
-        "job_d", [](cloud::JobArgs &) { std::cout << "job_d" << std::endl; });
+        JobBuilder builder2(js);
+        builder2.dispatch_wait(counter);
+        builder2.dispatch("job_c",
+                          [](JobArgs &) { std::cout << "job_c" << std::endl; });
 
-    js.spin_wait(builder4.extract_wait_counter());
-    js.spin_wait(builder3.extract_wait_counter());
+        JobBuilder builder4(js);
+        builder4.dispatch_wait(counter);
+        builder4.dispatch("job_d",
+                          [](JobArgs &) { std::cout << "job_d" << std::endl; });
+
+        js.spin_wait(builder4.extract_wait_counter());
+        js.spin_wait(builder3.extract_wait_counter());
+    }
+    js.emancipate();
+}
+
+struct EngineGlobal
+{
+    EngineGlobal(JobSystem &in_js)
+        : js(in_js)
+    {
+    }
+    JobSystem &js;
+    bool finished = false;
+    std::atomic<uint64_t> frame_index{0};
+    std::mutex render_mutex;
+    std::condition_variable render_signal;
+    std::mutex logic_mutex;
+    std::condition_variable logic_signal;
+
+    void wait_render(uint64_t index)
+    {
+        if (index == 0)
+            return;
+        std::unique_lock lock(render_mutex);
+        render_signal.wait(lock);
+    }
+    void dispatch_logic(uint64_t index) { logic_signal.notify_all(); }
+    void wait_logic()
+    {
+        std::unique_lock lock(logic_mutex);
+        logic_signal.wait(lock);
+    }
+    void disptach_render() { render_signal.notify_all(); }
+};
+
+void dummy_logic(JobSystem &js, EngineGlobal &global)
+{
+    js.adopt();
+    while (!global.finished)
+    {
+        global.wait_render(global.frame_index);
+        global.frame_index.fetch_add(1);
+        std::cout << "logic thread_id: " << std::this_thread::get_id()
+                  << "index: " << global.frame_index.load() << std::endl;
+        JobBuilder builder(js);
+        builder.dispatch("ecs_update", [](JobArgs &) {
+            std::cout << "ecs_update" << std::endl;
+        });
+        builder.dispatch_fence_explicitly();
+        builder.dispatch("logic_1", [](JobArgs &) {
+            std::cout << "scene_update_start" << std::endl;
+        });
+        builder.dispatch("physcal_update", [](JobArgs &) {
+            std::cout << "physcal_update" << std::endl;
+        });
+        builder.dispatch_fence_explicitly();
+        builder.dispatch("visible_udpate", [](JobArgs &) {
+            std::cout << "visible_udpate" << std::endl;
+        });
+        builder.dispatch_fence_explicitly();
+        builder.dispatch("exract",
+                         [](JobArgs &) { std::cout << "exract" << std::endl; });
+        js.spin_wait(builder.extract_wait_counter());
+        global.dispatch_logic(global.frame_index.load());
+    }
+    js.emancipate();
+}
+
+void dummy_render(JobSystem &js, EngineGlobal &global)
+{
+    js.adopt();
+    std::cout << "render thread_id: " << std::this_thread::get_id()
+              << std::endl;
+    while (!global.finished)
+    {
+        global.wait_logic();
+        JobBuilder builder(js);
+        builder.dispatch("parse exract", [](JobArgs &) {
+            std::cout << "parse exract" << std::endl;
+        });
+        builder.dispatch_fence_explicitly();
+        builder.dispatch("prepare rhi", [](JobArgs &) {
+            std::cout << "prepare_rhi" << std::endl;
+        });
+        builder.dispatch_fence_explicitly();
+        builder.dispatch("render",
+                         [](JobArgs &) { std::cout << "render" << std::endl; });
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+        js.spin_wait(builder.extract_wait_counter());
+        global.disptach_render();
+    }
+    js.emancipate();
+}
+
+void dummy_multithread()
+{
+    JobSystem js(5);
+    EngineGlobal global(js);
+    js.adopt();
+    std::thread logic_thread(dummy_logic, std::ref(js), std::ref(global));
+    std::thread render_thread(dummy_render, std::ref(js), std::ref(global));
+    logic_thread.join();
+    render_thread.join();
     js.emancipate();
 }
 
@@ -119,9 +225,13 @@ int main()
         Timer t("job system");
         test_counter();
     }
-    {
-        Timer t("job system counter test 2");
-        test_counter_2();
-    }
+    //{
+    //    Timer t("job system counter test 2");
+    //    test_counter_2();
+    //}
+    //{
+    //    Timer t("dummy_multithread");
+    //    dummy_multithread();
+    //}
     return 0;
 }

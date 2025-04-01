@@ -6,7 +6,7 @@
 #include "job_counter_entry.h"
 #include <iostream>
 
-namespace cloud
+namespace cloud::js
 {
 JobSystemExtension::JobSystemExtension(JobSystem *js)
     : js_(js)
@@ -136,14 +136,14 @@ void JobSystem::commit_job(JobWaitEntry *job_pkt)
     else
     {
         // cause empty job, no need to push_job
-        job_pkt->accumulate_counter->sub_cnt(1);
+        job_pkt->accumulate_counter->signal();
         try_signal(job_pkt->accumulate_counter);
     }
 }
 
 void JobSystem::try_signal(JobCounterEntry *counter)
 {
-    if (counter->get_cnt() != 0)
+    if (counter->get_waits() != 0)
         return;
     // signal other counters
     {
@@ -152,14 +152,12 @@ void JobSystem::try_signal(JobCounterEntry *counter)
         {
             auto entry = counter->wait_counter_list_.front();
             counter->wait_counter_list_.pop_front();
-            entry->sub_cnt();
+            entry->signal();
             try_dispatch(entry);
         }
     }
     try_dispatch(counter);
 }
-
-Counter JobSystem::create_counter() { return Counter(create_entry_counter()); }
 
 JobWaitEntry *JobSystem::create_job(const std::string &name,
                                     JobFunc task,
@@ -170,7 +168,7 @@ JobWaitEntry *JobSystem::create_job(const std::string &name,
     entry->job->init(name, task);
     entry->accumulate_counter = acc_counter;
     wait_counter->add_dep_jobs(entry);
-    acc_counter->add_cnt();
+    acc_counter->accumulate();
     return entry;
 }
 
@@ -185,6 +183,7 @@ void JobSystem::release_counter(JobCounterEntry *counter)
 {
     if (counter->ready_to_release())
     {
+        std::cout << counter_pool_->debug_info() << std::endl;
         counter->on_counter_destroyed();
         counter_pool_->release(counter);
     }
@@ -192,7 +191,7 @@ void JobSystem::release_counter(JobCounterEntry *counter)
 
 void JobSystem::try_dispatch(JobCounterEntry *counter)
 {
-    if (counter->get_cnt() != 0)
+    if (counter->get_waits() != 0)
         return;
 
     counter->on_counter_signal();
@@ -211,7 +210,7 @@ void JobSystem::try_dispatch(JobCounterEntry *counter)
 void JobSystem::spin_wait(JobCounterEntry *counter)
 {
     // just work like spin lock
-    while (counter->get_cnt() != 0)
+    while (counter->get_waits() != 0)
     {
         /* workers_->try_wake_up_all();*/
     }
@@ -258,11 +257,11 @@ bool JobSystem::execute_job(Worker &worker)
         JobArgs args{};
         job_pkt->job->execute(args);
 
-        job_pkt->accumulate_counter->sub_cnt(1);
+        job_pkt->accumulate_counter->signal();
         try_signal(job_pkt->accumulate_counter);
         release_job(job_pkt);
     }
     return valid_job;
 }
 
-} // namespace cloud
+} // namespace cloud::js

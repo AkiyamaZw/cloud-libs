@@ -1,14 +1,31 @@
 #include "counter.h"
 #include "job_counter_entry.h"
+#include "job_system.h"
+#include <iostream>
 
-namespace cloud
+namespace cloud::js
 {
 
-Counter::Counter(JobCounterEntry *entry) { entry_ = entry; }
+Counter::Counter(JobSystem &js)
+{
+    entry_ = js.create_entry_counter();
+    entry_->ref_counter_.add_cnt();
+}
 
-Counter::~Counter() {}
+Counter::~Counter()
+{
+    if (entry_)
+    {
+        finish_submit_job();
+        entry_->ref_counter_.sub_cnt();
+    }
+}
 
-Counter::Counter(const Counter &rhs) { entry_ = rhs.entry_; }
+Counter::Counter(const Counter &rhs)
+{
+    entry_ = rhs.entry_;
+    entry_->ref_counter_.add_cnt();
+}
 
 Counter::Counter(Counter &&rhs) noexcept
 {
@@ -21,7 +38,9 @@ Counter &Counter::operator=(const Counter &rhs)
     if (&rhs == this || rhs.entry_ == entry_)
         return *this;
 
+    entry_->ref_counter_.sub_cnt();
     entry_ = rhs.entry_;
+    entry_->ref_counter_.add_cnt();
     return *this;
 }
 
@@ -29,6 +48,7 @@ Counter &Counter::operator=(Counter &&rhs)
 {
     if (&rhs == this || rhs.entry_ == entry_)
         return *this;
+    entry_->ref_counter_.sub_cnt();
     entry_ = rhs.entry_;
     rhs.entry_ = nullptr;
     return *this;
@@ -37,7 +57,7 @@ Counter &Counter::operator=(Counter &&rhs)
 Counter &Counter::operator+=(const Counter &rhs)
 {
     // this means wait rhs to finish
-    entry_->add_cnt(1);
+    entry_->accumulate();
     rhs.entry_->add_dep_counters(entry_);
     return *this;
 }
@@ -49,10 +69,10 @@ bool Counter::operator==(const Counter &rhs) const
 
 void Counter::finish_submit_job()
 {
-    entry_->state_.store(JobCounterEntry::State::FinishAddDepend);
+    entry_->set_state(JobCounterEntry::State::FinishAddDepend);
 }
 
-uint32_t Counter::get_cnt() const { return entry_->get_cnt(); }
+uint32_t Counter::get_cnt() const { return entry_->get_waits(); }
 
 // void RunContext::export_grapviz(const std::string &path)
 // {
@@ -146,4 +166,4 @@ uint32_t Counter::get_cnt() const { return entry_->get_cnt(); }
 //     return s;
 // }
 
-} // namespace cloud
+} // namespace cloud::js

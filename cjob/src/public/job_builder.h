@@ -1,7 +1,7 @@
 #pragma once
 #include "counter.h"
 
-namespace cloud
+namespace cloud::js
 {
 class JobSystem;
 class JobBuilder
@@ -27,4 +27,4 @@ class JobBuilder
     Counter wait_counter_;
     Counter accumulate_counter_;
 };
-} // namespace cloud
+} // namespace cloud::js

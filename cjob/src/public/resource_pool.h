@@ -1,24 +1,41 @@
 #pragma once
 #include "job_define.h"
 
-namespace cloud::internal
+namespace cloud::js::internal
 {
 
+template <typename T>
+class ResourcePool;
+
+template <typename T>
 class IPoolableObject
 {
   public:
+    enum class ResourceState
+    {
+        RELEASED,
+        USABLE
+    };
     uint32_t get_index() const { return index_; };
     void set_index(uint32_t index) { index_ = index; }
     virtual void reset() = 0;
+    void set_resource_state(ResourceState state) { state_ = state; };
+    bool is_released() const { return state_ == ResourceState::RELEASED; }
+    void mark(ResourceState state) { state_ = state; }
+
+  protected:
+    ResourcePool<T> *pool_{nullptr};
+    friend class ResourcePool<T>;
 
   private:
     uint32_t index_;
+    ResourceState state_{ResourceState::RELEASED};
 };
 
 template <typename T>
 class ResourcePool
 {
-    static_assert(std::is_base_of<IPoolableObject, T>::value,
+    static_assert(std::is_base_of<IPoolableObject<T>, T>::value,
                   "pooled object must inheriet from IPoolableObject");
 
   public:
@@ -28,6 +45,13 @@ class ResourcePool
     T *get();
     T *at(uint32_t index);
     void release(T *t);
+
+    std::string debug_info() const
+    {
+        return std::format("resource count: {}, freed: {}",
+                           resource_pool_.size(),
+                           free_list_.size());
+    };
 
   private:
     std::mutex mutex_;
@@ -52,8 +76,11 @@ inline T *ResourcePool<T>::get()
         ret = new T();
         ret->set_index(resource_pool_.size());
         resource_pool_.push_back(ret);
+        ret->pool_ = this;
     }
+    assert(ret->is_released());
 
+    ret->mark(IPoolableObject<T>::ResourceState::USABLE);
     return ret;
 }
 
@@ -70,8 +97,10 @@ inline void ResourcePool<T>::release(T *t)
 {
     std::lock_guard lock(mutex_);
     assert(t != nullptr);
+    assert(!t->is_released());
     t->reset();
     free_list_.push_back(t->get_index());
+    t->mark(IPoolableObject<T>::ResourceState::RELEASED);
 }
 
 template <typename T>
@@ -89,4 +118,4 @@ inline ResourcePool<T>::~ResourcePool()
 
 // ↑ ↑ ↑ implement ↑ ↑ ↑
 
-} // namespace cloud::internal
+} // namespace cloud::js::internal

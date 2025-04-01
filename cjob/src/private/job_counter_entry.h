@@ -3,13 +3,11 @@
 #include "icounter.h"
 #include "resource_pool.h"
 
-namespace cloud
+namespace cloud::js
 {
 struct JobWaitEntry;
 
-class JobCounterEntry
-    : public internal::IPoolableObject
-    , public ICountable
+class JobCounterEntry : public internal::IPoolableObject<JobCounterEntry>
 {
   public:
     enum class State
@@ -42,6 +40,18 @@ class JobCounterEntry
     /* event callback */
     void on_counter_signal();
     void on_counter_destroyed();
+    /* set state and do some state check */
+    void set_state(State state);
+    /* add wait cnt */
+    void accumulate();
+    /* sub wait cnt */
+    void signal();
+    /* get wait counts */
+    uint32_t get_waits() const;
+
+  public:
+    /* ref counter */
+    Countable ref_counter_;
 
     /* wait_job_list records [job, accumulate_counter] collection, which
     will be add to workers queue while cnt go to 0. */
@@ -52,7 +62,11 @@ class JobCounterEntry
     std::mutex dep_counter_lock_;
     std::deque<JobCounterEntry *> wait_counter_list_;
 
+  private:
     /* just the state of counter.*/
     std::atomic<State> state_{State::Released};
+
+    /* mininal counter */
+    Countable wait_counter_;
 };
-} // namespace cloud
+} // namespace cloud::js

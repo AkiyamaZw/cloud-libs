@@ -3,7 +3,7 @@
 #include <cassert>
 #include <stdlib.h>
 
-namespace cloud
+namespace cloud::js
 {
 WorkerThreads::WorkerThreads() {}
 
@@ -164,4 +164,4 @@ void WorkerThreads::wait()
     wake_condition.wait(lock);
 }
 
-} // namespace cloud
+} // namespace cloud::js

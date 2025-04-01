@@ -1,15 +1,13 @@
 #include "job_builder.h"
 #include "job_system.h"
 
-namespace cloud
+namespace cloud::js
 {
 JobBuilder::JobBuilder(JobSystem &js)
     : js_(js)
-    , wait_counter_(nullptr)
-    , accumulate_counter_(nullptr)
+    , wait_counter_(js)
+    , accumulate_counter_(js)
 {
-    wait_counter_.set_entry(js.create_entry_counter());
-    accumulate_counter_.set_entry(js.create_entry_counter());
 }
 
 JobBuilder::~JobBuilder() { wait_counter_.finish_submit_job(); }
@@ -32,7 +30,7 @@ void JobBuilder::dispatch_fence_explicitly()
 {
     wait_counter_.finish_submit_job();
     wait_counter_ = accumulate_counter_;
-    accumulate_counter_ = js_.create_counter();
+    accumulate_counter_ = Counter(js_);
     disptach_empty_job();
 }
 
@@ -46,4 +44,4 @@ void JobBuilder::dispatch_wait(const Counter &counter)
 
 void JobBuilder::disptach_empty_job() { dispatch("empty job", nullptr); }
 
-} // namespace cloud
+} // namespace cloud::js

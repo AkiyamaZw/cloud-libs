@@ -1,14 +1,14 @@
 #pragma once
 #include "job_define.h"
 
-namespace cloud
+namespace cloud::js
 {
 class JobCounterEntry;
-
+class JobSystem;
 class Counter
 {
   public:
-    Counter(JobCounterEntry *entry);
+    Counter(JobSystem &js);
     ~Counter();
     Counter(const Counter &rhs);
     Counter(Counter &&rhs) noexcept;
@@ -26,4 +26,4 @@ class Counter
     JobCounterEntry *entry_{nullptr};
 };
 
-} // namespace cloud
+} // namespace cloud::js

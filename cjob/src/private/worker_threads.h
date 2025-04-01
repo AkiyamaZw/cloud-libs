@@ -10,7 +10,7 @@
 #include <random>
 #include "job_define.h"
 
-namespace cloud
+namespace cloud::js
 {
 struct Job;
 
@@ -63,4 +63,4 @@ class WorkerThreads
     std::mt19937 rand_engine_;
     std::uniform_int_distribution<int> rand_generator_;
 };
-} // namespace cloud
+} // namespace cloud::js

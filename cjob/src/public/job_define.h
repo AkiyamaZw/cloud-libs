@@ -8,8 +8,9 @@
 #include <vector>
 #include <memory>
 #include "stealable_queue.h"
+#include <format>
 
-namespace cloud
+namespace cloud::js
 {
 struct JobArgs;
 using JobFunc = std::function<void(JobArgs &)>;
@@ -53,4 +54,4 @@ static constexpr size_t MAX_JOB_COUNT = 16384;
 static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT is 16384");
 using JobQueue = StealableQueue<uint16_t, MAX_JOB_COUNT>;
 
-} // namespace cloud
+} // namespace cloud::js

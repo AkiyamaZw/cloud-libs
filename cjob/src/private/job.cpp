@@ -1,5 +1,6 @@
 #include "job.h"
-namespace cloud
+
+namespace cloud::js
 {
 
 Job::~Job() {}
@@ -41,4 +42,4 @@ void Job::reset()
     task_ = nullptr;
     state_.store(State::Empty);
 }
-} // namespace cloud
+} // namespace cloud::js

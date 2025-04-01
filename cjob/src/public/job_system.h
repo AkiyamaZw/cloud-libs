@@ -5,13 +5,13 @@
 #include "job.h"
 #include "counter.h"
 
-namespace cloud::internal
+namespace cloud::js::internal
 {
 template <typename T>
 class ResourcePool;
 }
 
-namespace cloud
+namespace cloud::js
 {
 class WorkerThreads;
 struct Worker;
@@ -82,7 +82,6 @@ class JobSystem final
     void spin_wait(const Counter &counter);
     void release_counter(JobCounterEntry *counter);
     void try_signal(JobCounterEntry *counter);
-    Counter create_counter();
 
   protected:
     uint32_t dispatch_group_count(uint32_t job_count,
@@ -103,4 +102,4 @@ class JobSystem final
     using JobWaitListEntryPool = internal::ResourcePool<JobWaitEntry>;
     std::unique_ptr<JobWaitListEntryPool> entry_pool_{nullptr};
 };
-} // namespace cloud
+} // namespace cloud::js
