@@ -1,4 +1,5 @@
 #include "job.h"
+#include "job_counter_entry.h"
 
 namespace cloud::js
 {
@@ -41,5 +42,21 @@ void Job::reset()
     name_ = "Unsetup";
     task_ = nullptr;
     state_.store(State::Empty);
+}
+
+void JobWaitEntry::init(const std::string &name,
+                        JobFunc task,
+                        JobCounterEntry *acc_counter)
+{
+    job.init(name, task);
+    accumulate_counter = acc_counter;
+    accumulate_counter->add_ref();
+}
+
+void JobWaitEntry::reset()
+{
+    JobCounterEntry::sub_ref_and_try_release(accumulate_counter);
+    accumulate_counter = nullptr;
+    job.reset();
 }
 } // namespace cloud::js

@@ -90,8 +90,9 @@ class JobSystem final
 
     void commit_job(JobWaitEntry *job_pkt);
     void release_job(JobWaitEntry *job_pkt);
-    bool execute_job(Worker &worker);
     void try_dispatch(JobCounterEntry *counter);
+    bool execute_job(Worker &worker);
+    void after_job_execute(JobWaitEntry *counter);
 
   private:
     friend class JobQueueProxy;

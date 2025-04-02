@@ -2,7 +2,10 @@
 
 namespace cloud::js
 {
-JobCounterEntry::JobCounterEntry() {}
+JobCounterEntry::JobCounterEntry()
+    : internal::CountablePoolableObject<JobCounterEntry>()
+{
+}
 
 JobCounterEntry::~JobCounterEntry()
 {

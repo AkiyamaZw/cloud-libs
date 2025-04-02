@@ -4,7 +4,12 @@
 
 namespace cloud::js::internal
 {
-
+enum class ResourceState
+{
+    UNKOWN,
+    RELEASED,
+    USABLE
+};
 template <typename T>
 class ResourcePool;
 
@@ -12,17 +17,15 @@ template <typename T>
 class IPoolableObject
 {
   public:
-    enum class ResourceState
-    {
-        RELEASED,
-        USABLE
-    };
     uint32_t get_index() const { return index_; };
     void set_index(uint32_t index) { index_ = index; }
     virtual void reset() = 0;
-    void set_resource_state(ResourceState state) { state_ = state; };
-    bool is_released() const { return state_ == ResourceState::RELEASED; }
-    void mark(ResourceState state) { state_ = state; }
+    void set_resource_state(ResourceState state) { res_state_.store(state); };
+    bool is_released() const
+    {
+        return res_state_.load() == ResourceState::RELEASED;
+    }
+    void mark(ResourceState state) { res_state_ = state; }
 
   protected:
     ResourcePool<T> *pool_{nullptr};
@@ -30,14 +33,14 @@ class IPoolableObject
 
   private:
     uint32_t index_;
-    ResourceState state_{ResourceState::RELEASED};
+    std::atomic<ResourceState> res_state_{ResourceState::RELEASED};
 };
 
 template <typename T>
 class CountablePoolableObject : public IPoolableObject<T>
 {
   public:
-    void reset() { ref_counter_.set_cnt(0); }
+    void reset() override { ref_counter_.set_cnt(0); }
     void add_ref() { ref_counter_.add_cnt(); }
     static void sub_ref_and_try_release(T *obj)
     {
@@ -101,7 +104,7 @@ inline T *ResourcePool<T>::get()
     }
     assert(ret->is_released());
 
-    ret->mark(IPoolableObject<T>::ResourceState::USABLE);
+    ret->mark(ResourceState::USABLE);
     return ret;
 }
 
@@ -121,7 +124,7 @@ inline void ResourcePool<T>::release(T *t)
     assert(!t->is_released());
     t->reset();
     free_list_.push_back(t->get_index());
-    t->mark(IPoolableObject<T>::ResourceState::RELEASED);
+    t->mark(ResourceState::RELEASED);
 }
 
 template <typename T>

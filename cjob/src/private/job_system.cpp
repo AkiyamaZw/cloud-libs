@@ -129,15 +129,14 @@ void JobSystem::emancipate() { workers_->detach(); }
 void JobSystem::commit_job(JobWaitEntry *job_pkt)
 {
     auto worker = workers_->get_worker();
-    if (job_pkt->job != nullptr && !job_pkt->job->is_empty())
+    if (!job_pkt->job.is_empty())
     {
         queue_proxy_->push_job(worker->job_queue, job_pkt);
     }
     else
     {
         // cause empty job, no need to push_job
-        job_pkt->accumulate_counter->signal();
-        try_signal(job_pkt->accumulate_counter);
+        after_job_execute(job_pkt);
     }
 }
 
@@ -165,8 +164,7 @@ JobWaitEntry *JobSystem::create_job(const std::string &name,
                                     JobCounterEntry *acc_counter)
 {
     JobWaitEntry *entry = entry_pool_->get();
-    entry->job->init(name, task);
-    entry->accumulate_counter = acc_counter;
+    entry->init(name, task, acc_counter);
     wait_counter->add_dep_jobs(entry);
     acc_counter->accumulate();
     return entry;
@@ -204,7 +202,7 @@ void JobSystem::try_dispatch(JobCounterEntry *counter)
             commit_job(pkt);
         }
     }
-    release_counter(counter);
+    /*release_counter(counter);*/
 }
 
 void JobSystem::spin_wait(JobCounterEntry *counter)
@@ -255,13 +253,18 @@ bool JobSystem::execute_job(Worker &worker)
     {
         // 1. check job is running?
         JobArgs args{};
-        job_pkt->job->execute(args);
+        job_pkt->job.execute(args);
 
-        job_pkt->accumulate_counter->signal();
-        try_signal(job_pkt->accumulate_counter);
-        release_job(job_pkt);
+        after_job_execute(job_pkt);
     }
     return valid_job;
+}
+
+void JobSystem::after_job_execute(JobWaitEntry *job)
+{
+    job->accumulate_counter->signal();
+    try_signal(job->accumulate_counter);
+    release_job(job);
 }
 
 } // namespace cloud::js

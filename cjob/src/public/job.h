@@ -48,20 +48,24 @@ class JobCounterEntry;
 struct JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 {
   public:
-    ~JobWaitEntry() { delete job; }
+    ~JobWaitEntry() {}
+    JobWaitEntry(const JobWaitEntry &) = delete;
+    JobWaitEntry(JobWaitEntry &&) = delete;
+    JobWaitEntry &operator=(const JobWaitEntry &) = delete;
+    JobWaitEntry &operator=(JobWaitEntry &&) = delete;
 
-    void reset() override
-    {
-        accumulate_counter = nullptr;
-        job->reset();
-    }
+    void init(const std::string &name,
+              JobFunc task,
+              JobCounterEntry *acc_counter);
+
+    void reset() override;
 
     JobCounterEntry *accumulate_counter{nullptr};
-    Job *job{nullptr};
+    Job job;
 
   protected:
     friend class internal::ResourcePool<JobWaitEntry>;
-    JobWaitEntry() { job = new Job(); }
+    JobWaitEntry() {}
 };
 
 } // namespace cloud::js

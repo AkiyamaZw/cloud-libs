@@ -4,6 +4,7 @@
 #include <format>
 #include <thread>
 #include "job_builder.h"
+#include <csignal>
 
 using namespace cloud::js;
 class Timer
@@ -127,25 +128,36 @@ struct EngineGlobal
     JobSystem &js;
     bool finished = false;
     std::atomic<uint64_t> frame_index{0};
+    std::atomic<uint64_t> render_index{0};
     std::mutex render_mutex;
     std::condition_variable render_signal;
     std::mutex logic_mutex;
     std::condition_variable logic_signal;
 
-    void wait_render(uint64_t index)
+    void wait_render()
     {
-        if (index == 0)
+        if (frame_index.load() <= render_index.load() + 1)
             return;
         std::unique_lock lock(render_mutex);
         render_signal.wait(lock);
     }
-    void dispatch_logic(uint64_t index) { logic_signal.notify_all(); }
+    void dispatch_logic(uint64_t index)
+    {
+        frame_index.fetch_add(1);
+        logic_signal.notify_all();
+    }
     void wait_logic()
     {
+        if (frame_index.load() > render_index.load())
+            return;
         std::unique_lock lock(logic_mutex);
         logic_signal.wait(lock);
     }
-    void disptach_render() { render_signal.notify_all(); }
+    void disptach_render()
+    {
+        render_index.fetch_add(1);
+        render_signal.notify_all();
+    }
 };
 
 void dummy_logic(JobSystem &js, EngineGlobal &global)
@@ -153,10 +165,10 @@ void dummy_logic(JobSystem &js, EngineGlobal &global)
     js.adopt();
     while (!global.finished)
     {
-        global.wait_render(global.frame_index);
-        global.frame_index.fetch_add(1);
-        std::cout << "logic thread_id: " << std::this_thread::get_id()
-                  << "index: " << global.frame_index.load() << std::endl;
+        global.wait_render();
+        auto str = std::format("logic index:{} \n logic start:==>",
+                               global.frame_index.load());
+        std::cout << str << std::endl;
         JobBuilder builder(js);
         builder.dispatch("ecs_update", [](JobArgs &) {
             std::cout << "ecs_update" << std::endl;
@@ -177,6 +189,7 @@ void dummy_logic(JobSystem &js, EngineGlobal &global)
                          [](JobArgs &) { std::cout << "exract" << std::endl; });
         js.spin_wait(builder.extract_wait_counter());
         global.dispatch_logic(global.frame_index.load());
+        std::cout << "logic end!" << std::endl;
     }
     js.emancipate();
 }
@@ -184,11 +197,13 @@ void dummy_logic(JobSystem &js, EngineGlobal &global)
 void dummy_render(JobSystem &js, EngineGlobal &global)
 {
     js.adopt();
-    std::cout << "render thread_id: " << std::this_thread::get_id()
-              << std::endl;
+
     while (!global.finished)
     {
         global.wait_logic();
+        auto str = std::format(" render_index{}, render start ==>",
+                               global.render_index.load());
+        std::cout << str << std::endl;
         JobBuilder builder(js);
         builder.dispatch("parse exract", [](JobArgs &) {
             std::cout << "parse exract" << std::endl;
@@ -200,38 +215,57 @@ void dummy_render(JobSystem &js, EngineGlobal &global)
         builder.dispatch_fence_explicitly();
         builder.dispatch("render",
                          [](JobArgs &) { std::cout << "render" << std::endl; });
-        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+
         js.spin_wait(builder.extract_wait_counter());
+        std::cout << "render end==> " << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         global.disptach_render();
     }
     js.emancipate();
+}
+
+std::function<void(int)> signal_exit_handler;
+void friendly_exit_multithread(int sig)
+{
+    if (signal_exit_handler)
+    {
+        signal_exit_handler(sig);
+    }
 }
 
 void dummy_multithread()
 {
     JobSystem js(5);
     EngineGlobal global(js);
-    js.adopt();
+
+    signal_exit_handler = [&](int) {
+        std::cout << "try to stop program" << std::endl;
+        global.finished = true;
+    };
+    std::signal(SIGINT, friendly_exit_multithread);
     std::thread logic_thread(dummy_logic, std::ref(js), std::ref(global));
     std::thread render_thread(dummy_render, std::ref(js), std::ref(global));
+    while (!global.finished)
+    {
+        // std::this_thread::sleep_for(std::chrono::seconds(1000));
+    }
     logic_thread.join();
     render_thread.join();
-    js.emancipate();
 }
 
 int main()
 {
-    {
-        Timer t("job system");
-        test_counter();
-    }
+    //{
+    //    Timer t("job system");
+    //    test_counter();
+    //}
     //{
     //    Timer t("job system counter test 2");
     //    test_counter_2();
     //}
-    //{
-    //    Timer t("dummy_multithread");
-    //    dummy_multithread();
-    //}
+    {
+        Timer t("dummy_multithread");
+        dummy_multithread();
+    }
     return 0;
 }
