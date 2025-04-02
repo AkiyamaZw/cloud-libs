@@ -1,5 +1,6 @@
 #pragma once
 #include "job_define.h"
+#include "icounter.h"
 
 namespace cloud::js::internal
 {
@@ -30,6 +31,26 @@ class IPoolableObject
   private:
     uint32_t index_;
     ResourceState state_{ResourceState::RELEASED};
+};
+
+template <typename T>
+class CountablePoolableObject : public IPoolableObject<T>
+{
+  public:
+    void reset() { ref_counter_.set_cnt(0); }
+    void add_ref() { ref_counter_.add_cnt(); }
+    static void sub_ref_and_try_release(T *obj)
+    {
+        uint32_t latest = obj->ref_counter_.sub_cnt();
+        if (latest == 1)
+        {
+            obj->pool_->release(obj);
+        }
+    }
+    uint32_t get_ref() const { return ref_counter_.get_cnt(); }
+
+  protected:
+    Countable ref_counter_;
 };
 
 template <typename T>

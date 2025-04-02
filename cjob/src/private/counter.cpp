@@ -9,7 +9,7 @@ namespace cloud::js
 Counter::Counter(JobSystem &js)
 {
     entry_ = js.create_entry_counter();
-    entry_->ref_counter_.add_cnt();
+    entry_->add_ref();
 }
 
 Counter::~Counter()
@@ -17,14 +17,14 @@ Counter::~Counter()
     if (entry_)
     {
         finish_submit_job();
-        entry_->ref_counter_.sub_cnt();
+        JobCounterEntry::sub_ref_and_try_release(entry_);
     }
 }
 
 Counter::Counter(const Counter &rhs)
 {
     entry_ = rhs.entry_;
-    entry_->ref_counter_.add_cnt();
+    entry_->add_ref();
 }
 
 Counter::Counter(Counter &&rhs) noexcept
@@ -37,10 +37,9 @@ Counter &Counter::operator=(const Counter &rhs)
 {
     if (&rhs == this || rhs.entry_ == entry_)
         return *this;
-
-    entry_->ref_counter_.sub_cnt();
+    JobCounterEntry::sub_ref_and_try_release(entry_);
     entry_ = rhs.entry_;
-    entry_->ref_counter_.add_cnt();
+    entry_->add_ref();
     return *this;
 }
 
@@ -48,7 +47,7 @@ Counter &Counter::operator=(Counter &&rhs)
 {
     if (&rhs == this || rhs.entry_ == entry_)
         return *this;
-    entry_->ref_counter_.sub_cnt();
+    JobCounterEntry::sub_ref_and_try_release(entry_);
     entry_ = rhs.entry_;
     rhs.entry_ = nullptr;
     return *this;

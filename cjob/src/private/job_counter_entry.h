@@ -7,7 +7,8 @@ namespace cloud::js
 {
 struct JobWaitEntry;
 
-class JobCounterEntry : public internal::IPoolableObject<JobCounterEntry>
+class JobCounterEntry
+    : public internal::CountablePoolableObject<JobCounterEntry>
 {
   public:
     enum class State
@@ -50,9 +51,6 @@ class JobCounterEntry : public internal::IPoolableObject<JobCounterEntry>
     uint32_t get_waits() const;
 
   public:
-    /* ref counter */
-    Countable ref_counter_;
-
     /* wait_job_list records [job, accumulate_counter] collection, which
     will be add to workers queue while cnt go to 0. */
     std::mutex dep_jobs_lock_;

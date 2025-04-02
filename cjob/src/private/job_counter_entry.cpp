@@ -2,16 +2,7 @@
 
 namespace cloud::js
 {
-JobCounterEntry::JobCounterEntry()
-{
-    ref_counter_.set_signal_callback(0, [this](Countable &cc) {
-        if (ready_to_release())
-        {
-            on_counter_destroyed();
-            pool_->release(this);
-        }
-    });
-}
+JobCounterEntry::JobCounterEntry() {}
 
 JobCounterEntry::~JobCounterEntry()
 {
@@ -33,11 +24,7 @@ void JobCounterEntry::add_dep_counters(JobCounterEntry *counter)
     wait_counter_list_.push_back(counter);
 }
 
-void JobCounterEntry::init()
-{
-    set_state(State::Setupped);
-    ref_counter_.set_cnt(0);
-}
+void JobCounterEntry::init() { set_state(State::Setupped); }
 
 void JobCounterEntry::reset()
 {
@@ -45,12 +32,12 @@ void JobCounterEntry::reset()
     wait_job_list_.clear();
     wait_counter_.set_cnt(0);
     wait_counter_list_.clear();
-    ref_counter_.set_cnt(0);
+    CountablePoolableObject<JobCounterEntry>::reset();
 }
 
 bool JobCounterEntry::ready_to_release() const
 {
-    return wait_counter_.get_cnt() == 0 && ref_counter_.get_cnt() == 0;
+    return wait_counter_.get_cnt() == 0 && get_ref() == 0;
 }
 
 void JobCounterEntry::on_counter_signal() {}

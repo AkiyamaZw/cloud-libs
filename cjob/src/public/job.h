@@ -47,8 +47,7 @@ class JobCounterEntry;
 
 struct JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 {
-
-    JobWaitEntry() { job = new Job(); }
+  public:
     ~JobWaitEntry() { delete job; }
 
     void reset() override
@@ -59,6 +58,10 @@ struct JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 
     JobCounterEntry *accumulate_counter{nullptr};
     Job *job{nullptr};
+
+  protected:
+    friend class internal::ResourcePool<JobWaitEntry>;
+    JobWaitEntry() { job = new Job(); }
 };
 
 } // namespace cloud::js
