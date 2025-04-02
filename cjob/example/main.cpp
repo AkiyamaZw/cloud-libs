@@ -166,6 +166,8 @@ void dummy_logic(JobSystem &js, EngineGlobal &global)
     while (!global.finished)
     {
         global.wait_render();
+        if (global.finished)
+            break;
         auto str = std::format("logic index:{} \n logic start:==>",
                                global.frame_index.load());
         std::cout << str << std::endl;
@@ -201,6 +203,8 @@ void dummy_render(JobSystem &js, EngineGlobal &global)
     while (!global.finished)
     {
         global.wait_logic();
+        if (global.finished)
+            break;
         auto str = std::format(" render_index{}, render start ==>",
                                global.render_index.load());
         std::cout << str << std::endl;
@@ -241,6 +245,8 @@ void dummy_multithread()
     signal_exit_handler = [&](int) {
         std::cout << "try to stop program" << std::endl;
         global.finished = true;
+        global.logic_signal.notify_all();
+        global.render_signal.notify_all();
     };
     std::signal(SIGINT, friendly_exit_multithread);
     std::thread logic_thread(dummy_logic, std::ref(js), std::ref(global));
