@@ -66,9 +66,11 @@ bool Counter::operator==(const Counter &rhs) const
     return entry_->get_index() == rhs.entry_->get_index();
 }
 
-void Counter::finish_submit_job()
+void Counter::finish_submit_job() { entry_->finish_submit_job_.store(true); }
+
+bool Counter::finished() const
 {
-    entry_->set_state(JobCounterEntry::State::FinishAddDepend);
+    return entry_->finish_submit_job_.load() == true;
 }
 
 uint32_t Counter::get_cnt() const { return entry_->get_waits(); }

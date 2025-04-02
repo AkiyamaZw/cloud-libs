@@ -27,11 +27,11 @@ void JobCounterEntry::add_dep_counters(JobCounterEntry *counter)
     wait_counter_list_.push_back(counter);
 }
 
-void JobCounterEntry::init() { set_state(State::Setupped); }
+void JobCounterEntry::init() {}
 
 void JobCounterEntry::reset()
 {
-    set_state(State::Released);
+    finish_submit_job_ = false;
     wait_job_list_.clear();
     wait_counter_.set_cnt(0);
     wait_counter_list_.clear();
@@ -46,22 +46,6 @@ bool JobCounterEntry::ready_to_release() const
 void JobCounterEntry::on_counter_signal() {}
 
 void JobCounterEntry::on_counter_destroyed() {}
-void JobCounterEntry::set_state(State state)
-{
-    if (state_.load() == State::Released && state == State::FinishAddDepend)
-    {
-        assert(false);
-    }
-    if (state_.load() != State::Released && state == State::Setupped)
-    {
-        assert(false);
-    }
-    if (state_.load() == State::Released && state == State::Released)
-    {
-        assert(false);
-    }
-    state_.store(state);
-}
 
 void JobCounterEntry::accumulate() { wait_counter_.add_cnt(1); }
 

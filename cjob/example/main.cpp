@@ -78,8 +78,8 @@ void test_counter()
         });
         // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
 
-        js.spin_wait(counter.get_entry());
-        js.spin_wait(builder3.extract_wait_counter().get_entry());
+        js.spin_wait(counter);
+        js.spin_wait(builder3.extract_wait_counter());
     }
     js.emancipate();
 }

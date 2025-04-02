@@ -41,8 +41,6 @@ class JobCounterEntry
     /* event callback */
     void on_counter_signal();
     void on_counter_destroyed();
-    /* set state and do some state check */
-    void set_state(State state);
     /* add wait cnt */
     void accumulate();
     /* sub wait cnt */
@@ -59,11 +57,9 @@ class JobCounterEntry
     /* wait_counter_list records counters that waitting current counters.*/
     std::mutex dep_counter_lock_;
     std::deque<JobCounterEntry *> wait_counter_list_;
+    std::atomic<bool> finish_submit_job_{false};
 
   private:
-    /* just the state of counter.*/
-    std::atomic<State> state_{State::Released};
-
     /* mininal counter */
     Countable wait_counter_;
 };

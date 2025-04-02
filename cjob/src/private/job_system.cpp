@@ -126,20 +126,6 @@ void JobSystem::adopt() { workers_->attach(); }
 
 void JobSystem::emancipate() { workers_->detach(); }
 
-void JobSystem::commit_job(JobWaitEntry *job_pkt)
-{
-    auto worker = workers_->get_worker();
-    if (!job_pkt->job.is_empty())
-    {
-        queue_proxy_->push_job(worker->job_queue, job_pkt);
-    }
-    else
-    {
-        // cause empty job, no need to push_job
-        after_job_execute(job_pkt);
-    }
-}
-
 void JobSystem::try_signal(JobCounterEntry *counter)
 {
     if (counter->get_waits() != 0)
@@ -152,10 +138,10 @@ void JobSystem::try_signal(JobCounterEntry *counter)
             auto entry = counter->wait_counter_list_.front();
             counter->wait_counter_list_.pop_front();
             entry->signal();
-            try_dispatch(entry);
+            try_dispatch_job(entry);
         }
     }
-    try_dispatch(counter);
+    try_dispatch_job(counter);
 }
 
 JobWaitEntry *JobSystem::create_job(const std::string &name,
@@ -177,65 +163,47 @@ JobCounterEntry *JobSystem::create_entry_counter()
     return counter;
 }
 
-void JobSystem::release_counter(JobCounterEntry *counter)
+void JobSystem::try_dispatch_job(JobCounterEntry *counter)
 {
-    if (counter->ready_to_release())
-    {
-        std::cout << counter_pool_->debug_info() << std::endl;
-        counter->on_counter_destroyed();
-        counter_pool_->release(counter);
-    }
-}
-
-void JobSystem::try_dispatch(JobCounterEntry *counter)
-{
-    if (counter->get_waits() != 0)
-        return;
-
+    assert(counter->get_waits() == 0);
     counter->on_counter_signal();
     {
         std::lock_guard lock(counter->dep_jobs_lock_);
+        auto worker = workers_->get_worker();
+
         while (!counter->wait_job_list_.empty())
         {
             auto pkt = counter->wait_job_list_.front();
             counter->wait_job_list_.pop_front();
-            commit_job(pkt);
-        }
-    }
-    /*release_counter(counter);*/
-}
 
-void JobSystem::spin_wait(JobCounterEntry *counter)
-{
-    // just work like spin lock
-    while (counter->get_waits() != 0)
-    {
-        /* workers_->try_wake_up_all();*/
+            if (!pkt->job.is_empty())
+            {
+                queue_proxy_->push_job(worker->job_queue, pkt);
+            }
+            else
+            {
+                // cause empty job, goto after_job_execute directly.
+                after_job_execute(pkt);
+            }
+        }
     }
 }
 
 void JobSystem::spin_wait(const Counter &counter)
 {
-    spin_wait(counter.get_entry());
+    // just work like spin lock
+    while (counter.get_entry()->get_waits() != 0)
+    {
+        /* workers_->try_wake_up_all();*/
+    }
 }
 
-uint32_t JobSystem::dispatch_group_count(uint32_t job_count,
-                                         uint32_t group_size) const
-{
-    return (job_count + group_size - 1) / group_size;
-}
-
-uint32_t JobSystem::calc_core_num(uint32_t max_core_num) const
+uint32_t JobSystem::calc_core_num(uint32_t max_core_num)
 {
 
     max_core_num = std::max(1u, max_core_num);
     uint32_t num_core = std::thread::hardware_concurrency();
     return std::clamp(num_core - 1, 1u, max_core_num);
-}
-
-void JobSystem::release_job(JobWaitEntry *job_pkt)
-{
-    entry_pool_->release(job_pkt);
 }
 
 bool JobSystem::execute_job(Worker &worker)
@@ -254,7 +222,6 @@ bool JobSystem::execute_job(Worker &worker)
         // 1. check job is running?
         JobArgs args{};
         job_pkt->job.execute(args);
-
         after_job_execute(job_pkt);
     }
     return valid_job;
@@ -264,7 +231,7 @@ void JobSystem::after_job_execute(JobWaitEntry *job)
 {
     job->accumulate_counter->signal();
     try_signal(job->accumulate_counter);
-    release_job(job);
+    entry_pool_->release(job);
 }
 
 } // namespace cloud::js

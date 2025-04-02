@@ -62,44 +62,56 @@ class JobSystem final
     JobSystem(uint32_t max_thread_count = 1, uint32_t max_adopt_thread = 5);
     ~JobSystem();
 
-    void shutdown();
     bool is_active() const;
     bool has_active_job() const;
     uint32_t get_num_core() const;
 
-    // thread attachment
+    /* attch current thread, and add a job queue to this thread */
     void adopt();
+    /* detach current thread */
     void emancipate();
 
-    // wait counter
+    /* create a jobwait entry */
     JobWaitEntry *create_job(const std::string &name,
                              JobFunc task,
                              JobCounterEntry *wait_counter,
                              JobCounterEntry *acc_counter);
+    /* create a counter entry */
     JobCounterEntry *create_entry_counter();
-
-    void spin_wait(JobCounterEntry *counter);
-    void spin_wait(const Counter &counter);
-    void release_counter(JobCounterEntry *counter);
+    /* signal a counter. */
     void try_signal(JobCounterEntry *counter);
 
-  protected:
-    uint32_t dispatch_group_count(uint32_t job_count,
-                                  uint32_t group_size) const;
-    uint32_t calc_core_num(uint32_t core_num) const;
+    /* watting in user space util counter counts to zero*/
+    void spin_wait(const Counter &counter);
 
-    void commit_job(JobWaitEntry *job_pkt);
-    void release_job(JobWaitEntry *job_pkt);
-    void try_dispatch(JobCounterEntry *counter);
+  protected:
+    /* make core_num in the range from 1 to hardware_concurrency */
+    static uint32_t calc_core_num(uint32_t core_num);
+
+    /* waits count to zero already and commit job to queue, if not call
+     * try_signal*/
+    void try_dispatch_job(JobCounterEntry *counter);
+
+    /* fetch job and run job. this function run in worker threads */
     bool execute_job(Worker &worker);
-    void after_job_execute(JobWaitEntry *counter);
+
+    /* try dispatch accumulate counters and release jobs*/
+    void after_job_execute(JobWaitEntry *job_pkt);
+
+  protected:
+    /* stop all works and wait all workers stop */
+    void shutdown();
 
   private:
-    friend class JobQueueProxy;
+    /* a threads manager */
     WorkerThreads *workers_{nullptr};
+    /* a job queue proxy */
+    friend class JobQueueProxy;
     std::unique_ptr<JobQueueProxy> queue_proxy_;
+    /* JobCounterEntry's pool */
     using CounterPool = internal::ResourcePool<JobCounterEntry>;
     std::unique_ptr<CounterPool> counter_pool_{nullptr};
+    /* JobWaitList's pool */
     using JobWaitListEntryPool = internal::ResourcePool<JobWaitEntry>;
     std::unique_ptr<JobWaitListEntryPool> entry_pool_{nullptr};
 };

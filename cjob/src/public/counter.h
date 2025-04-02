@@ -17,9 +17,9 @@ class Counter
     Counter &operator+=(const Counter &rhs);
     bool operator==(const Counter &rhs) const;
     void finish_submit_job();
+    bool finished() const;
     JobCounterEntry *get_entry() const { return entry_; };
     void set_entry(JobCounterEntry *entry) { entry_ = entry; }
-
     uint32_t get_cnt() const;
 
   private:
