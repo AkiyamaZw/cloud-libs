@@ -10,6 +10,12 @@
 #include "stealable_queue.h"
 #include <format>
 
+namespace cloud::js::internal
+{
+template <typename T>
+class ResourcePool;
+}
+
 namespace cloud::js
 {
 struct JobArgs;
@@ -49,6 +55,11 @@ struct JobArgs
     bool is_last_job_in_group;
     void *shared_memory;
 };
+
+class JobCounterEntry;
+class JobWaitEntry;
+using CounterPool = internal::ResourcePool<JobCounterEntry>;
+using JobWaitListEntryPool = internal::ResourcePool<JobWaitEntry>;
 
 static constexpr size_t MAX_JOB_COUNT = 16384;
 static_assert(MAX_JOB_COUNT <= 0x7FFE, "MAX_JOB_COUNT is 16384");

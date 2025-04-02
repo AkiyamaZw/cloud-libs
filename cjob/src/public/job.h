@@ -45,7 +45,7 @@ class Job
 
 class JobCounterEntry;
 
-struct JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
+class JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 {
   public:
     ~JobWaitEntry() {}
@@ -60,8 +60,8 @@ struct JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 
     void reset() override;
 
-    JobCounterEntry *accumulate_counter{nullptr};
-    Job job;
+    JobCounterEntry *accumulate_counter_{nullptr};
+    Job job_;
 
   protected:
     friend class internal::ResourcePool<JobWaitEntry>;

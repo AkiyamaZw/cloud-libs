@@ -1,9 +1,5 @@
 #pragma once
-#include <cstdint>
-#include <functional>
 #include "job_define.h"
-#include "job.h"
-#include "counter.h"
 
 namespace cloud::js::internal
 {
@@ -16,45 +12,9 @@ namespace cloud::js
 class WorkerThreads;
 struct Worker;
 class JobCounterEntry;
-class JobSystem;
-struct JobWaitEntry;
-
-class JobSystemExtension
-{
-  public:
-    using Super = JobSystemExtension;
-    JobSystemExtension(JobSystem *js);
-    virtual ~JobSystemExtension();
-
-  protected:
-    JobSystem *js_;
-};
-
-class JobQueueProxy : public JobSystemExtension
-{
-  public:
-    using Super::JobSystemExtension;
-
-    JobWaitEntry *pop_job(JobQueue &queue);
-    void push_job(JobQueue &queue, JobWaitEntry *job_pack);
-    JobWaitEntry *steal_job(JobQueue &queue);
-    JobWaitEntry *steal(Worker &worker);
-    int32_t get_active_jobs() const { return active_jobs_.load(); };
-
-  private:
-    std::atomic<int32_t> active_jobs_{0};
-};
-
-class JobSystemExporter : public JobSystemExtension
-{
-  public:
-    using Super::JobSystemExtension;
-    void export_grapviz(const std::string &path);
-
-  private:
-    std::string counter_grapviz(const JobWaitEntry *counter);
-    std::string job_graphviz(const Job &job) const;
-};
+class JobWaitEntry;
+class JobQueueProxy;
+class Counter;
 
 class JobSystem final
 {
@@ -109,10 +69,8 @@ class JobSystem final
     friend class JobQueueProxy;
     std::unique_ptr<JobQueueProxy> queue_proxy_;
     /* JobCounterEntry's pool */
-    using CounterPool = internal::ResourcePool<JobCounterEntry>;
     std::unique_ptr<CounterPool> counter_pool_{nullptr};
     /* JobWaitList's pool */
-    using JobWaitListEntryPool = internal::ResourcePool<JobWaitEntry>;
     std::unique_ptr<JobWaitListEntryPool> entry_pool_{nullptr};
 };
 } // namespace cloud::js

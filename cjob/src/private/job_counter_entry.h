@@ -5,7 +5,7 @@
 
 namespace cloud::js
 {
-struct JobWaitEntry;
+class JobWaitEntry;
 
 class JobCounterEntry
     : public internal::CountablePoolableObject<JobCounterEntry>
