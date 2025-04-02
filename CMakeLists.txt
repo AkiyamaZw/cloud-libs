@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.30)
 
 # set project name and version
-project ("cloud-ecs" VERSION 0.2)
+project ("cloud-libs" VERSION 0.2)
 
 # set cpp standard
 set(CMAKE_CXX_STANDARD 20)
