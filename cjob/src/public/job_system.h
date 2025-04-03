@@ -34,6 +34,7 @@ class JobSystem final
     /* create a jobwait entry */
     JobWaitEntry *create_job(const std::string &name,
                              JobFunc task,
+                             JobPriority property,
                              JobCounterEntry *wait_counter,
                              JobCounterEntry *acc_counter);
     /* create a counter entry */

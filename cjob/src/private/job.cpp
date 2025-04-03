@@ -46,17 +46,20 @@ void Job::reset()
 
 void JobWaitEntry::init(const std::string &name,
                         JobFunc task,
-                        JobCounterEntry *acc_counter)
+                        JobCounterEntry *acc_counter,
+                        JobPriority priority)
 {
     job_.init(name, task);
     accumulate_counter_ = acc_counter;
     accumulate_counter_->add_ref();
+    priority_ = priority;
 }
 
 void JobWaitEntry::reset()
 {
     JobCounterEntry::sub_ref_and_try_release(accumulate_counter_);
     accumulate_counter_ = nullptr;
+    priority_ = JobPriority::Count;
     job_.reset();
 }
 } // namespace cloud::js

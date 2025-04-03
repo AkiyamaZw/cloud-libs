@@ -27,20 +27,11 @@ using JobFunc = std::function<void(JobArgs &)>;
  */
 enum class JobPriority
 {
-    High,
-    Low,
-    Streaming,
+    Latent = 0,
+    RenderPath = 1,
+    CriticalPath = 2,
+    Immediate = 3,
     Count
-};
-
-/**
- * @brief job execute context
- *
- */
-struct JobContext
-{
-    std::atomic_long counter{0};
-    JobPriority priority{JobPriority::High};
 };
 
 /**
@@ -49,11 +40,6 @@ struct JobContext
  */
 struct JobArgs
 {
-    uint32_t job_index;
-    uint32_t group_index;
-    bool is_first_job_in_group;
-    bool is_last_job_in_group;
-    void *shared_memory;
 };
 
 class JobCounterEntry;

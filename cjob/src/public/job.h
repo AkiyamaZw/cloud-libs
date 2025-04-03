@@ -56,7 +56,8 @@ class JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
 
     void init(const std::string &name,
               JobFunc task,
-              JobCounterEntry *acc_counter);
+              JobCounterEntry *acc_counter,
+              JobPriority priority);
 
     void reset() override;
 
@@ -66,6 +67,7 @@ class JobWaitEntry : public internal::IPoolableObject<JobWaitEntry>
   protected:
     friend class internal::ResourcePool<JobWaitEntry>;
     JobWaitEntry() {}
+    JobPriority priority_;
 };
 
 } // namespace cloud::js

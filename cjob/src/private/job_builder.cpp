@@ -3,8 +3,9 @@
 
 namespace cloud::js
 {
-JobBuilder::JobBuilder(JobSystem &js)
+JobBuilder::JobBuilder(JobSystem &js, JobPriority property)
     : js_(js)
+    , priority_(property)
     , wait_counter_(js)
     , accumulate_counter_(js)
 {
@@ -22,8 +23,11 @@ Counter JobBuilder::extract_wait_counter()
 void JobBuilder::dispatch(const std::string &name, JobFunc func)
 {
     assert(!wait_counter_.finished());
-    js_.create_job(
-        name, func, wait_counter_.get_entry(), accumulate_counter_.get_entry());
+    js_.create_job(name,
+                   func,
+                   priority_,
+                   wait_counter_.get_entry(),
+                   accumulate_counter_.get_entry());
     js_.try_signal(wait_counter_.get_entry());
 }
 

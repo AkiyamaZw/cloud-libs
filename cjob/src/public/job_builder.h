@@ -7,7 +7,7 @@ class JobSystem;
 class JobBuilder
 {
   public:
-    JobBuilder(JobSystem &js);
+    JobBuilder(JobSystem &js, JobPriority property = JobPriority::Latent);
     ~JobBuilder();
     // new job to dispatch
     void dispatch(const std::string &name, JobFunc func);
@@ -26,5 +26,6 @@ class JobBuilder
     JobSystem &js_;
     Counter wait_counter_;
     Counter accumulate_counter_;
+    JobPriority priority_{JobPriority::Latent};
 };
 } // namespace cloud::js

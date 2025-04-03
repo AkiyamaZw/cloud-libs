@@ -56,11 +56,25 @@ void JobSystem::adopt() { workers_->attach(); }
 
 void JobSystem::emancipate() { workers_->detach(); }
 
+JobWaitEntry *JobSystem::create_job(const std::string &name,
+                                    JobFunc task,
+                                    JobPriority priority,
+                                    JobCounterEntry *wait_counter,
+                                    JobCounterEntry *acc_counter)
+{
+    JobWaitEntry *entry = entry_pool_->get();
+    entry->init(name, task, acc_counter, priority);
+    wait_counter->add_dep_jobs(entry);
+    acc_counter->accumulate();
+    return entry;
+}
+
 void JobSystem::try_signal(JobCounterEntry *counter)
 {
     if (counter->get_waits() != 0)
         return;
     // signal other counters
+    counter->on_counter_signal();
     {
         std::lock_guard lock(counter->dep_counter_lock_);
         while (!counter->wait_counter_list_.empty())
@@ -73,31 +87,17 @@ void JobSystem::try_signal(JobCounterEntry *counter)
     try_dispatch_job(counter);
 }
 
-JobWaitEntry *JobSystem::create_job(const std::string &name,
-                                    JobFunc task,
-                                    JobCounterEntry *wait_counter,
-                                    JobCounterEntry *acc_counter)
-{
-    JobWaitEntry *entry = entry_pool_->get();
-    entry->init(name, task, acc_counter);
-    wait_counter->add_dep_jobs(entry);
-    acc_counter->accumulate();
-    return entry;
-}
-
 JobCounterEntry *JobSystem::create_entry_counter()
 {
     auto counter = counter_pool_->get();
     counter->init(
         [this](JobCounterEntry *counter) { this->try_signal(counter); });
-    // counter->init();
     return counter;
 }
 
 void JobSystem::try_dispatch_job(JobCounterEntry *counter)
 {
     assert(counter->get_waits() == 0);
-    counter->on_counter_signal();
     {
         std::lock_guard lock(counter->dep_jobs_lock_);
         auto worker = workers_->get_worker();
