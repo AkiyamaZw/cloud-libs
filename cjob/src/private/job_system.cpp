@@ -68,7 +68,6 @@ void JobSystem::try_signal(JobCounterEntry *counter)
             auto entry = counter->wait_counter_list_.front();
             counter->wait_counter_list_.pop_front();
             entry->signal();
-            try_dispatch_job(entry);
         }
     }
     try_dispatch_job(counter);
@@ -89,7 +88,9 @@ JobWaitEntry *JobSystem::create_job(const std::string &name,
 JobCounterEntry *JobSystem::create_entry_counter()
 {
     auto counter = counter_pool_->get();
-    counter->init();
+    counter->init(
+        [this](JobCounterEntry *counter) { this->try_signal(counter); });
+    // counter->init();
     return counter;
 }
 
@@ -101,9 +102,10 @@ void JobSystem::try_dispatch_job(JobCounterEntry *counter)
         std::lock_guard lock(counter->dep_jobs_lock_);
         auto worker = workers_->get_worker();
 
+        JobWaitEntry *pkt = nullptr;
         while (!counter->wait_job_list_.empty())
         {
-            auto pkt = counter->wait_job_list_.front();
+            pkt = counter->wait_job_list_.front();
             counter->wait_job_list_.pop_front();
 
             if (!pkt->job_.is_empty())
@@ -160,7 +162,6 @@ bool JobSystem::execute_job(Worker &worker)
 void JobSystem::after_job_execute(JobWaitEntry *job)
 {
     job->accumulate_counter_->signal();
-    try_signal(job->accumulate_counter_);
     entry_pool_->release(job);
 }
 

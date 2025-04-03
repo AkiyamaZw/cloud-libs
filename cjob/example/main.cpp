@@ -229,6 +229,7 @@ void dummy_render(JobSystem &js, EngineGlobal &global)
 }
 
 std::function<void(int)> signal_exit_handler;
+
 void friendly_exit_multithread(int sig)
 {
     if (signal_exit_handler)
@@ -241,19 +242,20 @@ void dummy_multithread()
 {
     JobSystem js(5);
     EngineGlobal global(js);
-
     signal_exit_handler = [&](int) {
         std::cout << "try to stop program" << std::endl;
         global.finished = true;
         global.logic_signal.notify_all();
         global.render_signal.notify_all();
     };
+
     std::signal(SIGINT, friendly_exit_multithread);
+
     std::thread logic_thread(dummy_logic, std::ref(js), std::ref(global));
     std::thread render_thread(dummy_render, std::ref(js), std::ref(global));
     while (!global.finished)
     {
-        // std::this_thread::sleep_for(std::chrono::seconds(1000));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     logic_thread.join();
     render_thread.join();
@@ -261,10 +263,11 @@ void dummy_multithread()
 
 int main()
 {
-    //{
-    //    Timer t("job system");
-    //    test_counter();
-    //}
+
+    /*{
+        Timer t("job system");
+        test_counter();
+    }*/
     //{
     //    Timer t("job system counter test 2");
     //    test_counter_2();

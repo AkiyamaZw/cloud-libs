@@ -1,6 +1,6 @@
 #pragma once
 #include "job_define.h"
-#include "icounter.h"
+#include "countable.h"
 
 namespace cloud::js::internal
 {

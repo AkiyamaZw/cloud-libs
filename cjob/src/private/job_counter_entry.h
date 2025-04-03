@@ -1,11 +1,36 @@
 #pragma once
 #include "job_define.h"
-#include "icounter.h"
+#include "countable.h"
 #include "resource_pool.h"
 
 namespace cloud::js
 {
 class JobWaitEntry;
+
+class SubToTriggerCountable : public Countable
+{
+  public:
+    using Callback = std::function<void(JobCounterEntry *)>;
+
+    SubToTriggerCountable(uint32_t level = 0);
+    ~SubToTriggerCountable();
+
+    void register_callback(const std::string &name, Callback callback);
+
+    void unregister_callback(const std::string &name);
+    uint16_t sub_cnt(uint16_t i = 1, JobCounterEntry *entry = nullptr);
+    void reset() override
+    {
+        Countable::reset();
+        std::lock_guard lock(map_mutex_);
+        callbacks_.clear();
+    }
+
+  private:
+    uint32_t level_{0};
+    std::mutex map_mutex_;
+    std::unordered_map<std::string, Callback> callbacks_;
+};
 
 class JobCounterEntry
     : public internal::CountablePoolableObject<JobCounterEntry>
@@ -17,6 +42,9 @@ class JobCounterEntry
         Setupped,
         FinishAddDepend
     };
+
+  protected:
+    using Callback = SubToTriggerCountable::Callback;
 
   public:
     JobCounterEntry();
@@ -34,6 +62,8 @@ class JobCounterEntry
 
     /* used while get from pool*/
     void init();
+    /* used with sub to zero counter */
+    void init(Callback callback);
     /* called by the pool */
     void reset() override;
     /* a helper function to judge whether the count should be delete.*/
@@ -61,6 +91,6 @@ class JobCounterEntry
 
   private:
     /* mininal counter */
-    Countable wait_counter_;
+    SubToTriggerCountable wait_counter_;
 };
 } // namespace cloud::js
