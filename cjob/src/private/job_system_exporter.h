@@ -5,10 +5,10 @@ namespace cloud::js
 {
 class JobCounterEntry;
 class JobWaitEntry;
-class JobSystemExporter : public JobSystemExtension
+class JobSystemExporter : public JobSystemProxy
 {
   public:
-    using Super::JobSystemExtension;
+    using Super::JobSystemProxy;
     void export_grapviz(const std::string &path);
 
   private:

@@ -3,7 +3,7 @@
 #include "worker_threads.h"
 #include "counter.h"
 #include "job_counter_entry.h"
-#include "job_system_extension.h"
+#include "job_​scheduler.h"
 #include "job.h"
 
 namespace cloud::js
@@ -13,7 +13,7 @@ JobSystem::JobSystem(uint32_t max_thread_count, uint32_t max_adopt_thread)
 {
     counter_pool_ = std::make_unique<CounterPool>();
     entry_pool_ = std::make_unique<JobWaitListEntryPool>();
-    queue_proxy_ = std::make_unique<JobQueueProxy>(this);
+    queue_proxy_ = std::make_unique<Job​Scheduler>(this);
 
     workers_ = new WorkerThreads();
     workers_->init(
@@ -100,7 +100,7 @@ void JobSystem::try_dispatch_job(JobCounterEntry *counter)
     assert(counter->get_waits() == 0);
     {
         std::lock_guard lock(counter->dep_jobs_lock_);
-        auto worker = workers_->get_worker();
+        auto *worker = workers_->get_worker();
 
         JobWaitEntry *pkt = nullptr;
         while (!counter->wait_job_list_.empty())
@@ -110,7 +110,7 @@ void JobSystem::try_dispatch_job(JobCounterEntry *counter)
 
             if (!pkt->job_.is_empty())
             {
-                queue_proxy_->push_job(worker->job_queue, pkt);
+                queue_proxy_->push_job(*worker, pkt);
             }
             else
             {
@@ -140,13 +140,8 @@ uint32_t JobSystem::calc_core_num(uint32_t max_core_num)
 
 bool JobSystem::execute_job(Worker &worker)
 {
-    // 1. get job from this_thread
-    auto *job_pkt = queue_proxy_->pop_job(worker.job_queue);
-    // 2. if not get job from other threads
-    if (job_pkt == nullptr)
-    {
-        job_pkt = queue_proxy_->steal(worker);
-    }
+    // 1. get a job from scheduler
+    auto *job_pkt = queue_proxy_->fetch_job(worker);
     // 3. execute job
     bool valid_job = job_pkt != nullptr;
     if (valid_job)

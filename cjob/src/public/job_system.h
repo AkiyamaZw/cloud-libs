@@ -13,8 +13,8 @@ class WorkerThreads;
 struct Worker;
 class JobCounterEntry;
 class JobWaitEntry;
-class JobQueueProxy;
 class Counter;
+class I​Scheduler;
 
 class JobSystem final
 {
@@ -63,12 +63,12 @@ class JobSystem final
     /* stop all works and wait all workers stop */
     void shutdown();
 
-  private:
+  protected:
     /* a threads manager */
     WorkerThreads *workers_{nullptr};
     /* a job queue proxy */
-    friend class JobQueueProxy;
-    std::unique_ptr<JobQueueProxy> queue_proxy_;
+    friend class JobSystemProxy;
+    std::unique_ptr<I​Scheduler> queue_proxy_;
     /* JobCounterEntry's pool */
     std::unique_ptr<CounterPool> counter_pool_{nullptr};
     /* JobWaitList's pool */
