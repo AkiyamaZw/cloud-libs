@@ -19,6 +19,8 @@ class I​Scheduler
     virtual uint32_t get_active_jobs() const = 0;
 };
 
+/* current: steal use random strategy, and only one queue per worker. priority
+ * should implement in this place */
 class Job​Scheduler
     : public JobSystemProxy
     , public I​Scheduler
