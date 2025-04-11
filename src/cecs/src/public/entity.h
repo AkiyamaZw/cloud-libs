@@ -56,6 +56,8 @@ class EntityInfoPool final
 
     EntityInfo *operator[](const EntityID &id);
 
+    EntityInfo *at();
+
     const EntityInfo *operator[](const EntityID &id) const;
 
   protected:

@@ -1,5 +1,6 @@
 #include "archetype_manager.h"
 #include "archetype.h"
+#include <cassert>
 
 namespace cloud::world::ecs
 {

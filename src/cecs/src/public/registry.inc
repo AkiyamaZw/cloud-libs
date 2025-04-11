@@ -1,6 +1,7 @@
-#include "private/archetype.h"
-#include "private/component_manager.h"
-#include "private/archetype_manager.h"
+#include "archetype.h"
+#include "component_manager.h"
+#include "archetype_manager.h"
+#include "chunk.h"
 
 namespace cloud::world::ecs
 {
@@ -33,7 +34,7 @@ template <typename C>
 inline C &Registry::get_component(const EntityID &id)
 {
     assert(e_info_pool_[id]->chunk != nullptr);
-    return e_info_pool_[id]
+    return e_info_pool_.get(id)
         ->chunk->get_chunk_component<C>()[e_info_pool_[id]->index_in_chunk];
 }
 

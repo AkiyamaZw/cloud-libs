@@ -1,4 +1,5 @@
 #include "archetype.h"
+#include "chunk.h"
 
 namespace cloud::world::ecs::internal
 {

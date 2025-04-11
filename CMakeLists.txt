@@ -14,5 +14,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cecs)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cjob)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/cecs)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/cjob)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/example)

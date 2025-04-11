@@ -1,9 +1,9 @@
 #pragma once
-#include "chunk.h"
 #include "entity.h"
 
 namespace cloud::world::ecs::internal
 {
+struct Chunk;
 struct ChunkPool
 {
     std::vector<Chunk *> chunks;
