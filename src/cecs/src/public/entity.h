@@ -1,6 +1,7 @@
 #pragma once
 
 #include "define.h"
+#include "chunk.h"
 
 namespace cloud::world::ecs
 {
@@ -56,8 +57,6 @@ class EntityInfoPool final
 
     EntityInfo *operator[](const EntityID &id);
 
-    EntityInfo *at();
-
     const EntityInfo *operator[](const EntityID &id) const;
 
   protected:
@@ -68,5 +67,12 @@ class EntityInfoPool final
 
     std::queue<size_t> free_list_;
 };
+
+template <typename T>
+T &get_component(const EntityInfo &info)
+{
+    assert(info.chunk);
+    return info.chunk->get_chunk_component<T>()[info.index_in_chunk];
+}
 
 } // namespace cloud::world::ecs
