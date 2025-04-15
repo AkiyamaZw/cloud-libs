@@ -18,9 +18,9 @@ Registry::~Registry()
 
 bool Registry::destroy_entity(const EntityID &id)
 {
-    auto info = e_info_pool_[id];
-    assert(dellocate_entity(*e_info_pool_[id]));
-    e_info_pool_.destroy(id);
+    auto info = EntityManager::get(entity_data_, id);
+    assert(dellocate_entity(*info));
+    EntityManager::destroy(entity_data_, id);
     return true;
 }
 
@@ -44,8 +44,8 @@ size_t Registry::get_archetype_count() const
 
 EntityID Registry::allocate_entity(internal::Archetype *arch)
 {
-    EntityID id = e_info_pool_.get_or_create();
-    arch->add_entity(*e_info_pool_[id]);
+    EntityID id = EntityManager::get_or_create(entity_data_);
+    arch->add_entity(*EntityManager::get(entity_data_, id));
     return id;
 }
 

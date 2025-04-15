@@ -33,16 +33,17 @@ inline internal::Archetype *Registry::create_archetype()
 template <typename C>
 inline C &Registry::get_component(const EntityID &id)
 {
-    assert(e_info_pool_[id]->chunk != nullptr);
-    return e_info_pool_.get(id)
-        ->chunk->get_chunk_component<C>()[e_info_pool_[id]->index_in_chunk];
+    EntityInfo *info = EntityManager::get(entity_data_, id);
+    assert(info != nullptr && info->chunk != nullptr);
+    return info->chunk->get_chunk_component<C>()[info->index_in_chunk];
 }
 
 template <typename C>
 inline bool Registry::has_component(const EntityID &id) const
 {
     MaskType type(component_manager_->get<C>());
-    return (e_info_pool_[id]->archetype_mask & type) == type;
+    return (EntityManager::get(entity_data_, id)->archetype_mask & type) ==
+           type;
 }
 
 template <typename... C>

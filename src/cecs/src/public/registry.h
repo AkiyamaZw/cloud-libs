@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include "entity.h"
+#include "entity_manager.h"
 
 namespace cloud::world::ecs
 {
@@ -78,16 +79,10 @@ class Registry final
         MaskType mask, std::function<void(internal::Archetype *)> cb);
 
   private:
-    EntityInfoPool e_info_pool_;
+    EntityManagementData entity_data_;
     std::unique_ptr<ComponentManager> component_manager_;
     std::unique_ptr<ArchetypeManager> archetype_manager_;
 };
 
-// template <typename T>
-// void op(EntityInfo &info, T &comp)
-// {
-
-//     id + meta_pool-- > chunk-- > index_in_chunk
-// }
 } // namespace cloud::world::ecs
 #include "registry.inc"

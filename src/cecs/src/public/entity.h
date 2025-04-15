@@ -2,6 +2,7 @@
 
 #include "define.h"
 #include "chunk.h"
+#include <mutex>
 
 namespace cloud::world::ecs
 {

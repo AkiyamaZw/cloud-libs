@@ -1,20 +1,23 @@
 #include "registry.h"
-
+#include <iostream>
+#include "entity_manager.h"
 using namespace cloud;
 
-struct AComp
+namespace cloud::world::ecs
 {
-    int a;
+struct RegistryData
+{
+    EntityManagementData entity_mgr_data;
 };
 
-struct BComp
-{
-    int b;
-};
+} // namespace cloud::world::ecs
 
 int main()
 {
-    world::ecs::Registry reg;
-    auto ett = reg.create_entities<AComp, BComp>(10);
+    using namespace cloud::world::ecs;
+
+    RegistryData registry_data;
+    EntityID id = EntityManager::get_or_create(registry_data.entity_mgr_data);
+    std::cout << id.index << std::endl;
     return 0;
 }
