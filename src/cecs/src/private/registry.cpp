@@ -3,14 +3,11 @@
 
 namespace cloud::world::ecs
 {
-Registry::Registry()
-{
-    component_manager_ = std::make_unique<ComponentManager>();
-}
+Registry::Registry() {}
 
 Registry::~Registry()
 {
-    component_manager_->release_singleton_component();
+    Component::release_singleton_component(component_data_);
     internal::Archetype::release_archetypes(archetype_data_);
 }
 
@@ -59,6 +56,12 @@ void Registry::for_each_matching_archetype(
     MaskType mask, std::function<void(internal::ArchetypeData *)> cb)
 {
     internal::Archetype::for_each_matching_archetype(archetype_data_, mask, cb);
+}
+
+RegistryData::~RegistryData()
+{
+    Component::release_singleton_component(component_data_);
+    internal::Archetype::release_archetypes(archetype_data_);
 }
 
 } // namespace cloud::world::ecs

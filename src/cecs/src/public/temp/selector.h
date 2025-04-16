@@ -33,11 +33,12 @@ struct Selector
     Selector &with()
     {
         assert(registry_ptr != nullptr);
-        auto metas = registry_ptr->component_manager_->get_metatypes<C...>();
+        auto metas =
+            Component::get_metatypes<C...>(registry_ptr->component_data_);
         required_comps.insert(required_comps.end(), metas.begin(), metas.end());
         (...,
          (required_archetype.set(
-             registry_ptr->component_manager_->get_or_register<C>())));
+             Component::get_or_register<C>(registry_ptr->component_data_))));
         return *this;
     }
 
@@ -82,10 +83,10 @@ struct Selector
     template <typename... C>
     static View query(Registry &registry)
     {
-
-        auto metas = registry.component_manager_->get_metatypes<C...>();
+        auto metas = Component::get_metatypes<C...>(registry.component_data_);
         MaskType mask;
-        (..., (mask.set(registry.component_manager_->get_or_register<C>())));
+        (...,
+         (mask.set(Component::get_or_register<C>(registry.component_data_))));
 
         return Selector::create_view(registry, metas, mask);
     }

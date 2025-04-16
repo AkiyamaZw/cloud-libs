@@ -3,15 +3,18 @@
 
 namespace cloud::world::ecs
 {
-ComponentManager::~ComponentManager()
+
+ComponentManagerData::~ComponentManagerData()
 {
     // singleton must be cleaned out of the manager.
     assert(singleton_components_.empty());
 }
+} // namespace cloud::world::ecs
 
-void ComponentManager::release_singleton_component()
+void cloud::world::ecs::Component::release_singleton_component(
+    ComponentManagerData &data)
 {
-    for (auto ptr : singleton_components_)
+    for (auto ptr : data.singleton_components_)
     {
         if (ptr.second)
         {
@@ -19,6 +22,5 @@ void ComponentManager::release_singleton_component()
             ptr.second = nullptr;
         }
     }
-    singleton_components_.clear();
+    data.singleton_components_.clear();
 }
-} // namespace cloud::world::ecs

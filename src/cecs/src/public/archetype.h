@@ -43,17 +43,22 @@ std::vector<Chunk *> &get_chunks(ArchetypeData &data);
 
 /* called when system shutdown */
 void release_archetypes(ArchetypeManagerData &data);
+
 /*  get an archetype */
 ArchetypeData *get_archetype(ArchetypeManagerData &data, MaskType mask);
+
 /* create and archetype */
 ArchetypeData *create_archetype(ArchetypeManagerData &data,
                                 MaskType mask,
                                 MetaTypeList meta_type_list);
-/* each archetype operator*/
+
+/* each archetype operator */
 void for_each_matching_archetype(ArchetypeManagerData &data,
                                  MaskType mask,
                                  std::function<void(ArchetypeData *)> cb);
+/* release an archetype */
 bool destroy_archetype(ArchetypeManagerData &data, ArchetypeData *archetype);
+
 }; // namespace Archetype
 
 } // namespace cloud::world::ecs::internal

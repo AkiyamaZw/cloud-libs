@@ -2,6 +2,7 @@
 #include <functional>
 #include "entity.h"
 #include "entity_manager.h"
+#include "component_manager.h"
 #include "archetype.h"
 
 namespace cloud::world::ecs
@@ -75,11 +76,28 @@ class Registry final
     void for_each_matching_archetype(
         MaskType mask, std::function<void(internal::ArchetypeData *)> cb);
 
-  private:
+  public:
     EntityManagementData entity_data_;
     internal::ArchetypeManagerData archetype_data_;
-    std::unique_ptr<ComponentManager> component_manager_;
+    ComponentManagerData component_data_;
 };
+
+struct RegistryData
+{
+    ~RegistryData();
+    EntityManagementData entity_data_;
+    internal::ArchetypeManagerData archetype_data_;
+    ComponentManagerData component_data_;
+};
+
+namespace RegistryEx
+{
+template <typename... C>
+EntityID create_entity(RegistryData &data);
+
+template <typename... C>
+internal::ArchetypeData *get_or_create_archetype(RegistryData &data);
+} // namespace RegistryEx
 
 } // namespace cloud::world::ecs
 #include "registry.inc"
