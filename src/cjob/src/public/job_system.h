@@ -14,7 +14,7 @@ struct Worker;
 class JobCounterEntry;
 class JobWaitEntry;
 class Counter;
-class I​Scheduler;
+class IScheduler;
 
 class JobSystem final
 {
@@ -68,7 +68,7 @@ class JobSystem final
     WorkerThreads *workers_{nullptr};
     /* a job queue proxy */
     friend class JobSystemProxy;
-    std::unique_ptr<I​Scheduler> queue_proxy_;
+    std::unique_ptr<IScheduler> queue_proxy_;
     /* JobCounterEntry's pool */
     std::unique_ptr<CounterPool> counter_pool_{nullptr};
     /* JobWaitList's pool */

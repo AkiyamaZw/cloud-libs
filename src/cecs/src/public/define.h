@@ -19,6 +19,7 @@ static constexpr Index InvalidIndex = std::numeric_limits<Index>::max();
 constexpr size_t BLOCK_MEMORY_16K = 16384;
 
 constexpr size_t BLOCK_MEMORY_8K = 8192;
+
 using byte = unsigned char;
 
 struct MetaType;

@@ -13,7 +13,7 @@ JobSystem::JobSystem(uint32_t max_thread_count, uint32_t max_adopt_thread)
 {
     counter_pool_ = std::make_unique<CounterPool>();
     entry_pool_ = std::make_unique<JobWaitListEntryPool>();
-    queue_proxy_ = std::make_unique<Job​Scheduler>(this);
+    queue_proxy_ = std::make_unique<JobScheduler>(this);
 
     workers_ = new WorkerThreads();
     workers_->init(

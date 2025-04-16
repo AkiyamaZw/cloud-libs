@@ -8,7 +8,7 @@ class Worker;
 
 /* IScheduler works like a job queue, that makes sure different worker working
  * in a ​efficient way */
-class I​Scheduler
+class IScheduler
 {
   public:
     /* send job to scheduler*/
@@ -21,9 +21,9 @@ class I​Scheduler
 
 /* current: steal use random strategy, and only one queue per worker. priority
  * should implement in this place */
-class Job​Scheduler
+class JobScheduler
     : public JobSystemProxy
-    , public I​Scheduler
+    , public IScheduler
 {
   public:
     using Super::JobSystemProxy;
