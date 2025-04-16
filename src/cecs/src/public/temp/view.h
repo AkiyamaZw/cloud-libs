@@ -8,7 +8,7 @@ namespace cloud::world::ecs
 
 namespace internal
 {
-class Archetype;
+struct ArchetypeData;
 }
 
 class Registry;
@@ -88,7 +88,7 @@ class View
   private:
     Registry &registry_;
     MaskType masks_{0};
-    std::unordered_map<internal::Archetype *, std::vector<ComponentsView>>
+    std::unordered_map<internal::ArchetypeData *, std::vector<ComponentsView>>
         cached_view_;
 };
 } // namespace cloud::world::ecs

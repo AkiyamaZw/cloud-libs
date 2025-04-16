@@ -64,12 +64,12 @@ struct Selector
     Selector &for_each(Func &&func)
     {
         using Params = decltype(args(&Func::operator()));
-        for (auto [mask, archetype] :
-             registry_ptr->archetype_manager_->archetypes_)
+        for (auto [mask, archetype] : registry_ptr->archetype_data_.archetypes)
         {
             if ((mask & required_archetype) != required_archetype)
                 continue;
-            for (auto chunk : archetype->get_chunks())
+            auto &chunks = internal::Archetype::get_chunks(*archetype);
+            for (auto chunk : chunks)
             {
                 unpack_chunk(Params{}, chunk, std::forward<Func>(func));
             }

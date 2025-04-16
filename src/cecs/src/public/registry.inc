@@ -1,6 +1,4 @@
-#include "archetype.h"
 #include "component_manager.h"
-#include "archetype_manager.h"
 #include "chunk.h"
 
 namespace cloud::world::ecs
@@ -23,13 +21,6 @@ inline std::vector<EntityID> Registry::create_entities(size_t size)
     return res;
 }
 
-template <typename... C>
-inline internal::Archetype *Registry::create_archetype()
-{
-    auto [mask, meta_list] = component_manager_->get_info_for_archetype<C...>();
-    return archetype_manager_->create_archetype(mask, meta_list);
-}
-
 template <typename C>
 inline C &Registry::get_component(const EntityID &id)
 {
@@ -47,13 +38,19 @@ inline bool Registry::has_component(const EntityID &id) const
 }
 
 template <typename... C>
-inline internal::Archetype *Registry::get_or_create_archetype()
+inline internal::ArchetypeData *Registry::get_or_create_archetype()
 {
     MaskType mask;
     (..., (mask.set(component_manager_->get_or_register<C>())));
-    internal::Archetype *archetype = archetype_manager_->get_archetype(mask);
-
-    return archetype != nullptr ? archetype : create_archetype<C...>();
+    internal::ArchetypeData *archetype =
+        internal::Archetype::get_archetype(archetype_data_, mask);
+    if (archetype != nullptr)
+    {
+        return archetype;
+    }
+    auto meta_list = component_manager_->get_info_for_archetype<C...>(mask);
+    return internal::Archetype::create_archetype(
+        archetype_data_, mask, meta_list);
 }
 
 template <typename C>

@@ -3,6 +3,7 @@
 #include <limits>
 #include "meta_type.h"
 #include <utility>
+#include "define.h"
 
 namespace cloud::world::ecs
 {
@@ -46,7 +47,7 @@ class ComponentManager final
     MetaTypeList get_metatypes();
 
     template <typename... C>
-    std::pair<MaskType, MetaTypeList> get_info_for_archetype();
+    MetaTypeList get_info_for_archetype(MaskType &mask);
 
     template <typename C>
     C *get_singleton_component();
@@ -118,13 +119,11 @@ inline MetaTypeList ComponentManager::get_metatypes()
 }
 
 template <typename... C>
-inline std::pair<MaskType, MetaTypeList>
-    ComponentManager::get_info_for_archetype()
+inline MetaTypeList ComponentManager::get_info_for_archetype(MaskType &mask)
 {
-    MaskType mask;
     (..., (mask.set(get_or_register<C>())));
 
-    return std::make_pair(mask, get_metatypes<C...>());
+    return get_metatypes<C...>();
 }
 
 template <typename C>

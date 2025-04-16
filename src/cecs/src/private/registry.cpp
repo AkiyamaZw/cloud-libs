@@ -1,19 +1,17 @@
 #include "registry.h"
 #include "component_manager.h"
-#include "archetype_manager.h"
 
 namespace cloud::world::ecs
 {
 Registry::Registry()
 {
     component_manager_ = std::make_unique<ComponentManager>();
-    archetype_manager_ = std::make_unique<ArchetypeManager>();
 }
 
 Registry::~Registry()
 {
     component_manager_->release_singleton_component();
-    archetype_manager_->release_archetype();
+    internal::Archetype::release_archetypes(archetype_data_);
 }
 
 bool Registry::destroy_entity(const EntityID &id)
@@ -32,38 +30,35 @@ void Registry::destroy_entities(const std::vector<EntityID> &ids)
     }
 }
 
-bool Registry::destroy_archetype(internal::Archetype *archetype)
+bool Registry::destroy_archetype(internal::ArchetypeData *archetype)
 {
-    return archetype_manager_->destroy_archetype(archetype);
+    return internal::Archetype::destroy_archetype(archetype_data_, archetype);
 }
 
 size_t Registry::get_archetype_count() const
 {
-    return archetype_manager_->get_archetype_count();
+    return archetype_data_.archetypes.size();
 }
 
-EntityID Registry::allocate_entity(internal::Archetype *arch)
+EntityID Registry::allocate_entity(internal::ArchetypeData *arch)
 {
     EntityID id = EntityManager::get_or_create(entity_data_);
-    arch->add_entity(*EntityManager::get(entity_data_, id));
+    internal::Archetype::add_entity(*arch,
+                                    *EntityManager::get(entity_data_, id));
     return id;
 }
 
 bool Registry::dellocate_entity(EntityInfo &info)
 {
-    auto arch = get_archetype(info.archetype_mask);
-    return arch ? arch->destroy_entity(info) : false;
-}
-
-internal::Archetype *Registry::get_archetype(MaskType mask)
-{
-    return archetype_manager_->get_archetype(mask);
+    auto arch = internal::Archetype::get_archetype(archetype_data_,
+                                                   info.archetype_mask);
+    return arch ? internal::Archetype::destroy_entity(*arch, info) : false;
 }
 
 void Registry::for_each_matching_archetype(
-    MaskType mask, std::function<void(internal::Archetype *)> cb)
+    MaskType mask, std::function<void(internal::ArchetypeData *)> cb)
 {
-    archetype_manager_->for_each_matching_archetype(mask, cb);
+    internal::Archetype::for_each_matching_archetype(archetype_data_, mask, cb);
 }
 
 } // namespace cloud::world::ecs

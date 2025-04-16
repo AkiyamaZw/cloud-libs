@@ -2,16 +2,16 @@
 #include <functional>
 #include "entity.h"
 #include "entity_manager.h"
+#include "archetype.h"
 
 namespace cloud::world::ecs
 {
 namespace internal
 {
-class Archetype;
+struct ArchetypeData;
 };
 
 class ComponentManager;
-class ArchetypeManager;
 
 class Registry final
 {
@@ -61,27 +61,24 @@ class Registry final
     // ↓ ↓ ↓ archetype ↓ ↓ ↓
 
     template <typename... C>
-    internal::Archetype *get_or_create_archetype();
+    internal::ArchetypeData *get_or_create_archetype();
 
-    template <typename... C>
-    internal::Archetype *create_archetype();
-
-    bool destroy_archetype(internal::Archetype *archetype);
+    bool destroy_archetype(internal::ArchetypeData *archetype);
 
     size_t get_archetype_count() const;
     // ↑ ↑ ↑ archetype ↑ ↑ ↑
 
   protected:
-    EntityID allocate_entity(internal::Archetype *arch);
+    EntityID allocate_entity(internal::ArchetypeData *arch);
     bool dellocate_entity(EntityInfo &info);
-    internal::Archetype *get_archetype(MaskType mask);
+    internal::ArchetypeData *get_archetype(MaskType mask);
     void for_each_matching_archetype(
-        MaskType mask, std::function<void(internal::Archetype *)> cb);
+        MaskType mask, std::function<void(internal::ArchetypeData *)> cb);
 
   private:
     EntityManagementData entity_data_;
+    internal::ArchetypeManagerData archetype_data_;
     std::unique_ptr<ComponentManager> component_manager_;
-    std::unique_ptr<ArchetypeManager> archetype_manager_;
 };
 
 } // namespace cloud::world::ecs
