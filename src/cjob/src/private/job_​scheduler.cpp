@@ -6,7 +6,7 @@
 
 namespace cloud::js
 {
-JobWaitEntry *Job​Scheduler::pop_job(JobQueue &queue)
+JobWaitEntry *JobScheduler::pop_job(JobQueue &queue)
 {
     JobWaitEntry *entry = nullptr;
 
@@ -25,7 +25,7 @@ JobWaitEntry *Job​Scheduler::pop_job(JobQueue &queue)
     return entry;
 }
 
-void Job​Scheduler::push_job(Worker &worker, JobWaitEntry *job_pkt)
+void JobScheduler::push_job(Worker &worker, JobWaitEntry *job_pkt)
 {
     assert(job_pkt != nullptr);
     // this means left 0 to invalid default.
@@ -37,7 +37,7 @@ void Job​Scheduler::push_job(Worker &worker, JobWaitEntry *job_pkt)
     }
 }
 
-JobWaitEntry *Job​Scheduler::steal_job(JobQueue &queue)
+JobWaitEntry *JobScheduler::steal_job(JobQueue &queue)
 {
     JobWaitEntry *job_pkt{nullptr};
     active_jobs_.fetch_sub(1, std::memory_order_relaxed);
@@ -54,7 +54,7 @@ JobWaitEntry *Job​Scheduler::steal_job(JobQueue &queue)
     return job_pkt;
 }
 
-JobWaitEntry *Job​Scheduler::steal(Worker &worker)
+JobWaitEntry *JobScheduler::steal(Worker &worker)
 {
     JobWaitEntry *job_pkt{nullptr};
     do
@@ -68,7 +68,7 @@ JobWaitEntry *Job​Scheduler::steal(Worker &worker)
     return job_pkt;
 }
 
-JobWaitEntry *Job​Scheduler::fetch_job(Worker &worker)
+JobWaitEntry *JobScheduler::fetch_job(Worker &worker)
 {
     // 1. get job from this_thread
     auto *job_pkt = pop_job(worker.job_queue);
