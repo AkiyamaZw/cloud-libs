@@ -3,7 +3,7 @@
 #include <format>
 #include <cassert>
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 BitBool64::BitBool64(void *raw_ptr, size_t _count)
     : count(_count)
@@ -50,4 +50,4 @@ std::string BitBool64::debug_format_to_string() const
     return ss;
 }
 
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs

@@ -2,7 +2,7 @@
 #include "entity.h"
 #include <functional>
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 struct Chunk;
 
@@ -61,4 +61,4 @@ bool destroy_archetype(ArchetypeManagerData &data, ArchetypeData *archetype);
 
 }; // namespace Archetype
 
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs

@@ -2,7 +2,7 @@
 #include "define.h"
 #include <cassert>
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 struct Block;
 
@@ -49,4 +49,4 @@ struct MemoryAcessor
     T *data{nullptr};
     size_t count{0};
 };
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs

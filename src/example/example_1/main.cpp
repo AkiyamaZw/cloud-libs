@@ -1,6 +1,5 @@
 #include "registry.h"
 #include <iostream>
-#include "entity_manager.h"
 using namespace cloud;
 
 namespace cloud::world::ecs

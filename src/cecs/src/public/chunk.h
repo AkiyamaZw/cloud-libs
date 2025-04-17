@@ -4,7 +4,7 @@
 #include "bitbool.h"
 #include <span>
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 
 struct SlotPool
@@ -104,4 +104,4 @@ struct Chunk
     bool get_alive(size_t index) const;
 };
 
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs

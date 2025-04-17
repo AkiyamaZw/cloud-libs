@@ -102,9 +102,9 @@ void GameObject::update()
 
 size_t test_ecs(size_t entity_count, size_t epoch)
 {
-    Registry registry;
-    auto es = registry.create_entities<Transform, Movement, Render, Animation>(
-        entity_count);
+    RegistryData registry;
+    auto es = Registry::create_entities<Transform, Movement, Render, Animation>(
+        registry, entity_count);
     ControllerSystem ctl_system;
     RenderSystem render_system;
     AnimatorSystem ani_system;
@@ -125,26 +125,20 @@ size_t test_ecs(size_t entity_count, size_t epoch)
         }
         tt = t.get_us();
     }
-    registry.destroy_entities(es);
+    Registry::destroy_entities(registry, es);
     return tt;
 }
 
 size_t test_ecs_with_query(size_t entity_count, size_t epoch)
 {
-    Registry registry;
-    auto es = registry.create_entities<Transform, Movement, Render, Animation>(
-        entity_count);
+    RegistryData registry;
+    auto es = Registry::create_entities<Transform, Movement, Render, Animation>(
+        registry, entity_count);
     ControllerSystem ctl_system;
     RenderSystem render_system;
     AnimatorSystem ani_system;
     size_t tt;
     {
-        // Selector ctl_select(&registry);
-        // ctl_select.with<Transform, Movement>();
-        // Selector render_select(&registry);
-        // render_select.with<Transform, Render>();
-        // Selector ani_select(&registry);
-        // ani_select.with<Transform, Animation>();
         View view_ctl = Selector::query<Transform, Movement>(registry);
         auto ctl = [](Transform &tr, Movement &mo) {
             mo.speed += mo.accelerate * 0.033f;
@@ -173,7 +167,7 @@ size_t test_ecs_with_query(size_t entity_count, size_t epoch)
         }
         tt = t.get_us();
     }
-    registry.destroy_entities(es);
+    Registry::destroy_entities(registry, es);
     return tt;
 }
 

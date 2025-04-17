@@ -5,26 +5,19 @@
 #include <iostream>
 namespace cloud::world::ecs
 {
-
-namespace internal
-{
 struct ArchetypeData;
-}
-
-class Registry;
-
+struct RegistryData;
 // this is a class is for queried result for a chunk
 // the order is define by the MetaTypeList
 struct ComponentsView
 {
-    ComponentsView(
-        const MetaTypeList &list,
-        internal::Chunk *_chunk,
-        const std::vector<internal::Chunk::ChunkComponentMeta *> &lists);
+    ComponentsView(const MetaTypeList &list,
+                   Chunk *_chunk,
+                   const std::vector<Chunk::ChunkComponentMeta *> &lists);
 
-    internal::Chunk *chunk{nullptr};
+    Chunk *chunk{nullptr};
     // stored in the order of MetaTypeList
-    std::vector<internal::Chunk::ChunkComponentMeta *> selected_comps;
+    std::vector<Chunk::ChunkComponentMeta *> selected_comps;
 };
 
 // template <typename T>
@@ -83,12 +76,12 @@ class View
     }
 
   protected:
-    View(Registry &registry, MaskType mask);
+    View(RegistryData &registry, MaskType mask);
 
   private:
-    Registry &registry_;
+    RegistryData &registry_;
     MaskType masks_{0};
-    std::unordered_map<internal::ArchetypeData *, std::vector<ComponentsView>>
+    std::unordered_map<ArchetypeData *, std::vector<ComponentsView>>
         cached_view_;
 };
 } // namespace cloud::world::ecs

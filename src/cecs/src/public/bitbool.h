@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 // use uint_t64 as a bool[64]
 struct BitBool64
@@ -24,4 +24,4 @@ struct BitBool64
 
     std::string debug_format_to_string() const;
 };
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs

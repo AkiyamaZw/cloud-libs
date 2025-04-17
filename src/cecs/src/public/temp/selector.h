@@ -20,14 +20,14 @@ type_list<Args...> args(Ret (Kls::*)(Args...) const);
 struct Selector
 {
     Selector() = default;
-    Selector(Registry *registry);
-    Registry *registry_ptr{nullptr};
+    Selector(RegistryData *registry);
+    RegistryData *registry_ptr{nullptr};
     MetaTypeList required_comps{};
     MaskType required_archetype{0};
     MetaTypeList exclude_comps{};
 
     // just a factory function
-    static Selector from(Registry *registry);
+    static Selector from(RegistryData *registry);
 
     template <typename... C>
     Selector &with()
@@ -43,9 +43,7 @@ struct Selector
     }
 
     template <typename... Args, typename Func>
-    void unpack_chunk(type_list<Args...> type,
-                      internal::Chunk *chunk,
-                      Func &&func)
+    void unpack_chunk(type_list<Args...> type, Chunk *chunk, Func &&func)
     {
         // #ifdef DEBUG
         //         show_chunk_alive_info(chunk);
@@ -69,7 +67,7 @@ struct Selector
         {
             if ((mask & required_archetype) != required_archetype)
                 continue;
-            auto &chunks = internal::Archetype::get_chunks(*archetype);
+            auto &chunks = Archetype::get_chunks(*archetype);
             for (auto chunk : chunks)
             {
                 unpack_chunk(Params{}, chunk, std::forward<Func>(func));
@@ -78,10 +76,10 @@ struct Selector
         return *this;
     }
 
-    void show_chunk_alive_info(internal::Chunk *chunk);
+    void show_chunk_alive_info(Chunk *chunk);
 
     template <typename... C>
-    static View query(Registry &registry)
+    static View query(RegistryData &registry)
     {
         auto metas = Component::get_metatypes<C...>(registry.component_data_);
         MaskType mask;
@@ -91,7 +89,7 @@ struct Selector
         return Selector::create_view(registry, metas, mask);
     }
 
-    static View create_view(Registry &registry,
+    static View create_view(RegistryData &registry,
                             const MetaTypeList &metas,
                             MaskType mask);
 };

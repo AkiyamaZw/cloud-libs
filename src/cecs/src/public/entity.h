@@ -32,7 +32,7 @@ struct EntityInfo
 {
     EntityVersion version{0};
     MaskType archetype_mask{0};
-    internal::Chunk *chunk{nullptr};
+    Chunk *chunk{nullptr};
     Index index_in_archetype_{InvalidIndex};
     Index index_in_chunk{InvalidIndex};
 };
@@ -41,39 +41,19 @@ struct EntityInfo
  * @brief a entity info pool to contain entity and its EntityInfo
  *
  */
-class EntityInfoPool final
+struct EntityManagementData
 {
-  public:
-    EntityInfoPool() = default;
-
-    ~EntityInfoPool();
-
-    EntityID get_or_create();
-
-    EntityInfo *get(const EntityID &id);
-
-    const EntityInfo *get(const EntityID &id) const;
-
-    void destroy(const EntityID &id);
-
-    EntityInfo *operator[](const EntityID &id);
-
-    const EntityInfo *operator[](const EntityID &id) const;
-
-  protected:
-    void reset_info(EntityInfo &info);
-
-  private:
     std::vector<EntityInfo *> entity_infos_;
-
     std::queue<size_t> free_list_;
+    std::mutex queue_mutex_;
+    ~EntityManagementData();
 };
 
-template <typename T>
-T &get_component(const EntityInfo &info)
+namespace EntityManager
 {
-    assert(info.chunk);
-    return info.chunk->get_chunk_component<T>()[info.index_in_chunk];
-}
-
+EntityID get_or_create(EntityManagementData &data);
+EntityInfo *get(const EntityManagementData &data, const EntityID &id);
+void destroy(EntityManagementData &data, const EntityID &id);
+void reset(EntityInfo &info);
+}; // namespace EntityManager
 } // namespace cloud::world::ecs

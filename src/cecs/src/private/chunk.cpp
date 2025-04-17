@@ -1,6 +1,6 @@
 #include "chunk.h"
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 SlotPool::~SlotPool() { allocated.clear(); }
 
@@ -141,4 +141,4 @@ bool Chunk::get_alive(size_t index) const
 {
     return entity_live_flags->get_bit(index);
 }
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs

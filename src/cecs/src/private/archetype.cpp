@@ -1,7 +1,7 @@
 #include "archetype.h"
 #include "chunk.h"
 
-namespace cloud::world::ecs::internal
+namespace cloud::world::ecs
 {
 
 ChunkPoolData::~ChunkPoolData()
@@ -150,4 +150,4 @@ bool Archetype::destroy_archetype(ArchetypeManagerData &data,
     return true;
 }
 
-} // namespace cloud::world::ecs::internal
+} // namespace cloud::world::ecs
