@@ -197,7 +197,7 @@ void test_main()
     int average_cnt = 10;
     using TestFunc = std::function<size_t(size_t, size_t)>;
 
-    std::cout << "entity count: " << entity_cnt << " update times: " << epochs
+    std::cout << "entity count: " << entity_cnt << " update frames: " << epochs
               << " times: " << average_cnt << std::endl;
 
     auto show_result = [](const std::string &name,
