@@ -16,19 +16,17 @@ using EntityVersion = uint64_t;
 using Index = size_t;
 static constexpr Index InvalidIndex = std::numeric_limits<Index>::max();
 
+constexpr size_t BLOCK_MEMORY_32K = 32 * 1024;
 constexpr size_t BLOCK_MEMORY_16K = 16384;
-
 constexpr size_t BLOCK_MEMORY_8K = 8192;
-constexpr bool is_16K = false;
-constexpr size_t BLOCK_MEMORY = is_16K ? BLOCK_MEMORY_16K : BLOCK_MEMORY_8K;
+
+constexpr bool is_16K = true;
+constexpr size_t BLOCK_MEMORY =
+    BLOCK_MEMORY_16K; // is_16K ? BLOCK_MEMORY_16K : BLOCK_MEMORY_8K;
 
 using byte = unsigned char;
 
 struct MetaType;
-namespace internal
-{
-struct Chunk;
-} // namespace internal
 
 using MetaTypeList = std::vector<const MetaType *>;
 

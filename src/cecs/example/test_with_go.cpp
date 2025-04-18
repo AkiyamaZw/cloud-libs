@@ -96,8 +96,8 @@ GameObject::~GameObject()
 void GameObject::update()
 {
     c_comp->on_update();
-    r_comp->on_update();
-    a_comp->on_update();
+    // r_comp->on_update();
+    // a_comp->on_update();
 }
 
 size_t test_ecs(size_t entity_count, size_t epoch)
@@ -120,8 +120,8 @@ size_t test_ecs(size_t entity_count, size_t epoch)
         for (size_t i = 0; i < epoch; ++i)
         {
             ctl_system.on_update(ctl_select);
-            render_system.on_update(render_select);
-            ani_system.on_update(ani_select);
+            // render_system.on_update(render_select);
+            // ani_system.on_update(ani_select);
         }
         tt = t.get_us();
     }
@@ -217,12 +217,12 @@ void test_main()
             acculate_time += func(entity_cnt, epochs);
         return {1.0f * acculate_time / average_cnt, acculate_time};
     };
-
-    show_result("gameobjct", calc_average(test_go));
-    show_result("myecs", calc_average(test_ecs));
-    // show_result("myecs_query", calc_average(test_ecs_with_query));
-    // assert(ecs_count == go_count && go_count == entt_count && ecs_count ==
-    // entt_count);
+    auto re1 = calc_average(test_go);
+    auto re2 = calc_average(test_ecs);
+    float delta = (re1.first - re2.first) / re2.first;
+    show_result("gameobjct", re1);
+    show_result("myecs", re2);
+    std::cout << std::format("speed up {}%", delta * 100.0f) << std::endl;
 }
 
 } // namespace cloud::world::ecs::vsgo

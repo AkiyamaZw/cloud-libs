@@ -14,11 +14,11 @@ struct alignas(8) BlockHeader
 
 struct alignas(32) Block
 {
-    byte storage[BLOCK_MEMORY_16K - sizeof(BlockHeader)];
+    byte storage[BLOCK_MEMORY - sizeof(BlockHeader)];
     BlockHeader *header;
 };
 
-static_assert(sizeof(Block) == BLOCK_MEMORY_16K, "Block size if not 16kb!");
+static_assert(sizeof(Block) == BLOCK_MEMORY, "Block size if not 16kb!");
 
 template <typename T>
 struct MemoryAcessor
