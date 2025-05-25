@@ -1,5 +1,7 @@
 #include "test_with_go.h"
 #include <memory>
+#include <cmath>
+
 // #include "entt/entity/registry.hpp"
 
 namespace cloud::world::ecs::vsgo
@@ -34,7 +36,7 @@ void AnimatorSystem::on_update(Selector &select)
     select.for_each([](Transform &tr, Animation &anim) {
         anim.pose1 = tr.x * tr.x;
         anim.joint1 = tr.y * tr.y;
-        anim.rotation = sqrt(tr.z);
+        anim.rotation = std::sqrt(tr.z);
         ecs_count += 1;
     });
 }

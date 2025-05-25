@@ -47,11 +47,11 @@ namespace cloud::world::ecs
 //     return id;
 // }
 
-// bool Registry::dellocate_entity(EntityInfo &info)
+// bool dellocate_entity(EntityInfo &info)
 // {
 //     auto arch = Archetype::get_archetype(archetype_data_,
-//                                                    info.archetype_mask);
-//     return arch ? Archetype::destroy_entity(*arch, info) : false;
+//     info.archetype_mask); return arch ? Archetype::destroy_entity(*arch,
+//     info) : false;
 // }
 
 // void Registry::for_each_matching_archetype(
@@ -70,7 +70,10 @@ RegistryData::~RegistryData()
 bool Registry::destroy_entity(RegistryData &data, const EntityID &id)
 {
     auto info = EntityManager::get(data.entity_data_, id);
-    assert(dellocate_entity(*info));
+    auto arch =
+        Archetype::get_archetype(data.archetype_data_, info->archetype_mask);
+    assert(arch);
+    Archetype::destroy_entity(*arch, *info);
     EntityManager::destroy(data.entity_data_, id);
     return true;
 }
