@@ -70,7 +70,11 @@ RegistryData::~RegistryData()
 bool Registry::destroy_entity(RegistryData &data, const EntityID &id)
 {
     auto info = EntityManager::get(data.entity_data_, id);
-    assert(dellocate_entity(*info));
+    if (auto arch = Archetype::get_archetype(data.archetype_data_,
+                                             info->archetype_mask))
+    {
+        Archetype::destroy_entity(*arch, *info);
+    }
     EntityManager::destroy(data.entity_data_, id);
     return true;
 }
