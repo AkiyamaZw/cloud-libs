@@ -1,0 +1,13 @@
+file(GLOB_RECURSE HEAD_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+add_executable(EXAMPLE_APP ${HEAD_FILES} ${SOURCE_FILES})
+target_link_libraries(EXAMPLE_APP PRIVATE application)
+target_include_directories(EXAMPLE_APP PRIVATE "${PROJECT_SOURCE_FOLDER}")
+
+
+
+
+
+
+
