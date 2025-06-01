@@ -6,7 +6,10 @@ file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/private/*.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${HEAD_FILES} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
-        PUBLIC glfw)
+        PUBLIC
+        glfw
+        ${vulkan_lib}
+)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER modules/application)
