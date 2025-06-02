@@ -16,13 +16,14 @@ class GraphicsBase
     void RegInstanceExt(const char *ins_ext_name);
 
   private:
+    friend VkResult CreateVkInstance(VkInstanceCreateFlags flags, GraphicsBase *graphics_base);
+
     uint32_t api_version_{VK_API_VERSION_1_0};
     VkInstance instance_;
     std::vector<const char *> instance_layer_;
     std::vector<const char *> instance_extentions_;
     VkDebugUtilsMessengerEXT debug_messager_;
     VkSurfaceKHR surface_;
-    friend VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphics_base);
 
     // physical device is just like a remote server, it provides base information.
     VkPhysicalDevice physical_device_;

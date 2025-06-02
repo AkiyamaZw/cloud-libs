@@ -1,8 +1,48 @@
 #include "VkGraphicsBase.h"
 #include <iostream>
+#include <format>
 
 namespace graphics::vk
 {
+
+VkResult CreateDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT messenger)
+{
+    static PFN_vkDebugUtilsMessengerCallbackEXT debug_utils_callback =
+        [](VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
+           VkDebugUtilsMessageTypeFlagsEXT msg_types,
+           const VkDebugUtilsMessengerCallbackDataEXT *cb_data,
+           void *user_data) {
+            std::cout << std::format("{}\n\n", cb_data->pMessage);
+            return VK_FALSE;
+        };
+    VkDebugUtilsMessengerCreateInfoEXT debug_utils_mesg_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+        .pfnUserCallback = debug_utils_callback};
+
+    PFN_vkCreateDebugUtilsMessengerEXT vk_create_debug_utils_messager =
+        reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+            vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));
+    if (vk_create_debug_utils_messager == nullptr)
+    {
+        std::cout << std::format("failed to create debug messager due to get function pointer of "
+                                 "vkCreateDebugUtilsMessengerEXT\n");
+        return VK_RESULT_MAX_ENUM;
+    }
+
+    VkResult succ = vkCreateDebugUtilsMessengerEXT(
+        instance, &debug_utils_mesg_create_info, nullptr, &messenger);
+    if (succ)
+    {
+        std::cout << std::format("failed to create a debug messenger: error code :{}\n",
+                                 int32_t(succ));
+    }
+    return succ;
+}
 
 VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphics_base)
 {
@@ -32,7 +72,7 @@ VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphic
                              VK_VERSION_MINOR(graphics_base->api_version_),
                              VK_VERSION_PATCH(graphics_base->api_version_));
 #ifndef NDEBUG
-    CreateDebugMessenger();
+    CreateDebugMessenger(graphics_base->instance_, graphics_base->debug_messager_);
 #endif
 
     return VK_SUCCESS;
