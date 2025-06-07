@@ -15,6 +15,8 @@ class GraphicsBase
     void RegInstanceLayer(const char *ins_layer_name);
     void RegInstanceExt(const char *ins_ext_name);
 
+    void SetSurface(VkSurfaceKHR surface);
+
   private:
     friend VkResult CreateVkInstance(VkInstanceCreateFlags flags, GraphicsBase *graphics_base);
 

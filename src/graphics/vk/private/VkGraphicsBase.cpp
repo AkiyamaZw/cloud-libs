@@ -1,6 +1,7 @@
 #include "VkGraphicsBase.h"
 #include <iostream>
 #include <format>
+#include <span>
 
 namespace graphics::vk
 {
@@ -44,6 +45,102 @@ VkResult CreateDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT mess
     return succ;
 }
 
+VkResult CheckInstanceLayers(VkInstance instance, std::span<const char *> layer_check)
+{
+    uint32_t layer_count;
+    std::vector<VkLayerProperties> avaliable_layers;
+    if (VkResult succ = vkEnumerateInstanceLayerProperties(&layer_count, nullptr))
+    {
+        std::cout << std::format("enumerateInstanceLayer failed: error_code {}\n", int32_t(succ));
+        return succ;
+    }
+    if (layer_count)
+    {
+        avaliable_layers.resize(layer_count);
+        if (VkResult succ =
+                vkEnumerateInstanceLayerProperties(&layer_count, avaliable_layers.data()))
+        {
+            std::cout << std::format("enumerateInstanceLayer failed: error_code {}\n",
+                                     int32_t(succ));
+            return succ;
+        }
+        for (auto &prop : layer_check)
+        {
+            bool found = false;
+            for (auto &layer : avaliable_layers)
+            {
+                if (!strcmp(prop, layer.layerName))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                prop = nullptr;
+            }
+        }
+    }
+    else
+    {
+        for (auto &layer : layer_check)
+        {
+            layer = nullptr;
+        }
+    }
+    return VK_SUCCESS;
+}
+
+VkResult CheckInstanceExtension(VkInstance instance,
+                                std::span<const char *> ext_check,
+                                const char *layer_name)
+{
+    uint32_t ext_count;
+    std::vector<VkExtensionProperties> avaliable_exts;
+    if (VkResult succ = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count, nullptr))
+    {
+        std::cout << std::format("enumerateInstanceExtension failed: error_code {}, layer_name{}\n",
+                                 int32_t(succ),
+                                 layer_name);
+        return succ;
+    }
+    if (ext_count)
+    {
+        avaliable_exts.resize(ext_count);
+        if (VkResult succ = vkEnumerateInstanceExtensionProperties(
+                layer_name, &ext_count, avaliable_exts.data()))
+        {
+            std::cout << std::format("enumerateInstanceLayer failed: error_code {}\n",
+                                     int32_t(succ));
+            return succ;
+        }
+        for (auto &prop : ext_check)
+        {
+            bool found = false;
+            for (auto &layer : avaliable_exts)
+            {
+                if (!strcmp(prop, layer.extensionName))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                prop = nullptr;
+            }
+        }
+    }
+    else
+    {
+        for (auto &layer : ext_check)
+        {
+            layer = nullptr;
+        }
+    }
+    return VK_SUCCESS;
+}
+
 VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphics_base)
 {
 #ifndef NDEBUG
@@ -66,7 +163,6 @@ VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphic
         std::cerr << "ceate vk instance failed" << std::endl;
         return succ;
     }
-
     std::cout << std::format("vulkan {}.{}.{} standing by.",
                              VK_VERSION_MAJOR(graphics_base->api_version_),
                              VK_VERSION_MINOR(graphics_base->api_version_),
@@ -74,10 +170,99 @@ VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphic
 #ifndef NDEBUG
     CreateDebugMessenger(graphics_base->instance_, graphics_base->debug_messager_);
 #endif
-
     return VK_SUCCESS;
+}
 
-} // namespace graphics::vk
+VkResult GetPhysicalDevices(VkInstance instance, std::vector<VkPhysicalDevice> &physical_devices)
+{
+    uint32_t device_cnt{0};
+    if (VkResult succ = vkEnumeratePhysicalDevices(instance, &device_cnt, nullptr))
+    {
+        std::cout << std::format("failed to get physical device count/n");
+        return succ;
+    }
+    if (!device_cnt)
+    {
+        std::cout << std::format("get physical device count equals to 0\n");
+        VkResult::VK_ERROR_DEVICE_LOST;
+    }
+    physical_devices.resize(device_cnt);
+    VkResult succ = vkEnumeratePhysicalDevices(instance, &device_cnt, physical_devices.data());
+    if (succ)
+        std::cout << std::format("get available device failed\n");
+    return succ;
+}
+
+VkResult GetQueueFamilyIndices(VkPhysicalDevice physical_device,
+                               bool enable_graphics_queue,
+                               bool enable_compute_queue,
+                               VkSurfaceKHR surface,
+                               uint32_t (&queue_family_indices)[3])
+{
+    uint32_t queue_family_count{0};
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
+    if (!queue_family_count)
+    {
+        return VK_RESULT_MAX_ENUM;
+    }
+    std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        physical_device, &queue_family_count, queue_family_properties.data());
+    auto &[ig, ip, ic] = queue_family_indices;
+    ig, ip, ic = VK_QUEUE_FAMILY_IGNORED;
+    for (uint32_t i = 0; i < queue_family_count; ++i)
+    {
+        VkBool32 support_graphics =
+            enable_graphics_queue && queue_family_properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
+        VkBool32 support_present = false;
+        VkBool32 support_compute =
+            enable_compute_queue && queue_family_properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
+        if (surface)
+        {
+            if (VkResult succ = vkGetPhysicalDeviceSurfaceSupportKHR(
+                    physical_device, i, surface, &support_present))
+            {
+                std::cout << "failed to determine if the queue family support present\n";
+                return;
+            }
+        }
+        if (support_graphics && support_compute)
+        {
+            if (support_present)
+            {
+                ig = ip = ic = i;
+                break;
+            }
+            if (ig != ic || ig == VK_QUEUE_FAMILY_IGNORED)
+            {
+                ig = ic = i;
+            }
+            if (!surface)
+            {
+                break;
+            }
+        }
+        if (support_graphics && ig == VK_QUEUE_FAMILY_IGNORED)
+        {
+            ig = i;
+        }
+        if (support_compute && ic == VK_QUEUE_FAMILY_IGNORED)
+        {
+            ic = i;
+        }
+        if (support_present && ip == VK_QUEUE_FAMILY_IGNORED)
+        {
+            ip = i;
+        }
+    }
+    if (ig == VK_QUEUE_FAMILY_IGNORED && enable_graphics_queue ||
+        ip == VK_QUEUE_FAMILY_IGNORED && surface ||
+        ic == VK_QUEUE_FAMILY_IGNORED && enable_compute_queue)
+    {
+        return VK_RESULT_MAX_ENUM;
+    }
+    return;
+}
 
 void InsertToVector(const char *name, std::vector<const char *> &vec)
 {
@@ -103,6 +288,12 @@ void GraphicsBase::RegInstanceLayer(const char *ins_layer_name)
 void GraphicsBase::RegInstanceExt(const char *ins_ext_name)
 {
     InsertToVector(ins_ext_name, instance_extentions_);
+}
+
+void GraphicsBase::SetSurface(VkSurfaceKHR surface)
+{
+    if (!surface_)
+        surface_ = surface;
 }
 
 } // namespace graphics::vk
