@@ -9,6 +9,12 @@ if(NOT TARGET glfw)
     set_target_properties(glfw PROPERTIES FOLDER extern/glfw)
 endif()
 
+if (NOT TARGET spdlog)
+    set(SPDLOG_BUILD_SHARED)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/extern/spdlog)
+    set_target_properties(spdlog PROPERTIES FOLDER extern/spdlog)
+endif()
+
 
 if(WIN32)
     set(vulkan_lib ${EXTERN_LIB_DIR}/VulkanSDK/lib/Win32/vulkan-1.lib)
