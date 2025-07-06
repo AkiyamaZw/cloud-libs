@@ -6,11 +6,19 @@ GraphicsApplication::GraphicsApplication() {}
 
 GraphicsApplication::~GraphicsApplication() {}
 
-void GraphicsApplication::Run()
+void GraphicsApplication::Setup()
 {
-    while (!window_.ShouldExit())
+    ApplicationBase::Setup();
+    RegisterSlotUpdate(std::bind(&GraphicsWindow::Update, &window_, std::placeholders::_1));
+}
+
+void GraphicsApplication::Run() { ApplicationBase::Run(); }
+
+void GraphicsApplication::OnTick()
+{
+    if (window_.ShouldExit())
     {
-        window_.Update(0.0f);
+        RequestEndApplication();
     }
 }
 } // namespace cloud

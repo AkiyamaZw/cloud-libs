@@ -2,7 +2,7 @@
 #include "vulkan/vulkan.h"
 #include <vector>
 
-namespace graphics::vk
+namespace cloud::graphics::vk
 {
 class GraphicsBase
 {
@@ -49,4 +49,6 @@ class GraphicsBase
     std::vector<VkImageView> swapchain_views_;
     VkSwapchainCreateInfoKHR swapchain_create_info_{};
 };
-} // namespace graphics::vk
+
+void SetupGraphics(GraphicsBase *graphics);
+} // namespace cloud::graphics::vk

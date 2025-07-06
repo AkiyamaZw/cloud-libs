@@ -2,10 +2,10 @@
 #include <iostream>
 #include <format>
 #include <span>
+#include <cassert>
 
-namespace graphics::vk
+namespace cloud::graphics::vk
 {
-
 VkResult CreateDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT messenger)
 {
     static PFN_vkDebugUtilsMessengerCallbackEXT debug_utils_callback =
@@ -141,7 +141,7 @@ VkResult CheckInstanceExtension(VkInstance instance,
     return VK_SUCCESS;
 }
 
-VkResult CreateVkInstance(VkInstanceCreateFlags flags = 0, GraphicsBase *graphics_base)
+VkResult CreateVkInstance(VkInstanceCreateFlags flags, GraphicsBase *graphics_base)
 {
 #ifndef NDEBUG
     graphics_base->RegInstanceLayer("VK_LAYER_KHRONOS_Validation");
@@ -184,7 +184,7 @@ VkResult GetPhysicalDevices(VkInstance instance, std::vector<VkPhysicalDevice> &
     if (!device_cnt)
     {
         std::cout << std::format("get physical device count equals to 0\n");
-        VkResult::VK_ERROR_DEVICE_LOST;
+        return VkResult::VK_ERROR_DEVICE_LOST;
     }
     physical_devices.resize(device_cnt);
     VkResult succ = vkEnumeratePhysicalDevices(instance, &device_cnt, physical_devices.data());
@@ -209,7 +209,7 @@ VkResult GetQueueFamilyIndices(VkPhysicalDevice physical_device,
     vkGetPhysicalDeviceQueueFamilyProperties(
         physical_device, &queue_family_count, queue_family_properties.data());
     auto &[ig, ip, ic] = queue_family_indices;
-    ig, ip, ic = VK_QUEUE_FAMILY_IGNORED;
+    ig = ip = ic = VK_QUEUE_FAMILY_IGNORED;
     for (uint32_t i = 0; i < queue_family_count; ++i)
     {
         VkBool32 support_graphics =
@@ -223,7 +223,7 @@ VkResult GetQueueFamilyIndices(VkPhysicalDevice physical_device,
                     physical_device, i, surface, &support_present))
             {
                 std::cout << "failed to determine if the queue family support present\n";
-                return;
+                return VK_RESULT_MAX_ENUM;
             }
         }
         if (support_graphics && support_compute)
@@ -261,7 +261,7 @@ VkResult GetQueueFamilyIndices(VkPhysicalDevice physical_device,
     {
         return VK_RESULT_MAX_ENUM;
     }
-    return;
+    return VK_SUCCESS;
 }
 
 void InsertToVector(const char *name, std::vector<const char *> &vec)
@@ -296,4 +296,5 @@ void GraphicsBase::SetSurface(VkSurfaceKHR surface)
         surface_ = surface;
 }
 
-} // namespace graphics::vk
+void SetupGraphics(GraphicsBase *graphics) { assert(graphics != nullptr); }
+} // namespace cloud::graphics::vk

@@ -1,15 +1,19 @@
 #pragma once
+#include "application_base.h"
 #include "graphic_window.h"
 
 namespace cloud
 {
-class GraphicsApplication
+class GraphicsApplication : public ApplicationBase
 {
   public:
     GraphicsApplication();
     ~GraphicsApplication();
+    void Setup() override;
+    void Run() override;
 
-    void Run();
+  protected:
+    void OnTick() override;
 
   private:
     static constexpr int WIDTH = 600;

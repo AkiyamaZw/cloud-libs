@@ -16,7 +16,6 @@ class GraphicsWindow
     GraphicsWindow(GraphicsWindow &&) = delete;
     GraphicsWindow &operator=(const GraphicsWindow &) = delete;
     GraphicsWindow &operator=(GraphicsWindow &&) = delete;
-
     bool ShouldExit() const;
     void Update(float dt);
 
