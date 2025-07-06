@@ -2,7 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-
+#include "utility.h"
 namespace cloud
 {
 float UpdateTimer::Update()
@@ -41,11 +41,11 @@ void ApplicationBase::Run()
     while (state_ != ApplicationState::CLOSING)
     {
         float dt = update_timer_.Update();
-        std::cout << dt << std::endl;
+        INFO("good is now in update with dt: {}", dt);
         for (auto &update_func : updaters_)
         {
             update_func(dt);
-            // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
         OnTick();
     }
@@ -79,7 +79,7 @@ void ApplicationBase::RegisterModule(const std::string &id, Module *module_)
     }
     else
     {
-        std::cout << "module with id has registered" << std::endl;
+        ERROR("module with id has registered");
     }
 }
 
