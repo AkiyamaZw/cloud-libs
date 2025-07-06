@@ -1,4 +1,4 @@
-#include "utility.h"
+#include "app_utility.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/async.h"
 #include "spdlog/sinks/msvc_sink.h"

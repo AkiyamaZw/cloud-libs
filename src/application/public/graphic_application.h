@@ -10,7 +10,6 @@ class GraphicsApplication : public ApplicationBase
     GraphicsApplication();
     ~GraphicsApplication();
     void Setup() override;
-    void Run() override;
 
   protected:
     void OnTick() override;

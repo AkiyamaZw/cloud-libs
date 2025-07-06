@@ -12,8 +12,6 @@ void GraphicsApplication::Setup()
     RegisterSlotUpdate(std::bind(&GraphicsWindow::Update, &window_, std::placeholders::_1));
 }
 
-void GraphicsApplication::Run() { ApplicationBase::Run(); }
-
 void GraphicsApplication::OnTick()
 {
     if (window_.ShouldExit())

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include "utility.h"
+#include "app_utility.h"
 namespace cloud
 {
 float UpdateTimer::Update()
@@ -10,7 +10,7 @@ float UpdateTimer::Update()
     auto ts = std::chrono::high_resolution_clock::now();
     last_update_ts_ = std::chrono::duration_cast<std::chrono::milliseconds>(ts - start_ts_).count();
     start_ts_ = ts;
-    return last_update_ts_;
+    return last_update_ts_ / 1000.0;
 }
 
 Module::Module()
@@ -41,7 +41,6 @@ void ApplicationBase::Run()
     while (state_ != ApplicationState::CLOSING)
     {
         float dt = update_timer_.Update();
-        INFO("good is now in update with dt: {}", dt);
         for (auto &update_func : updaters_)
         {
             update_func(dt);

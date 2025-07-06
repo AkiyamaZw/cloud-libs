@@ -36,7 +36,7 @@ class UpdateTimer
     float GetDeltaTime() const { return last_update_ts_; }
 
   private:
-    float last_update_ts_{0.0};
+    float last_update_ts_{0.0}; // milisecond
     std::chrono::high_resolution_clock::time_point start_ts_;
 };
 
