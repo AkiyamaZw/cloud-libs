@@ -4,6 +4,7 @@
 
 namespace cloud::graphics::vk
 {
+struct VkDeviceData;
 class GraphicsBase
 {
   public:
@@ -18,19 +19,15 @@ class GraphicsBase
     void SetSurface(VkSurfaceKHR surface);
 
   private:
-    friend VkResult CreateVkInstance(VkInstanceCreateFlags flags, GraphicsBase *graphics_base);
-
-    uint32_t api_version_{VK_API_VERSION_1_0};
-    VkInstance instance_;
-    std::vector<const char *> instance_layer_;
-    std::vector<const char *> instance_extentions_;
-    VkDebugUtilsMessengerEXT debug_messager_;
+    friend VkResult CreateVkInstance(GraphicsBase *graphics_base, VkInstanceCreateFlags flags);
+    friend bool SetupGraphics(GraphicsBase *graphics);
     VkSurfaceKHR surface_;
 
     // physical device is just like a remote server, it provides base information.
     VkPhysicalDevice physical_device_;
     VkPhysicalDeviceProperties physical_device_properties_;
     VkPhysicalDeviceMemoryProperties physical_device_memroy_properties_;
+    std::vector<VkPhysicalDevice> avaiable_physical_devices_;
 
     // a phisical device' proxy just like a proxy of a remote server.
     VkDevice vk_device_;
@@ -48,7 +45,10 @@ class GraphicsBase
     std::vector<VkImage> swapchain_images_;
     std::vector<VkImageView> swapchain_views_;
     VkSwapchainCreateInfoKHR swapchain_create_info_{};
+
+  public:
+    std::unique_ptr<VkDeviceData> device_data_;
 };
 
-void SetupGraphics(GraphicsBase *graphics);
+bool SetupGraphics(GraphicsBase *graphics);
 } // namespace cloud::graphics::vk

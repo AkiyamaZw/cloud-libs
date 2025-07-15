@@ -46,36 +46,22 @@ void test_counter()
     {
         Counter counter(js);
         JobBuilder builder(js);
-        builder.dispatch("first_job1", [](JobArgs &) {
-            std::cout << "first_job1" << std::endl;
-        });
-        builder.dispatch("first_job2", [](JobArgs &) {
-            std::cout << "first_job2" << std::endl;
-        });
-        builder.dispatch("first_job3", [](JobArgs &) {
-            std::cout << "first_job3" << std::endl;
-        });
+        builder.dispatch("first_job1", [](JobArgs &) { std::cout << "first_job1" << std::endl; });
+        builder.dispatch("first_job2", [](JobArgs &) { std::cout << "first_job2" << std::endl; });
+        builder.dispatch("first_job3", [](JobArgs &) { std::cout << "first_job3" << std::endl; });
         counter += builder.extract_wait_counter();
 
         JobBuilder builder2(js);
-        builder2.dispatch("second_job", [](JobArgs &) {
-            std::cout << "second_job" << std::endl;
-        });
+        builder2.dispatch("second_job", [](JobArgs &) { std::cout << "second_job" << std::endl; });
         counter += builder2.extract_wait_counter();
 
         JobBuilder builder3(js);
         builder3.dispatch_wait(counter);
-        builder3.dispatch("third_job", [](JobArgs &) {
-            std::cout << "third_job" << std::endl;
-        });
+        builder3.dispatch("third_job", [](JobArgs &) { std::cout << "third_job" << std::endl; });
         builder3.dispatch_fence_explicitly();
-        builder3.dispatch("third_job2", [](JobArgs &) {
-            std::cout << "third_job2" << std::endl;
-        });
+        builder3.dispatch("third_job2", [](JobArgs &) { std::cout << "third_job2" << std::endl; });
         builder3.dispatch_fence_explicitly();
-        builder3.dispatch("third_job3", [](JobArgs &) {
-            std::cout << "third_job3" << std::endl;
-        });
+        builder3.dispatch("third_job3", [](JobArgs &) { std::cout << "third_job3" << std::endl; });
         // cloud::RunContext::get_context()->export_grapviz("./graph.dot");
 
         js.spin_wait(counter);
@@ -92,26 +78,21 @@ void test_counter_2()
     {
 
         JobBuilder builder(js);
-        builder.dispatch("job_a",
-                         [](JobArgs &) { std::cout << "job_a" << std::endl; });
-        builder.dispatch("job_b",
-                         [](JobArgs &) { std::cout << "job_b" << std::endl; });
+        builder.dispatch("job_a", [](JobArgs &) { std::cout << "job_a" << std::endl; });
+        builder.dispatch("job_b", [](JobArgs &) { std::cout << "job_b" << std::endl; });
         counter += builder.extract_wait_counter();
 
         JobBuilder builder3(js);
-        builder3.dispatch("job_e",
-                          [](JobArgs &) { std::cout << "job_e" << std::endl; });
+        builder3.dispatch("job_e", [](JobArgs &) { std::cout << "job_e" << std::endl; });
         counter += builder3.extract_wait_counter();
 
         JobBuilder builder2(js);
         builder2.dispatch_wait(counter);
-        builder2.dispatch("job_c",
-                          [](JobArgs &) { std::cout << "job_c" << std::endl; });
+        builder2.dispatch("job_c", [](JobArgs &) { std::cout << "job_c" << std::endl; });
 
         JobBuilder builder4(js);
         builder4.dispatch_wait(counter);
-        builder4.dispatch("job_d",
-                          [](JobArgs &) { std::cout << "job_d" << std::endl; });
+        builder4.dispatch("job_d", [](JobArgs &) { std::cout << "job_d" << std::endl; });
 
         js.spin_wait(builder4.extract_wait_counter());
         js.spin_wait(builder3.extract_wait_counter());
@@ -168,27 +149,20 @@ void dummy_logic(JobSystem &js, EngineGlobal &global)
         global.wait_render();
         if (global.finished)
             break;
-        auto str = std::format("logic index:{} \n logic start:==>",
-                               global.frame_index.load());
+        auto str = std::format("logic index:{} \n logic start:==>", global.frame_index.load());
         std::cout << str << std::endl;
         JobBuilder builder(js);
-        builder.dispatch("ecs_update", [](JobArgs &) {
-            std::cout << "ecs_update" << std::endl;
-        });
+        builder.dispatch("ecs_update", [](JobArgs &) { std::cout << "ecs_update" << std::endl; });
         builder.dispatch_fence_explicitly();
-        builder.dispatch("logic_1", [](JobArgs &) {
-            std::cout << "scene_update_start" << std::endl;
-        });
-        builder.dispatch("physcal_update", [](JobArgs &) {
-            std::cout << "physcal_update" << std::endl;
-        });
+        builder.dispatch("logic_1",
+                         [](JobArgs &) { std::cout << "scene_update_start" << std::endl; });
+        builder.dispatch("physcal_update",
+                         [](JobArgs &) { std::cout << "physcal_update" << std::endl; });
         builder.dispatch_fence_explicitly();
-        builder.dispatch("visible_udpate", [](JobArgs &) {
-            std::cout << "visible_udpate" << std::endl;
-        });
+        builder.dispatch("visible_udpate",
+                         [](JobArgs &) { std::cout << "visible_udpate" << std::endl; });
         builder.dispatch_fence_explicitly();
-        builder.dispatch("exract",
-                         [](JobArgs &) { std::cout << "exract" << std::endl; });
+        builder.dispatch("exract", [](JobArgs &) { std::cout << "exract" << std::endl; });
         js.spin_wait(builder.extract_wait_counter());
         global.dispatch_logic(global.frame_index.load());
         std::cout << "logic end!" << std::endl;
@@ -205,20 +179,15 @@ void dummy_render(JobSystem &js, EngineGlobal &global)
         global.wait_logic();
         if (global.finished)
             break;
-        auto str = std::format(" render_index{}, render start ==>",
-                               global.render_index.load());
+        auto str = std::format(" render_index{}, render start ==>", global.render_index.load());
         std::cout << str << std::endl;
         JobBuilder builder(js);
-        builder.dispatch("parse exract", [](JobArgs &) {
-            std::cout << "parse exract" << std::endl;
-        });
+        builder.dispatch("parse exract",
+                         [](JobArgs &) { std::cout << "parse exract" << std::endl; });
         builder.dispatch_fence_explicitly();
-        builder.dispatch("prepare rhi", [](JobArgs &) {
-            std::cout << "prepare_rhi" << std::endl;
-        });
+        builder.dispatch("prepare rhi", [](JobArgs &) { std::cout << "prepare_rhi" << std::endl; });
         builder.dispatch_fence_explicitly();
-        builder.dispatch("render",
-                         [](JobArgs &) { std::cout << "render" << std::endl; });
+        builder.dispatch("render", [](JobArgs &) { std::cout << "render" << std::endl; });
 
         js.spin_wait(builder.extract_wait_counter());
         std::cout << "render end==> " << std::endl;

@@ -27,11 +27,18 @@ Module::~Module() = default;
 
 void Module::OnDestroy() {}
 
-ApplicationBase::ApplicationBase() {}
+ApplicationBase::ApplicationBase()
+    : js_(std::thread::hardware_concurrency(), 5)
+{
+}
 
 ApplicationBase::~ApplicationBase() {}
 
-void ApplicationBase::Setup() { state_ = ApplicationState::SETUP; }
+void ApplicationBase::Setup()
+{
+    state_ = ApplicationState::SETUP;
+    js_.adopt();
+}
 
 void ApplicationBase::Run()
 {
@@ -44,7 +51,6 @@ void ApplicationBase::Run()
         for (auto &update_func : updaters_)
         {
             update_func(dt);
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
         OnTick();
     }
@@ -66,6 +72,7 @@ void ApplicationBase::Exit()
     ReleaseAllModule();
     updaters_.clear();
     state_ = ApplicationState::CLOSED;
+    js_.emancipate();
 }
 
 void ApplicationBase::RegisterSlotUpdate(UpdateFunc func) { updaters_.push_back(func); }

@@ -20,7 +20,7 @@ class AppLogger
     static constexpr uint8_t queue_size_{5};
 };
 
-#define __SYS_LOGGER AppLogger::Logger()
+#define __SYS_LOGGER cloud::AppLogger::Logger()
 
 #define INFO(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::info, __VA_ARGS__)
 

@@ -2,6 +2,7 @@
 #include <functional>
 #include <unordered_map>
 #include <string>
+#include "job_system.h"
 
 namespace cloud
 {
@@ -64,5 +65,6 @@ class ApplicationBase
     ApplicationState state_{ApplicationState::None};
     std::vector<UpdateFunc> updaters_;
     UpdateTimer update_timer_;
+    js::JobSystem js_;
 };
 } // namespace cloud
