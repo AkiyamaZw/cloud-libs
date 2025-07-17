@@ -1,8 +1,8 @@
 #include "application_base.h"
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include "app_utility.h"
+
 namespace cloud
 {
 float UpdateTimer::Update()
@@ -37,6 +37,7 @@ ApplicationBase::~ApplicationBase() {}
 void ApplicationBase::Setup()
 {
     state_ = ApplicationState::SETUP;
+    Utility::AppEnvInit();
     js_.adopt();
 }
 

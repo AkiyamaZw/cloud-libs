@@ -4,7 +4,7 @@ file(GLOB_RECURSE HEAD_FILES    ${CMAKE_CURRENT_SOURCE_DIR}/public/*.h
                                 ${CMAKE_CURRENT_SOURCE_DIR}/private/*.inc)
 file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/private/*.cpp)
 
-set(vulkan_include ${EXTERN_LIB_DIR}/VulkanSDK/include)
+set(vulkan_include ${EXTERN_LIB_DIR}/VulkanSDK/include PARENT)
 
 add_library(${PROJECT_NAME} STATIC ${HEAD_FILES} ${SOURCE_FILES})
 target_link_libraries(

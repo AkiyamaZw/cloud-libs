@@ -3,8 +3,16 @@
 #include <spdlog/spdlog.h>
 #include <cstdint>
 
+#define NEO_XSTR(s) NEO_STR(s)
+#define NEO_STR(s) #s
+
 namespace cloud
 {
+namespace Utility
+{
+void AppEnvInit();
+} // namespace Utility
+
 class AppLogger
 {
   public:

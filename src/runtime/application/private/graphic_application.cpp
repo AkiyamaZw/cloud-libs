@@ -9,6 +9,7 @@ GraphicsApplication::~GraphicsApplication() {}
 void GraphicsApplication::Setup()
 {
     ApplicationBase::Setup();
+    window_.Setup();
     RegisterSlotUpdate(std::bind(&GraphicsWindow::Update, &window_, std::placeholders::_1));
 }
 

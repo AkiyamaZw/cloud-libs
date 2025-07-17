@@ -10,8 +10,12 @@ target_link_libraries(${PROJECT_NAME}
         cloud_minicore
         glfw
 )
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME}
+        PUBLIC
+                ${CMAKE_CURRENT_SOURCE_DIR}/public
+        PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}
+                ${vulkan_include})
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER modules/application)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEAD_FILES} ${SOURCE_FILES})
 
