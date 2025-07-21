@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME} STATIC ${HEAD_FILES} ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
         cloud_minicore
+        graphics_vk
         glfw
 )
 target_include_directories(${PROJECT_NAME}

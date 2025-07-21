@@ -23,6 +23,7 @@ class GraphicsWindow
     void Update(float dt);
 
     std::tuple<int, int> GetWindowSize() const;
+    const std::vector<std::string_view> &GetWindowExtensions() const;
 
   private:
     int width_;

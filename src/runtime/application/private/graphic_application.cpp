@@ -10,6 +10,8 @@ void GraphicsApplication::Setup()
 {
     ApplicationBase::Setup();
     window_.Setup();
+    graphics_base_.RegInstanceExts(window_.GetWindowExtensions());
+    cloud::graphics::vk::SetupGraphics(&graphics_base_);
     RegisterSlotUpdate(std::bind(&GraphicsWindow::Update, &window_, std::placeholders::_1));
 }
 
@@ -19,5 +21,10 @@ void GraphicsApplication::OnTick()
     {
         RequestEndApplication();
     }
+}
+void GraphicsApplication::Exit()
+{
+    cloud::graphics::vk::DestoryGraphics(&graphics_base_);
+    ApplicationBase::Exit();
 }
 } // namespace cloud

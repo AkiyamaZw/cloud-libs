@@ -1,2 +1,3 @@
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/core)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/graphics)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/application)

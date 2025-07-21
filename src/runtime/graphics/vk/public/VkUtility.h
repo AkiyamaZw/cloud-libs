@@ -17,4 +17,5 @@ struct VkDeviceData
 };
 
 VkResult CreateVkInstance(VkDeviceData *device, VkInstanceCreateFlags flags = 0);
+bool DestoryInstance(VkDeviceData *device);
 } // namespace cloud::graphics::vk

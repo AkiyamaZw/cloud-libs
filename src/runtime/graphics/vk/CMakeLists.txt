@@ -9,9 +9,11 @@ set(vulkan_include ${EXTERN_LIB_DIR}/VulkanSDK/include PARENT)
 add_library(${PROJECT_NAME} STATIC ${HEAD_FILES} ${SOURCE_FILES})
 target_link_libraries(
         ${PROJECT_NAME}
-        PUBLIC ${vulkan_lib}
+        PUBLIC
+         ${vulkan_lib}
+         cloud_minicore
 )
-message(STATUS ${vulkan_lib})
+
 target_include_directories(
         ${PROJECT_NAME}
         PUBLIC

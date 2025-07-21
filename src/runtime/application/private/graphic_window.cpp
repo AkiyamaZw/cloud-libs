@@ -41,6 +41,11 @@ bool GraphicsWindow::Setup()
         ERROR("[GLFW]window create failed!");
         return false;
     }
+#ifdef __WIN32
+    extension_count = 2;
+    window_extension_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    window_extension_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME)
+#elif __APPLE__
     uint32_t extension_count = 0;
     const char **extension_names = nullptr;
     extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
@@ -53,9 +58,10 @@ bool GraphicsWindow::Setup()
     for (int i = 0; i < extension_count; i++)
     {
         window_extension_.push_back(extension_names[i]);
-        INFO("Window EXTENSION: {}", window_extension_.back());
     }
-    return true;
+#endif
+
+        return true;
 }
 
 bool GraphicsWindow::ShouldExit() const
@@ -64,4 +70,9 @@ bool GraphicsWindow::ShouldExit() const
 }
 
 void GraphicsWindow::Update(float dt) { glfwPollEvents(); }
+
+const std::vector<std::string_view> &GraphicsWindow::GetWindowExtensions() const
+{
+    return window_extension_;
+}
 } // namespace cloud

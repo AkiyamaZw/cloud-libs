@@ -1,6 +1,7 @@
 #pragma once
 #include "vulkan/vulkan.h"
 #include <vector>
+#include <string_view>
 
 namespace cloud::graphics::vk
 {
@@ -15,6 +16,8 @@ class GraphicsBase
 
     void RegInstanceLayer(const char *ins_layer_name);
     void RegInstanceExt(const char *ins_ext_name);
+    void RegInstanceLayers(const std::vector<std::string_view> &ins_layers);
+    void RegInstanceExts(const std::vector<std::string_view> &ins_exts);
 
     void SetSurface(VkSurfaceKHR surface);
 
@@ -51,4 +54,5 @@ class GraphicsBase
 };
 
 bool SetupGraphics(GraphicsBase *graphics);
+bool DestoryGraphics(GraphicsBase *graphics);
 } // namespace cloud::graphics::vk

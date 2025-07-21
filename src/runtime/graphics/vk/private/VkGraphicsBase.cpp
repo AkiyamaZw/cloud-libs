@@ -207,7 +207,7 @@ void InsertToVector(const char *name, std::vector<const char *> &vec)
     vec.push_back(name);
 }
 
-GraphicsBase::GraphicsBase() {}
+GraphicsBase::GraphicsBase() { device_data_ = std::make_unique<VkDeviceData>(); }
 
 GraphicsBase::~GraphicsBase() {}
 
@@ -219,6 +219,22 @@ void GraphicsBase::RegInstanceLayer(const char *ins_layer_name)
 void GraphicsBase::RegInstanceExt(const char *ins_ext_name)
 {
     InsertToVector(ins_ext_name, device_data_->instance_extentions);
+}
+
+void GraphicsBase::RegInstanceLayers(const std::vector<std::string_view> &ins_layers)
+{
+    for (const auto &layer : ins_layers)
+    {
+        RegInstanceLayer(layer.data());
+    }
+}
+
+void GraphicsBase::RegInstanceExts(const std::vector<std::string_view> &ins_exts)
+{
+    for (const auto &ext : ins_exts)
+    {
+        RegInstanceExt(ext.data());
+    }
 }
 
 void GraphicsBase::SetSurface(VkSurfaceKHR surface)
@@ -245,5 +261,14 @@ bool SetupGraphics(GraphicsBase *graphics)
     // 3.0 get physical device
 
     return true;
+}
+
+bool DestoryGraphics(GraphicsBase *graphics)
+{
+    if (graphics->device_data_ == nullptr)
+        return false;
+
+    bool succ = DestoryInstance(graphics->device_data_.get());
+    return succ;
 }
 } // namespace cloud::graphics::vk
