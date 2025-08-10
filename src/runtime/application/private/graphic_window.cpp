@@ -60,7 +60,6 @@ bool GraphicsWindow::Setup()
         window_extension_.push_back(extension_names[i]);
     }
 #endif
-
         return true;
 }
 

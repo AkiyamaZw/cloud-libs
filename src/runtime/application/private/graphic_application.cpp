@@ -12,6 +12,7 @@ void GraphicsApplication::Setup()
     window_.Setup();
     graphics_base_.RegInstanceExts(window_.GetWindowExtensions());
     cloud::graphics::vk::SetupGraphics(&graphics_base_);
+
     RegisterSlotUpdate(std::bind(&GraphicsWindow::Update, &window_, std::placeholders::_1));
 }
 

@@ -22,8 +22,6 @@ class GraphicsBase
     void SetSurface(VkSurfaceKHR surface);
 
   private:
-    friend VkResult CreateVkInstance(GraphicsBase *graphics_base, VkInstanceCreateFlags flags);
-    friend bool SetupGraphics(GraphicsBase *graphics);
     VkSurfaceKHR surface_;
 
     // physical device is just like a remote server, it provides base information.

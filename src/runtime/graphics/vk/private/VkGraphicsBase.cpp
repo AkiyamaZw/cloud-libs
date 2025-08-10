@@ -1,9 +1,7 @@
 #include "VkGraphicsBase.h"
-#include <iostream>
-#include <format>
-#include <span>
-#include <cassert>
 #include "VkUtility.h"
+#include "app_utility.h"
+#include <span>
 
 namespace cloud::graphics::vk
 {
@@ -14,7 +12,7 @@ VkResult CheckInstanceLayers(VkInstance instance, std::span<const char *> layer_
     std::vector<VkLayerProperties> avaliable_layers;
     if (VkResult succ = vkEnumerateInstanceLayerProperties(&layer_count, nullptr))
     {
-        std::cout << std::format("enumerateInstanceLayer failed: error_code {}\n", int32_t(succ));
+        INFO("enumerateInstanceLayer failed: error_code {}\n", int32_t(succ));
         return succ;
     }
     if (layer_count)
@@ -23,8 +21,7 @@ VkResult CheckInstanceLayers(VkInstance instance, std::span<const char *> layer_
         if (VkResult succ =
                 vkEnumerateInstanceLayerProperties(&layer_count, avaliable_layers.data()))
         {
-            std::cout << std::format("enumerateInstanceLayer failed: error_code {}\n",
-                                     int32_t(succ));
+            INFO("enumerateInstanceLayer failed: error_code {}\n", int32_t(succ));
             return succ;
         }
         for (auto &prop : layer_check)
@@ -62,9 +59,9 @@ VkResult CheckInstanceExtension(VkInstance instance,
     std::vector<VkExtensionProperties> avaliable_exts;
     if (VkResult succ = vkEnumerateInstanceExtensionProperties(layer_name, &ext_count, nullptr))
     {
-        std::cout << std::format("enumerateInstanceExtension failed: error_code {}, layer_name{}\n",
-                                 int32_t(succ),
-                                 layer_name);
+        INFO("enumerateInstanceExtension failed: error_code {}, layer_name{}\n",
+             int32_t(succ),
+             layer_name);
         return succ;
     }
     if (ext_count)
@@ -73,8 +70,7 @@ VkResult CheckInstanceExtension(VkInstance instance,
         if (VkResult succ = vkEnumerateInstanceExtensionProperties(
                 layer_name, &ext_count, avaliable_exts.data()))
         {
-            std::cout << std::format("enumerateInstanceLayer failed: error_code {}\n",
-                                     int32_t(succ));
+            INFO("enumerateInstanceLayer failed: error_code {}\n", int32_t(succ));
             return succ;
         }
         for (auto &prop : ext_check)
@@ -109,18 +105,18 @@ VkResult GetPhysicalDevices(VkInstance instance, std::vector<VkPhysicalDevice> &
     uint32_t device_cnt{0};
     if (VkResult succ = vkEnumeratePhysicalDevices(instance, &device_cnt, nullptr))
     {
-        std::cout << std::format("failed to get physical device count/n");
+        INFO("failed to get physical device count/n");
         return succ;
     }
     if (!device_cnt)
     {
-        std::cout << std::format("get physical device count equals to 0\n");
+        INFO("get physical device count equals to 0\n");
         return VkResult::VK_ERROR_DEVICE_LOST;
     }
     physical_devices.resize(device_cnt);
     VkResult succ = vkEnumeratePhysicalDevices(instance, &device_cnt, physical_devices.data());
     if (succ)
-        std::cout << std::format("get available device failed\n");
+        INFO("get available device failed\n");
     return succ;
 }
 
@@ -153,7 +149,7 @@ VkResult GetQueueFamilyIndices(VkPhysicalDevice physical_device,
             if (VkResult succ = vkGetPhysicalDeviceSurfaceSupportKHR(
                     physical_device, i, surface, &support_present))
             {
-                std::cout << "failed to determine if the queue family support present\n";
+                INFO("failed to determine if the queue family support present");
                 return VK_RESULT_MAX_ENUM;
             }
         }
@@ -246,7 +242,6 @@ void GraphicsBase::SetSurface(VkSurfaceKHR surface)
 bool SetupGraphics(GraphicsBase *graphics)
 {
     assert(graphics != nullptr);
-    // todo add extension
 
     // 1.0 create device instance
     if (CreateVkInstance(graphics->device_data_.get()))
@@ -256,7 +251,6 @@ bool SetupGraphics(GraphicsBase *graphics)
 
     // 2.0 create window surface
     VkSurfaceKHR surface = VK_NULL_HANDLE;
-    // todo
 
     // 3.0 get physical device
 

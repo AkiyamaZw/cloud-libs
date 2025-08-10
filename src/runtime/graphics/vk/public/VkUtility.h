@@ -14,6 +14,7 @@ struct VkDeviceData
     std::vector<const char *> instance_layer;
     std::vector<const char *> instance_extentions;
     VkDebugUtilsMessengerEXT debug_messager;
+    VkSurfaceKHR surface_;
 };
 
 VkResult CreateVkInstance(VkDeviceData *device, VkInstanceCreateFlags flags = 0);
