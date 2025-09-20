@@ -1,6 +1,6 @@
 #include "VkUtility.h"
 #include <format>
-#include "app_utility.h"
+#include "logger.h"
 
 namespace cloud::graphics::vk
 {

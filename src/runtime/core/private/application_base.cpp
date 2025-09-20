@@ -1,7 +1,7 @@
 #include "application_base.h"
 #include <chrono>
 #include <thread>
-#include "app_utility.h"
+#include "logger.h"
 
 namespace cloud
 {
