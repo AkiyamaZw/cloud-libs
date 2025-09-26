@@ -3,7 +3,7 @@
 #include "worker_threads.h"
 #include "counter.h"
 #include "job_counter_entry.h"
-#include "job_​scheduler.h"
+#include "job_scheduler.h"
 #include "job.h"
 
 namespace cloud::js

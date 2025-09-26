@@ -1,6 +1,7 @@
 #include "graphics/vulakn/vulkan_device.h"
 #include "runtime_log.h"
 #include "GLFW/glfw3.h"
+#include <array>
 
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
@@ -201,8 +202,6 @@ void InitGpuDevice(GpuCreateParam &param)
 	// messenger
 	CreateDebugExt();
 
-	uint32_t num_physical_device;
-	succ = vkEnumeratePhysicalDevic
 			   // swapchain creation
 			   g_vulkan_device.swapchain_width = param.width;
 	g_vulkan_device.swapchain_height = param.height;

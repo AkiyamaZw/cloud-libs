@@ -1,4 +1,4 @@
-#include "job_​scheduler.h"
+#include "job_scheduler.h"
 #include "job_system.h"
 #include "worker_threads.h"
 #include "resource_pool.h"

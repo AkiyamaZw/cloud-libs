@@ -1,5 +1,6 @@
 #include "graphic_application.h"
 #include "runtime_log.h"
+
 #ifndef NEO_GLFW_INCLUDE
 #define NEO_GLFW_INCLUDE
 #ifdef WIN32
@@ -50,7 +51,7 @@ void InputCallback(GLFWwindow *window, int key, int scancode, int action, int mo
 	}
 }
 
-void CreateWindow(AppContext *context)
+void InitWindow(AppContext *context)
 {
 	glfwSetErrorCallback(GLFWErrorUserDefinedCallback);
 	if (!glfwInit())
@@ -95,7 +96,7 @@ void DestoryWindow(AppContext *context)
 
 void InitModules()
 {
-	CreateWindow(&GAppContext);
+	InitWindow(&GAppContext);
 	GpuCreateParam param{
 		.window = GAppContext.window_ptr, .width = GAppContext.width, .height = GAppContext.height};
 	CreateRenderer(param);
