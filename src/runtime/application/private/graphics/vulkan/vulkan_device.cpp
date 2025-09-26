@@ -1,0 +1,226 @@
+#include "graphics/vulakn/vulkan_device.h"
+#include "runtime_log.h"
+#include "GLFW/glfw3.h"
+
+#define ArraySize(array) (sizeof(array) / sizeof(array)[0])
+#define check_vk(succ)                                                                             \
+	if (succ != VK_SUCCESS)                                                                        \
+		printf("%d", succ);
+#define check_true(succ) assert(succ)
+
+namespace cloud::vulkan
+{
+
+struct GpuDevice
+{
+	/* basic api object */
+	VkInstance instance;
+	VkPhysicalDevice physical_device;
+	VkPhysicalDeviceProperties physical_device_properties;
+	VkDevice device;
+	VkQueue queue;
+	uint32_t queue_family;
+	VkDescriptorPool descriptor_pool;
+
+	/* extension debug */
+	bool debug_utils_extension_present{false};
+	VkDebugReportCallbackEXT debug_callback;
+	VkDebugUtilsMessengerEXT debug_utils_messenger;
+
+	/* swapchain */
+	std::array<VkImage, MaxSwapchainImages> swapchain_images;
+	std::array<VkImage, MaxSwapchainImages> swapchain_image_views;
+	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_freamebuffers;
+	uint32_t swapchain_width;
+	uint32_t swapchain_height;
+	/* sync */
+	std::array<VkSemaphore, MaxSwapchainImages> render_complete_semaphore;
+	std::array<VkSemaphore, MaxSwapchainImages> image_acquired_semaphore;
+	std::array<VkFence, MaxSwapchainImages> command_buffer_fence;
+
+} g_vulkan_device;
+
+static const char *s_instance_layer[] = {
+#ifdef DEBUG
+	"VK_LAYER_KHRONOS_validation",
+#else
+	"",
+#endif
+};
+
+static const char *s_requested_extensions[] = {
+	VK_KHR_SURFACE_EXTENSION_NAME,
+// Platform specific extension
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+	VK_MVK_MACOS_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+	VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+	VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+	VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+	VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_MIR_KHR) || defined(VK_USE_PLATFORM_DISPLAY_KHR)
+	VK_KHR_DISPLAY_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+	VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_IOS_MVK)
+	VK_MVK_IOS_SURFACE_EXTENSION_NAME,
+#endif // VK_USE_PLATFORM_WIN32_KHR
+
+#if defined(DEBUG)
+	VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif // VULKAN_DEBUG_REPORT
+};
+
+static VkBool32 debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+									 VkDebugUtilsMessageTypeFlagsEXT types,
+									 const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+									 void *user_data)
+{
+	INFO(" MessageID: {} {}\nMessage: {}\n\n",
+		 callback_data->pMessageIdName,
+		 callback_data->messageIdNumber,
+		 callback_data->pMessage);
+
+	if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		// __debugbreak();
+	}
+
+	return VK_FALSE;
+}
+
+VkDebugUtilsMessengerCreateInfoEXT create_debug_utils_messenger_info()
+{
+	VkDebugUtilsMessengerCreateInfoEXT creation_info = {
+		VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+	creation_info.pfnUserCallback = debug_utils_callback;
+	creation_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+									VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+	creation_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+								VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+
+	return creation_info;
+}
+
+void CreateDebugExt()
+{
+#ifdef DEBUG
+	assert(g_vulkan_device.instance != VK_NULL_HANDLE);
+	uint32_t num_instance_extensions;
+	vkEnumerateInstanceExtensionProperties(nullptr, &num_instance_extensions, nullptr);
+	std::vector<VkExtensionProperties> extensions(num_instance_extensions);
+	vkEnumerateInstanceExtensionProperties(nullptr, &num_instance_extensions, extensions.data());
+	const auto &result = std::find_if(extensions.begin(), extensions.end(), [](const auto &rhs) {
+		return !strcmp(rhs.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	});
+	if (result != extensions.end())
+	{
+		g_vulkan_device.debug_utils_extension_present = true;
+	}
+	if (!g_vulkan_device.debug_utils_extension_present)
+	{
+		INFO("[Vulkan Device] Extension {} for debugging non presenting",
+			 VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	}
+	else
+	{
+		PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT =
+			(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+				g_vulkan_device.instance, "vkCreateDebugUtilsMessengerEXT");
+		VkDebugUtilsMessengerCreateInfoEXT debug_msger_create_info =
+			create_debug_utils_messenger_info();
+		vkCreateDebugUtilsMessengerEXT(g_vulkan_device.instance,
+									   &debug_msger_create_info,
+									   nullptr,
+									   &g_vulkan_device.debug_utils_messenger);
+	}
+	check_true(g_vulkan_device.debug_utils_messenger != VK_NULL_HANDLE);
+	INFO("[Vulkan GPU Device] DebugUtilsMessenger Created..");
+#endif
+}
+
+void CreateInstance(GpuCreateParam &param)
+{
+	VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+								  .apiVersion = VK_MAKE_VERSION(1, 0, 0)};
+	VkInstanceCreateInfo ins_info = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+									 .flags = 0,
+									 .pApplicationInfo = &app_info,
+#ifdef DEBUG
+									 .enabledLayerCount = ArraySize(s_instance_layer),
+									 .ppEnabledLayerNames = s_instance_layer,
+									 .enabledExtensionCount = ArraySize(s_requested_extensions),
+									 .ppEnabledExtensionNames = s_requested_extensions
+#endif
+	};
+
+#ifdef DEBUG
+	const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
+		create_debug_utils_messenger_info();
+	ins_info.pNext = &debug_create_info;
+#endif
+	auto succ = vkCreateInstance(&ins_info, nullptr, &g_vulkan_device.instance);
+	check_vk(succ);
+	INFO("[Vulkan Gpu Device] Instance Created..");
+}
+
+void InitGpuDevice(GpuCreateParam &param)
+{
+	INFO("[Vulkan Gpu Device] Start init...");
+	VkResult succ;
+
+	std::vector<std::string_view> window_extension;
+#ifdef __WIN32
+	extension_count = 2;
+	window_extension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME)
+#elif __APPLE__
+	uint32_t extension_count = 0;
+	const char **extension_names = nullptr;
+	extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
+	if (extension_count == 0)
+	{
+		ERROR("[GLFW] cannot get Vulkan Extentions Info!");
+		return;
+	}
+	for (int i = 0; i < extension_count; i++)
+	{
+		window_extension.push_back(extension_names[i]);
+	}
+#endif
+		// instance
+		CreateInstance(param);
+	// messenger
+	CreateDebugExt();
+
+	uint32_t num_physical_device;
+	succ = vkEnumeratePhysicalDevic
+			   // swapchain creation
+			   g_vulkan_device.swapchain_width = param.width;
+	g_vulkan_device.swapchain_height = param.height;
+
+	uint32_t num_physical_device;
+	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, NULL);
+	check_vk(succ);
+}
+
+void ShutdownGpuDevice()
+{
+#ifdef DEBUG
+	auto vkDestroyDebugUtilsMessengerEXT =
+		(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+			g_vulkan_device.instance, "vkDestroyDebugUtilsMessengerEXT");
+	vkDestroyDebugUtilsMessengerEXT(
+		g_vulkan_device.instance, g_vulkan_device.debug_utils_messenger, nullptr);
+#endif
+	vkDestroyInstance(g_vulkan_device.instance, nullptr);
+}
+} // namespace cloud::vulkan

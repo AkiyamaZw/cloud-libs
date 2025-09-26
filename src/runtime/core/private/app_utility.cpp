@@ -1,4 +1,4 @@
-#include "logger.h"
+#include "runtime_log.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/async.h"
 #include "spdlog/sinks/msvc_sink.h"
