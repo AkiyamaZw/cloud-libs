@@ -40,7 +40,7 @@ struct AppContext
 
 void GLFWErrorUserDefinedCallback(int error, const char *description)
 {
-	ERROR("[Glfw] error {}, {}", error, description);
+	FATAL("[Glfw] error {}, {}", error, description);
 }
 
 void InputCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -56,7 +56,7 @@ void InitWindow(AppContext *context)
 	glfwSetErrorCallback(GLFWErrorUserDefinedCallback);
 	if (!glfwInit())
 	{
-		ERROR("Initialize GLFW Failed!");
+		FATAL("Initialize GLFW Failed!");
 		return;
 	}
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -64,12 +64,12 @@ void InitWindow(AppContext *context)
 		glfwCreateWindow(context->width, context->height, context->title.c_str(), nullptr, nullptr);
 	if (!window_handle)
 	{
-		ERROR("[GLFW]window create failed!");
+		FATAL("[GLFW]window create failed!");
 		return;
 	}
 	if (!glfwVulkanSupported())
 	{
-		ERROR("[GLFW] Vulkan not suppported!");
+		FATAL("[GLFW] Vulkan not suppported!");
 		return;
 	}
 	// glfwMakeContextCurrent(window_handle);

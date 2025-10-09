@@ -36,7 +36,7 @@ class AppLogger
 
 #define WARN(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::warn, __VA_ARGS__)
 
-#define ERROR(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::err, __VA_ARGS__)
+#define FATAL(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::err, __VA_ARGS__)
 
 #define TRACE(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::trace, __VA_ARGS__)
 

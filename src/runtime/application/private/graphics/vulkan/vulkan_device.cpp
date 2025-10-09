@@ -1,7 +1,21 @@
 #include "graphics/vulakn/vulkan_device.h"
 #include "runtime_log.h"
-#include "GLFW/glfw3.h"
 #include <array>
+// clang-format off
+#ifdef WIN32
+	#define VK_USE_PLATFORM_WIN32_KHR
+	#define GLFW_INCLUDE_VULKAN
+	#include "Windows.h"
+	#include <vulkan/vulkan_win32.h>
+	#include "GLFW/glfw3.h"
+	#define GLFW_EXPOSE_NATIVE_WIN32
+	#include "GLFW/glfw3native.h"
+#elif defined(__APPLE__)
+	#define GLFW_INCLUDE_VULKAN
+	#include "GLFW/glfw3.h"
+#endif
+// clang-format on
+
 
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
@@ -34,6 +48,7 @@ struct GpuDevice
 	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_freamebuffers;
 	uint32_t swapchain_width;
 	uint32_t swapchain_height;
+
 	/* sync */
 	std::array<VkSemaphore, MaxSwapchainImages> render_complete_semaphore;
 	std::array<VkSemaphore, MaxSwapchainImages> image_acquired_semaphore;
@@ -179,17 +194,18 @@ void InitGpuDevice(GpuCreateParam &param)
 	VkResult succ;
 
 	std::vector<std::string_view> window_extension;
-#ifdef __WIN32
+	uint32_t extension_count = 0;
+#ifdef WIN32
 	extension_count = 2;
 	window_extension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME)
+	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif __APPLE__
-	uint32_t extension_count = 0;
+	
 	const char **extension_names = nullptr;
 	extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
 	if (extension_count == 0)
 	{
-		ERROR("[GLFW] cannot get Vulkan Extentions Info!");
+		FATAL("[GLFW] cannot get Vulkan Extentions Info!");
 		return;
 	}
 	for (int i = 0; i < extension_count; i++)
@@ -197,18 +213,21 @@ void InitGpuDevice(GpuCreateParam &param)
 		window_extension.push_back(extension_names[i]);
 	}
 #endif
-		// instance
-		CreateInstance(param);
+	// instance
+	CreateInstance(param);
 	// messenger
 	CreateDebugExt();
 
-			   // swapchain creation
-			   g_vulkan_device.swapchain_width = param.width;
+	// swapchain creation
+	g_vulkan_device.swapchain_width = param.width;
 	g_vulkan_device.swapchain_height = param.height;
 
 	uint32_t num_physical_device;
 	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, NULL);
 	check_vk(succ);
+
+	
+
 }
 
 void ShutdownGpuDevice()
