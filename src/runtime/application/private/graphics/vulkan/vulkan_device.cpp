@@ -32,6 +32,7 @@ struct GpuDevice
 	VkInstance instance;
 	VkPhysicalDevice physical_device;
 	VkPhysicalDeviceProperties physical_device_properties;
+	float gpu_timestamp_frequency;
 	VkDevice device;
 	VkQueue queue;
 	uint32_t queue_family;
@@ -42,7 +43,13 @@ struct GpuDevice
 	VkDebugReportCallbackEXT debug_callback;
 	VkDebugUtilsMessengerEXT debug_utils_messenger;
 
+	/* window */
+	VkSurfaceKHR window_surface;
+	VkSurfaceFormatKHR window_surface_format;
+	VkPresentModeKHR present_mode;
+
 	/* swapchain */
+	VkSwapchainKHR swapchain;
 	std::array<VkImage, MaxSwapchainImages> swapchain_images;
 	std::array<VkImage, MaxSwapchainImages> swapchain_image_views;
 	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_freamebuffers;
@@ -163,6 +170,29 @@ void CreateDebugExt()
 #endif
 }
 
+bool get_family_queue( VkPhysicalDevice physical_device, VkSurfaceKHR window_surface, uint32_t& queue_family_index) {
+    uint32_t queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr );
+
+	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+
+    uint32_t family_index = 0;
+    VkBool32 surface_supported;
+    for ( ; family_index < queue_family_count; ++family_index ) {
+        VkQueueFamilyProperties queue_family = queue_families[ family_index ];
+        if ( queue_family.queueCount > 0 && queue_family.queueFlags & ( VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ) ) {
+            vkGetPhysicalDeviceSurfaceSupportKHR( physical_device, family_index, window_surface, &surface_supported);
+
+            if ( surface_supported ) {
+                queue_family_index = family_index;
+                break;
+            }
+        }
+    }
+    return surface_supported;
+}
+
 void CreateInstance(GpuCreateParam &param)
 {
 	VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -218,20 +248,66 @@ void InitGpuDevice(GpuCreateParam &param)
 	// messenger
 	CreateDebugExt();
 
-	// swapchain creation
+	// surface creation
 	g_vulkan_device.swapchain_width = param.width;
 	g_vulkan_device.swapchain_height = param.height;
+	succ = glfwCreateWindowSurface(g_vulkan_device.instance, (GLFWwindow*)param.window, nullptr, &g_vulkan_device.window_surface);
+	check_vk(succ);
 
 	uint32_t num_physical_device;
 	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, NULL);
 	check_vk(succ);
 
-	
+	std::vector<VkPhysicalDevice> gpus(num_physical_device);
+	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, gpus.data());
+	check_vk(succ);
+	VkPhysicalDeviceProperties device_property;
+	VkPhysicalDevice discrate_device;
+	VkPhysicalDevice intergrate_device;
 
+	for(uint32_t index = 0; index < num_physical_device; ++index)
+	{
+		vkGetPhysicalDeviceProperties(gpus[index], &g_vulkan_device.physical_device_properties);
+		VkPhysicalDeviceType device_type = g_vulkan_device.physical_device_properties.deviceType;
+		if (device_type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+		{
+			if (get_family_queue(gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
+			{
+				discrate_device = gpus[index];
+				break;			
+			}
+			continue;
+		}
+		if (device_type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+		{
+			if (get_family_queue(gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
+			{
+				intergrate_device = gpus[index];
+				break;
+			}
+			continue;;
+		}
+	}
+	if (discrate_device != VK_NULL_HANDLE)
+	{
+		g_vulkan_device.physical_device = discrate_device;
+	}
+	else if (intergrate_device != VK_NULL_HANDLE)
+	{
+		g_vulkan_device.physical_device = intergrate_device;
+	}
+	check_true(g_vulkan_device.physical_device != VK_NULL_HANDLE);
+	g_vulkan_device.gpu_timestamp_frequency = g_vulkan_device.physical_device_properties.limits.timestampPeriod / (1000 * 1000);
+	INFO("[vulkan device] select gpu {}, gpu_timestamp_frequency:{:.8f}", g_vulkan_device.physical_device_properties.deviceName, g_vulkan_device.gpu_timestamp_frequency);
+
+	/* device */
 }
 
 void ShutdownGpuDevice()
 {
+
+	vkDestroySurfaceKHR(g_vulkan_device.instance, g_vulkan_device.window_surface, nullptr);
+	
 #ifdef DEBUG
 	auto vkDestroyDebugUtilsMessengerEXT =
 		(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
