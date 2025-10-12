@@ -16,7 +16,6 @@
 #endif
 // clang-format on
 
-
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
 	if (succ != VK_SUCCESS)                                                                        \
@@ -33,6 +32,8 @@ struct GpuDevice
 	VkPhysicalDevice physical_device;
 	VkPhysicalDeviceProperties physical_device_properties;
 	float gpu_timestamp_frequency;
+	uint64_t ubo_alignment{256};
+	uint64_t ssbo_alignment{256};
 	VkDevice device;
 	VkQueue queue;
 	uint32_t queue_family;
@@ -170,41 +171,78 @@ void CreateDebugExt()
 #endif
 }
 
-bool get_family_queue( VkPhysicalDevice physical_device, VkSurfaceKHR window_surface, uint32_t& queue_family_index) {
-    uint32_t queue_family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr );
+bool get_family_queue(VkPhysicalDevice physical_device,
+					  VkSurfaceKHR window_surface,
+					  uint32_t &queue_family_index)
+{
+	uint32_t queue_family_count = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
 
 	std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families.data());
+	vkGetPhysicalDeviceQueueFamilyProperties(
+		physical_device, &queue_family_count, queue_families.data());
 
-    uint32_t family_index = 0;
-    VkBool32 surface_supported;
-    for ( ; family_index < queue_family_count; ++family_index ) {
-        VkQueueFamilyProperties queue_family = queue_families[ family_index ];
-        if ( queue_family.queueCount > 0 && queue_family.queueFlags & ( VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ) ) {
-            vkGetPhysicalDeviceSurfaceSupportKHR( physical_device, family_index, window_surface, &surface_supported);
+	uint32_t family_index = 0;
+	VkBool32 surface_supported;
+	for (; family_index < queue_family_count; ++family_index)
+	{
+		VkQueueFamilyProperties queue_family = queue_families[family_index];
+		if (queue_family.queueCount > 0 &&
+			queue_family.queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+		{
+			vkGetPhysicalDeviceSurfaceSupportKHR(
+				physical_device, family_index, window_surface, &surface_supported);
 
-            if ( surface_supported ) {
-                queue_family_index = family_index;
-                break;
-            }
-        }
-    }
-    return surface_supported;
+			if (surface_supported)
+			{
+				queue_family_index = family_index;
+				break;
+			}
+		}
+	}
+	return surface_supported;
 }
 
 void CreateInstance(GpuCreateParam &param)
 {
+	std::vector<const char *> window_extension;
+	uint32_t extension_count = 0;
+#ifdef WIN32
+	extension_count = 2;
+	window_extension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif __APPLE__
+
+	const char **extension_names = nullptr;
+	extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
+	if (extension_count == 0)
+	{
+		FATAL("[GLFW] cannot get Vulkan Extentions Info!");
+		return;
+	}
+	for (int i = 0; i < extension_count; i++)
+	{
+		window_extension.push_back(extension_names[i]);
+	}
+#endif
+
+	std::vector<const char *> extensions;
+	for (int i = 0; i < ArraySize(s_requested_extensions); i++)
+	{
+		extensions.push_back(s_requested_extensions[i]);
+	}
+	extensions.insert(extensions.end(), window_extension.begin(), window_extension.end());
+
 	VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-								  .apiVersion = VK_MAKE_VERSION(1, 0, 0)};
+								  .apiVersion = VK_MAKE_VERSION(1, 1, 0)};
 	VkInstanceCreateInfo ins_info = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 									 .flags = 0,
 									 .pApplicationInfo = &app_info,
 #ifdef DEBUG
 									 .enabledLayerCount = ArraySize(s_instance_layer),
 									 .ppEnabledLayerNames = s_instance_layer,
-									 .enabledExtensionCount = ArraySize(s_requested_extensions),
-									 .ppEnabledExtensionNames = s_requested_extensions
+									 .enabledExtensionCount = (uint32_t)extensions.size(),
+									 .ppEnabledExtensionNames = extensions.data()
 #endif
 	};
 
@@ -223,26 +261,6 @@ void InitGpuDevice(GpuCreateParam &param)
 	INFO("[Vulkan Gpu Device] Start init...");
 	VkResult succ;
 
-	std::vector<std::string_view> window_extension;
-	uint32_t extension_count = 0;
-#ifdef WIN32
-	extension_count = 2;
-	window_extension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif __APPLE__
-	
-	const char **extension_names = nullptr;
-	extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
-	if (extension_count == 0)
-	{
-		FATAL("[GLFW] cannot get Vulkan Extentions Info!");
-		return;
-	}
-	for (int i = 0; i < extension_count; i++)
-	{
-		window_extension.push_back(extension_names[i]);
-	}
-#endif
 	// instance
 	CreateInstance(param);
 	// messenger
@@ -251,7 +269,10 @@ void InitGpuDevice(GpuCreateParam &param)
 	// surface creation
 	g_vulkan_device.swapchain_width = param.width;
 	g_vulkan_device.swapchain_height = param.height;
-	succ = glfwCreateWindowSurface(g_vulkan_device.instance, (GLFWwindow*)param.window, nullptr, &g_vulkan_device.window_surface);
+	succ = glfwCreateWindowSurface(g_vulkan_device.instance,
+								   (GLFWwindow *)param.window,
+								   nullptr,
+								   &g_vulkan_device.window_surface);
 	check_vk(succ);
 
 	uint32_t num_physical_device;
@@ -265,27 +286,30 @@ void InitGpuDevice(GpuCreateParam &param)
 	VkPhysicalDevice discrate_device;
 	VkPhysicalDevice intergrate_device;
 
-	for(uint32_t index = 0; index < num_physical_device; ++index)
+	for (uint32_t index = 0; index < num_physical_device; ++index)
 	{
 		vkGetPhysicalDeviceProperties(gpus[index], &g_vulkan_device.physical_device_properties);
 		VkPhysicalDeviceType device_type = g_vulkan_device.physical_device_properties.deviceType;
 		if (device_type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 		{
-			if (get_family_queue(gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
+			if (get_family_queue(
+					gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
 			{
 				discrate_device = gpus[index];
-				break;			
+				break;
 			}
 			continue;
 		}
 		if (device_type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
 		{
-			if (get_family_queue(gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
+			if (get_family_queue(
+					gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
 			{
 				intergrate_device = gpus[index];
 				break;
 			}
-			continue;;
+			continue;
+			;
 		}
 	}
 	if (discrate_device != VK_NULL_HANDLE)
@@ -297,17 +321,64 @@ void InitGpuDevice(GpuCreateParam &param)
 		g_vulkan_device.physical_device = intergrate_device;
 	}
 	check_true(g_vulkan_device.physical_device != VK_NULL_HANDLE);
-	g_vulkan_device.gpu_timestamp_frequency = g_vulkan_device.physical_device_properties.limits.timestampPeriod / (1000 * 1000);
-	INFO("[vulkan device] select gpu {}, gpu_timestamp_frequency:{:.8f}", g_vulkan_device.physical_device_properties.deviceName, g_vulkan_device.gpu_timestamp_frequency);
+	g_vulkan_device.gpu_timestamp_frequency =
+		g_vulkan_device.physical_device_properties.limits.timestampPeriod / (1000 * 1000);
+	g_vulkan_device.ubo_alignment =
+		g_vulkan_device.physical_device_properties.limits.minUniformBufferOffsetAlignment;
+	g_vulkan_device.ssbo_alignment =
+		g_vulkan_device.physical_device_properties.limits.minStorageBufferOffsetAlignment;
+	INFO("[vulkan device] select gpu {}, gpu_timestamp_frequency:{:.8f}",
+		 g_vulkan_device.physical_device_properties.deviceName,
+		 g_vulkan_device.gpu_timestamp_frequency);
 
 	/* device */
+	std::vector<const char *> device_extensions = {"VK_KHR_swapchain", "VK_KHR_portability_subset"};
+	const float queue_priority[] = {1.f};
+	VkDeviceQueueCreateInfo queue_info[1] = {};
+	queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queue_info[0].queueFamilyIndex = g_vulkan_device.queue_family;
+	queue_info[0].queueCount = 1;
+	queue_info[0].pQueuePriorities = queue_priority;
+
+	VkPhysicalDeviceFeatures2 physical_features2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+	vkGetPhysicalDeviceFeatures2(g_vulkan_device.physical_device, &physical_features2);
+
+	VkDeviceCreateInfo device_cinfo = {};
+	device_cinfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	device_cinfo.queueCreateInfoCount = sizeof(queue_info) / sizeof(queue_info[0]);
+	device_cinfo.pQueueCreateInfos = queue_info;
+	device_cinfo.enabledExtensionCount = (uint32_t)device_extensions.size();
+	device_cinfo.ppEnabledExtensionNames = device_extensions.data();
+	device_cinfo.pNext = &physical_features2;
+
+	succ = vkCreateDevice(
+		g_vulkan_device.physical_device, &device_cinfo, nullptr, &g_vulkan_device.device);
+	check_vk(succ);
+
+	vkGetDeviceQueue(
+		g_vulkan_device.device, g_vulkan_device.queue_family, 0, &g_vulkan_device.queue);
+
+	/* swapchian */
+	const VkFormat surface_image_format[] = {VK_FORMAT_B8G8R8A8_UNORM,
+											 VK_FORMAT_R8G8B8A8_UNORM,
+											 VK_FORMAT_B8G8R8_UNORM,
+											 VK_FORMAT_R8G8B8_UNORM};
+	const VkColorSpaceKHR surface_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+	uint32_t supported_count;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(
+		g_vulkan_device.physical_device, g_vulkan_device.window_surface, &supported_count, nullptr);
+	std::vector<VkSurfaceFormatKHR> supported_format(supported_count);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkan_device.physical_device,
+										 g_vulkan_device.window_surface,
+										 &supported_count,
+										 supported_format.data());
 }
 
 void ShutdownGpuDevice()
 {
-
+	vkDestroyDevice(g_vulkan_device.device, nullptr);
 	vkDestroySurfaceKHR(g_vulkan_device.instance, g_vulkan_device.window_surface, nullptr);
-	
+
 #ifdef DEBUG
 	auto vkDestroyDebugUtilsMessengerEXT =
 		(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
