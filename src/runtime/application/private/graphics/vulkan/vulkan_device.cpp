@@ -2,6 +2,7 @@
 #include "runtime_log.h"
 #include <array>
 #include "graphics/vulakn/gpu_enums.h"
+#include <map>
 
 // clang-format off
 #ifdef WIN32
@@ -17,6 +18,7 @@
 	#include "GLFW/glfw3.h"
 #endif
 // clang-format on
+
 
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
@@ -184,9 +186,8 @@ bool get_family_queue(VkPhysicalDevice physical_device,
 	vkGetPhysicalDeviceQueueFamilyProperties(
 		physical_device, &queue_family_count, queue_families.data());
 
-	uint32_t family_index = 0;
-	VkBool32 surface_supported;
-	for (; family_index < queue_family_count; ++family_index)
+    VkBool32 surface_supported;
+	for (uint32_t family_index = 0; family_index < queue_family_count; ++family_index)
 	{
 		VkQueueFamilyProperties queue_family = queue_families[family_index];
 		if (queue_family.queueCount > 0 &&
@@ -203,6 +204,12 @@ bool get_family_queue(VkPhysicalDevice physical_device,
 		}
 	}
 	return surface_supported;
+}
+
+VkResult UseLatestApiVersion(uint32_t& api_version) {
+    if (vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion"))
+        return vkEnumerateInstanceVersion(&api_version);
+    return VK_SUCCESS;
 }
 
 void CreateInstance(GpuCreateParam &param)
@@ -233,17 +240,23 @@ void CreateInstance(GpuCreateParam &param)
 	{
 		extensions.push_back(s_requested_extensions[i]);
 	}
+    VkResult succ;
 	extensions.insert(extensions.end(), window_extension.begin(), window_extension.end());
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    uint32_t api_version = 0;
+    succ = UseLatestApiVersion(api_version);
+    check_vk(succ);
+    INFO("api version: {}.{}.{}", VK_VERSION_MAJOR(api_version), VK_VERSION_MINOR(api_version), VK_VERSION_PATCH(api_version));
 
 	VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-								  .apiVersion = VK_MAKE_VERSION(1, 4, 0)};
+								  .apiVersion = api_version};
 	VkInstanceCreateInfo ins_info = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-									 .flags = 0,
+									 .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 									 .pApplicationInfo = &app_info,
 #ifdef DEBUG
-									 .enabledLayerCount = ArraySize(s_instance_layer),
+									 .enabledLayerCount = std::size(s_instance_layer),
 									 .ppEnabledLayerNames = s_instance_layer,
-									 .enabledExtensionCount = (uint32_t)extensions.size(),
+									 .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
 									 .ppEnabledExtensionNames = extensions.data()
 #endif
 	};
@@ -253,7 +266,7 @@ void CreateInstance(GpuCreateParam &param)
 		create_debug_utils_messenger_info();
 	ins_info.pNext = &debug_create_info;
 #endif
-	auto succ = vkCreateInstance(&ins_info, nullptr, &g_vulkan_device.instance);
+	succ = vkCreateInstance(&ins_info, nullptr, &g_vulkan_device.instance);
 	check_vk(succ);
 	INFO("[Vulkan Gpu Device] Instance Created..");
 }
@@ -272,13 +285,13 @@ void InitGpuDevice(GpuCreateParam &param)
 	g_vulkan_device.swapchain_width = param.width;
 	g_vulkan_device.swapchain_height = param.height;
 	succ = glfwCreateWindowSurface(g_vulkan_device.instance,
-								   (GLFWwindow *)param.window,
+								   static_cast<GLFWwindow *>(param.window),
 								   nullptr,
 								   &g_vulkan_device.window_surface);
 	check_vk(succ);
 
 	uint32_t num_physical_device;
-	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, NULL);
+	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, nullptr);
 	check_vk(succ);
 
 	std::vector<VkPhysicalDevice> gpus(num_physical_device);
@@ -329,12 +342,13 @@ void InitGpuDevice(GpuCreateParam &param)
 		g_vulkan_device.physical_device_properties.limits.minUniformBufferOffsetAlignment;
 	g_vulkan_device.ssbo_alignment =
 		g_vulkan_device.physical_device_properties.limits.minStorageBufferOffsetAlignment;
+
 	INFO("[vulkan device] select gpu {}, gpu_timestamp_frequency:{:.8f}",
 		 g_vulkan_device.physical_device_properties.deviceName,
 		 g_vulkan_device.gpu_timestamp_frequency);
 
 	/* device */
-	std::vector<const char *> device_extensions = {"VK_KHR_swapchain"};
+	std::vector<const char *> device_extensions = {"VK_KHR_swapchain", "VK_KHR_portability_subset"};
 	const float queue_priority[] = {1.f};
 	VkDeviceQueueCreateInfo queue_info[1] = {};
 	queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -342,14 +356,17 @@ void InitGpuDevice(GpuCreateParam &param)
 	queue_info[0].queueCount = 1;
 	queue_info[0].pQueuePriorities = queue_priority;
 
+
 	VkPhysicalDeviceFeatures2 physical_features2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-	vkGetPhysicalDeviceFeatures2(g_vulkan_device.physical_device, &physical_features2);
+
+    vkGetPhysicalDeviceFeatures2(g_vulkan_device.physical_device, &physical_features2);
+    physical_features2.features.robustBufferAccess=VK_FALSE;
 
 	VkDeviceCreateInfo device_cinfo = {};
 	device_cinfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	device_cinfo.queueCreateInfoCount = sizeof(queue_info) / sizeof(queue_info[0]);
+	device_cinfo.queueCreateInfoCount = std::size(queue_info);
 	device_cinfo.pQueueCreateInfos = queue_info;
-	device_cinfo.enabledExtensionCount = (uint32_t)device_extensions.size();
+	device_cinfo.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
 	device_cinfo.ppEnabledExtensionNames = device_extensions.data();
 	device_cinfo.pNext = &physical_features2;
 
