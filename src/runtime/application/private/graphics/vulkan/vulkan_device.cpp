@@ -1,6 +1,8 @@
 #include "graphics/vulakn/vulkan_device.h"
 #include "runtime_log.h"
 #include <array>
+#include "graphics/vulakn/gpu_enums.h"
+
 // clang-format off
 #ifdef WIN32
 	#define VK_USE_PLATFORM_WIN32_KHR
@@ -234,7 +236,7 @@ void CreateInstance(GpuCreateParam &param)
 	extensions.insert(extensions.end(), window_extension.begin(), window_extension.end());
 
 	VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-								  .apiVersion = VK_MAKE_VERSION(1, 0, 0)};
+								  .apiVersion = VK_MAKE_VERSION(1, 4, 0)};
 	VkInstanceCreateInfo ins_info = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 									 .flags = 0,
 									 .pApplicationInfo = &app_info,
@@ -340,8 +342,8 @@ void InitGpuDevice(GpuCreateParam &param)
 	queue_info[0].queueCount = 1;
 	queue_info[0].pQueuePriorities = queue_priority;
 
-	// VkPhysicalDeviceFeatures2 physical_features2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-	// vkGetPhysicalDeviceFeatures2(g_vulkan_device.physical_device, &physical_features2);
+	VkPhysicalDeviceFeatures2 physical_features2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+	vkGetPhysicalDeviceFeatures2(g_vulkan_device.physical_device, &physical_features2);
 
 	VkDeviceCreateInfo device_cinfo = {};
 	device_cinfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -349,7 +351,7 @@ void InitGpuDevice(GpuCreateParam &param)
 	device_cinfo.pQueueCreateInfos = queue_info;
 	device_cinfo.enabledExtensionCount = (uint32_t)device_extensions.size();
 	device_cinfo.ppEnabledExtensionNames = device_extensions.data();
-	// device_cinfo.pNext = &physical_features2;
+	device_cinfo.pNext = &physical_features2;
 
 	succ = vkCreateDevice(
 		g_vulkan_device.physical_device, &device_cinfo, nullptr, &g_vulkan_device.device);
