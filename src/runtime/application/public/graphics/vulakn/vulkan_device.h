@@ -4,7 +4,6 @@
 
 namespace cloud::vulkan
 {
-static constexpr uint32_t MaxSwapchainImages = 3;
 
 void InitGpuDevice(GpuCreateParam &param);
 void ShutdownGpuDevice();
