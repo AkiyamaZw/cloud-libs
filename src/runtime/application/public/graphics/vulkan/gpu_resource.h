@@ -1,0 +1,151 @@
+#pragma once
+#include "gpu_enums.h"
+#include "vulkan/vulkan.h"
+#include "graphics/vulkan/vk_mem_alloc.h"
+
+namespace cloud::vulkan
+{
+
+struct RenderPassOutput
+{
+    VkFormat color_formats[MaxSwapchainImages];
+    VkFormat depth_stencil_format;
+    uint32_t num_color_formats{0};
+
+    RenderPassOperation color_operation{RenderPassOperation::DontCare};
+    RenderPassOperation depth_operation{RenderPassOperation::DontCare};
+    RenderPassOperation stencil_operation{RenderPassOperation::DontCare};
+
+    RenderPassOutput &Reset();
+    RenderPassOutput &SetColorFormat(VkFormat format);
+    RenderPassOutput &SetDepthFormat(VkFormat format);
+    RenderPassOutput &SetOperation(RenderPassOperation color_op,
+                                   RenderPassOperation depth_op,
+                                   RenderPassOperation stencil_op);
+};
+
+struct ResourceDefine
+{
+    using ResourceHandle = uint32_t;
+};
+
+#define HANDLE_DECLARE(name) \
+    struct name##Handle{ ResourceDefine::ResourceHandle index; }
+
+HANDLE_DECLARE(Buffer);
+HANDLE_DECLARE(Texture);
+HANDLE_DECLARE(DescriptorSetLayout);
+HANDLE_DECLARE(ShaderState);
+
+
+struct Buffer
+{
+    VkBuffer buffer;
+    VmaAllocation allocation;
+    VkDeviceMemory memory;
+    VkDeviceSize device_size;
+    VkBufferUsageFlags usage_flags{0};
+    ResourceUsageType usage_type{ResourceUsageType::Immutable};
+    uint32_t size = 0;
+    uint32_t global_offset{0};
+    BufferHandle handle;
+    BufferHandle parent_handle;
+    bool ready{false};
+    uint8_t *mapped_data{nullptr};
+    const char *name{nullptr};
+};
+
+struct Sampler
+{
+    VkSampler sampler;
+    VkFilter min_filter{VK_FILTER_NEAREST};
+    VkFilter mag_filter{VK_FILTER_NEAREST};
+    VkSamplerMipmapMode mipmap_mode{VK_SAMPLER_MIPMAP_MODE_NEAREST};
+    VkSamplerAddressMode address_mode_u{VK_SAMPLER_ADDRESS_MODE_REPEAT};
+    VkSamplerAddressMode address_mode_v{VK_SAMPLER_ADDRESS_MODE_REPEAT};
+    VkSamplerAddressMode address_mode_w{VK_SAMPLER_ADDRESS_MODE_REPEAT};
+    VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
+    const char *name{nullptr};
+};
+
+struct Texture
+{
+    VkImage image;
+    VkImageView view;
+    VkFormat format;
+    VkImageUsageFlags usage_flags;
+    VmaAllocation allocation;
+    ResourceState state{ResourceState::RESOURCE_STATE_UNDEFINED};
+    uint16_t width{1};
+    uint16_t height{1};
+    uint16_t depth{1};
+    uint16_t array_layer_count{1};
+    uint8_t mip_levels_count{1};
+    uint8_t flags{0};
+    uint16_t mip_base_levels{0};
+    uint16_t array_base_layer{0};
+    bool sparse{false};
+    TextureHandle handle;
+    TextureHandle parent_handle;
+    TextureType type{TextureType::Texture2D};
+    const char *name{nullptr};
+    Sampler* sampler;
+};
+
+struct RenderPass
+{
+    VkRenderPass render_pass;
+    RenderPassOutput output;
+    uint16_t dispatch_x{1};
+    uint16_t dispatch_y{1};
+    uint16_t dispatch_z{1};
+
+    uint8_t num_render_targets{0};
+    uint32_t multiview_mask{0};
+    const char *name{nullptr};
+};
+
+
+struct DescriptorBinding
+{
+    VkDescriptorType descriptor_type;
+    uint16_t start{0};
+    uint16_t count{0};
+    uint16_t set{0};
+    const char *name{nullptr};
+};
+
+struct DescriptorSetLayout
+{
+    VkDescriptorSetLayout descriptor_set_layout;
+    VkDescriptorSetLayoutBinding* binding{nullptr};
+    DescriptorBinding *descriptor_bindings{nullptr};
+    uint16_t num_bindings{0};
+    uint16_t set_index{0};
+    DescriptorSetLayoutHandle handle;
+
+};
+
+struct ShaderState
+{
+    VkPipelineShaderStageCreateInfo shader_stage_create_info[GMaxShaderStages];
+    const char *name{nullptr};
+    uint32_t active_shaders{0};
+    bool graphics_pipeline{false};
+};
+
+struct Pipeline
+{
+    VkPipeline pipeline;
+    VkPipelineLayout pipeline_layout;
+    VkPipelineBindPoint pipeline_bind_point;
+    ShaderStateHandle shader_state_handle;
+    const DescriptorSetLayout* descriptor_set_layout[GMAXDescriptorSetLayouts];
+    DescriptorSetLayoutHandle descriptor_set_layout_handle[GMAXDescriptorSetLayouts];
+
+    // todo
+
+
+
+};
+}
