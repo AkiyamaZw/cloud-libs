@@ -36,10 +36,14 @@ HANDLE_DECLARE(Buffer);
 HANDLE_DECLARE(Texture);
 HANDLE_DECLARE(DescriptorSetLayout);
 HANDLE_DECLARE(ShaderState);
+HANDLE_DECLARE(Pipeline);
+HANDLE_DECLARE(Sampler);
 
 
 struct Buffer
 {
+    BufferHandle handle;
+    BufferHandle parent_handle;
     VkBuffer buffer;
     VmaAllocation allocation;
     VkDeviceMemory memory;
@@ -48,8 +52,6 @@ struct Buffer
     ResourceUsageType usage_type{ResourceUsageType::Immutable};
     uint32_t size = 0;
     uint32_t global_offset{0};
-    BufferHandle handle;
-    BufferHandle parent_handle;
     bool ready{false};
     uint8_t *mapped_data{nullptr};
     const char *name{nullptr};
@@ -70,6 +72,8 @@ struct Sampler
 
 struct Texture
 {
+    TextureHandle handle;
+    TextureHandle parent_handle;
     VkImage image;
     VkImageView view;
     VkFormat format;
@@ -85,8 +89,6 @@ struct Texture
     uint16_t mip_base_levels{0};
     uint16_t array_base_layer{0};
     bool sparse{false};
-    TextureHandle handle;
-    TextureHandle parent_handle;
     TextureType type{TextureType::Texture2D};
     const char *name{nullptr};
     Sampler* sampler;
@@ -117,13 +119,22 @@ struct DescriptorBinding
 
 struct DescriptorSetLayout
 {
+    DescriptorSetLayoutHandle handle;
     VkDescriptorSetLayout descriptor_set_layout;
     VkDescriptorSetLayoutBinding* binding{nullptr};
     DescriptorBinding *descriptor_bindings{nullptr};
     uint16_t num_bindings{0};
     uint16_t set_index{0};
-    DescriptorSetLayoutHandle handle;
+};
 
+struct DescriptorSet
+{
+    VkDescriptorSet descriptor_set;
+    ResourceDefine::ResourceHandle* resources{nullptr};
+    SamplerHandle* samplers{nullptr};
+    uint16_t* bindings{nullptr};
+    const DescriptorSetLayout* layout{nullptr};
+    uint32_t num_resources{0};
 };
 
 struct ShaderState
@@ -186,8 +197,16 @@ struct BlendStateCreation
     BlendState& AddBlendState();
 };
 
+struct RasterizationCreation
+{
+    VkCullModeFlagBits cull_mode{VK_CULL_MODE_NONE};
+    VkFrontFace front_face{VK_FRONT_FACE_COUNTER_CLOCKWISE};
+    FillMode fill_mode{FillMode::Solid};
+};
+
 struct Pipeline
 {
+    PipelineHandle handle;
     VkPipeline pipeline;
     VkPipelineLayout pipeline_layout;
     VkPipelineBindPoint pipeline_bind_point;
@@ -198,9 +217,7 @@ struct Pipeline
     uint32_t num_active_layouts{0};
     DepthStencilCreation depth_stencil;
     BlendStateCreation blend_state;
-    // todo
-
-
-
+    RasterizationCreation rasterization;
+    bool graphics_pipeline{false};
 };
 }

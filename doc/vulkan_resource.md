@@ -10,11 +10,13 @@ r6[DescriptorSetLayout]
 r7[DescriptorBinding]
 r8[ShaderState]
 r9[ShaderStateHandle]
+r10[RasterizationCreation]
 
 r1-.->r9
 r1-.->r6
 r1-->r2
 r1-->r3
+r1-->r10
 
 r2-->r4
 r3-->r5

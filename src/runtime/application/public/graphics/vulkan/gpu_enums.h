@@ -8,6 +8,7 @@ static constexpr uint32_t GlobalPoolElements = 128;
 static constexpr uint8_t GMaxShaderStages = 5;
 static constexpr uint8_t GMAXDescriptorSetLayouts=8;
 
+
 enum class RenderPassOperation
 {
     DontCare,
@@ -67,6 +68,7 @@ enum class  ColorWriteEnabled
 {
     Red, Green, Blue, Alpha, All, Count
 };
+
 enum class  ColorWriteEnabledMask
 {
     Red_Mask = 1 << 0,
@@ -74,5 +76,13 @@ enum class  ColorWriteEnabledMask
     Blue_Mask = 1 << 2,
     Alpha_Mask = 1 << 3,
     All_Mask = Red_Mask | Green_Mask | Blue_Mask | Alpha_Mask
+};
+
+enum class  FillMode
+{
+    Wireframe,
+    Solid,
+    Point,
+    Count
 };
 }

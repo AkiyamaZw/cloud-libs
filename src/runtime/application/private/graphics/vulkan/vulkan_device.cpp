@@ -22,6 +22,75 @@
 
 namespace cloud::vulkan
 {
+struct GPUTimestamp
+{
+    uint32_t start;
+    uint32_t end;
+    double elapsed_ms;
+    uint16_t parent_index;
+    uint16_t depth;
+    uint32_t color;
+    uint32_t frame_index;
+    const char* name;
+};
+
+class GPUTimestampManager final
+{
+public:
+    GPUTimestampManager(uint16_t queries_per_frame, uint16_t max_frames);
+    ~GPUTimestampManager();
+
+    bool HasValidQueries() const;
+    void Reset();
+    uint32_t Resolve(uint32_t current_frame, GPUTimestamp* timestamps_to_fill);
+    uint32_t Push(uint32_t current_frame, const char* name);
+    uint32_t Pop(uint32_t current_frame);
+
+private:
+    struct FrameGPUTimestamps
+    {
+        std::vector<GPUTimestamp*> timestamps;
+    };
+    std::vector<GPUTimestamp*> timestamps_;
+    std::vector<FrameGPUTimestamps> frame_timestamps;
+    uint32_t queries_per_frame_{0};
+    uint32_t current_query_{0};
+    uint32_t parent_index_{0};
+    uint32_t depth_{0};
+    bool current_frame_resolved_{false};
+};
+
+GPUTimestampManager::GPUTimestampManager(uint16_t queries_per_frame, uint16_t max_frames)
+    :queries_per_frame_(queries_per_frame)
+{
+
+}
+
+GPUTimestampManager::~GPUTimestampManager()
+{
+    for (auto& timestamp : timestamps_)
+    {
+        delete timestamp;
+    }
+}
+
+bool GPUTimestampManager::HasValidQueries() const
+{
+    return current_query_ > 0 && depth_== 0;
+}
+
+void GPUTimestampManager::Reset()
+{
+    current_query_ = 0;
+    parent_index_ = 0;
+    current_frame_resolved_ = false;
+    depth_ = 0;
+}
+
+uint32_t GPUTimestampManager::Resolve(uint32_t current_frame, GPUTimestamp *timestamps_to_fill)
+{
+    //todo
+}
 
 typedef struct _GpuDevice
 {
@@ -76,9 +145,14 @@ typedef struct _GpuDevice
 	static constexpr uint32_t descriptor_layout_pool_size = 128;
 	cloud::ResourcePool descriptor_set_layout{descriptor_layout_pool_size,
 											  sizeof(DescriptorSetLayout)};
-
 	static constexpr uint32_t pipeline_pool_size = 128;
 	cloud::ResourcePool pipelines{pipeline_pool_size, sizeof(Pipeline)};
+    static constexpr uint32_t shader_pool_size = 128;
+    cloud::ResourcePool shaders{shader_pool_size, sizeof(ShaderState)};
+    static constexpr uint32_t descriptor_set_pool_size = 256;
+    cloud::ResourcePool descriptor_sets{descriptor_set_pool_size, sizeof(DescriptorSet)};
+    static constexpr uint32_t sampler_pool_size = 32;
+    cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
 
 } GpuDevice;
 
@@ -354,7 +428,11 @@ void CreatePhysicalDevice()
 
 void CreateDeviceAndQueue()
 {
-	std::vector<const char *> device_extensions = {"VK_KHR_swapchain"};
+#ifdef WIN32
+    std::vector<const char *> device_extensions = {"VK_KHR_swapchain"};
+#else
+	std::vector<const char *> device_extensions = {"VK_KHR_swapchain", "VK_KHR_portability_subset"};
+#endif
 	const float queue_priority[] = {1.f};
 	VkDeviceQueueCreateInfo queue_info[1] = {};
 	queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -579,7 +657,6 @@ void CreateVmaAllocator()
 
 void CreateDescriptorPool()
 {
-
 	VkDescriptorPoolSize descriptor_pool_size[] = {
 		{VK_DESCRIPTOR_TYPE_SAMPLER, GlobalPoolElements},
 		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, GlobalPoolElements},
@@ -600,6 +677,43 @@ void CreateDescriptorPool()
 	VkResult succ = vkCreateDescriptorPool(
 		g_vulkan_device.device, &pool_create_info, nullptr, &g_vulkan_device.descriptor_pool);
 	check_vk(succ);
+}
+
+void CreateQueryPool(const GpuCreateParam &param)
+{
+    VkQueryPoolCreateInfo pool_create_info = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+                                              nullptr,
+                                              0,
+                                              VK_QUERY_TYPE_TIMESTAMP,
+                                              param.gpu_time_queries_per_frame * 2u *
+                                                  MaxSwapchainImages,
+                                              0};
+    vkCreateQueryPool(
+        g_vulkan_device.device, &pool_create_info, nullptr, &g_vulkan_device.timestamp_query_pool);
+}
+
+
+void CreateSyncMarkers()
+{
+    VkSemaphoreCreateInfo semaphore_create_info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    for (size_t i=0; i< MaxSwapchainImages; ++i)
+    {
+        vkCreateSemaphore(g_vulkan_device.device, &semaphore_create_info, nullptr, &g_vulkan_device.render_complete_semaphore[i]);
+        vkCreateSemaphore(g_vulkan_device.device, &semaphore_create_info, nullptr, &g_vulkan_device.image_acquired_semaphore[i]);
+        VkFenceCreateInfo fence_create_info = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+        fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        vkCreateFence(g_vulkan_device.device, &fence_create_info, nullptr, &g_vulkan_device.command_buffer_fence[i]);
+    }
+}
+
+void DestroySyncMarkers()
+{
+    for (size_t i = 0; i < g_vulkan_device.swapchain_image_count; ++i)
+    {
+        vkDestroySemaphore(g_vulkan_device.device, g_vulkan_device.render_complete_semaphore[i], nullptr);
+        vkDestroySemaphore(g_vulkan_device.device, g_vulkan_device.image_acquired_semaphore[i], nullptr);
+        vkDestroyFence(g_vulkan_device.device, g_vulkan_device.command_buffer_fence[i], nullptr);
+    }
 }
 
 void InitGpuDevice(GpuCreateParam &param)
@@ -639,21 +753,19 @@ void InitGpuDevice(GpuCreateParam &param)
 	CreateDescriptorPool();
 	assert(g_vulkan_device.descriptor_pool);
 
-	VkQueryPoolCreateInfo pool_create_info = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
-											  nullptr,
-											  0,
-											  VK_QUERY_TYPE_TIMESTAMP,
-											  param.gpu_time_queries_per_frame * 2u *
-												  MaxSwapchainImages,
-											  0};
-	vkCreateQueryPool(
-		g_vulkan_device.device, &pool_create_info, nullptr, &g_vulkan_device.timestamp_query_pool);
+    CreateQueryPool(param);
 	assert(g_vulkan_device.timestamp_query_pool);
+
+    CreateSyncMarkers();
+    assert(g_vulkan_device.render_complete_semaphore[0]);
+    assert(g_vulkan_device.image_acquired_semaphore[0]);
+    assert(g_vulkan_device.command_buffer_fence[0]);
 }
 
 void ShutdownGpuDevice()
 {
 
+    DestroySyncMarkers();
 	vkDestroyQueryPool(g_vulkan_device.device, g_vulkan_device.timestamp_query_pool, nullptr);
 	vkDestroyDescriptorPool(g_vulkan_device.device, g_vulkan_device.descriptor_pool, nullptr);
 	vmaDestroyAllocator(g_vulkan_device.vma_allocator);
