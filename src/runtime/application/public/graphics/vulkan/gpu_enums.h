@@ -62,4 +62,17 @@ enum class TextureType
 {
     Texture1D, Texture2D, Texture3D, TextureCube, Texture_1D_Array, Texture_2D_Array, Texture_Cube_Array, Count
 };
+
+enum class  ColorWriteEnabled
+{
+    Red, Green, Blue, Alpha, All, Count
+};
+enum class  ColorWriteEnabledMask
+{
+    Red_Mask = 1 << 0,
+    Green_Mask = 1 << 1,
+    Blue_Mask = 1 << 2,
+    Alpha_Mask = 1 << 3,
+    All_Mask = Red_Mask | Green_Mask | Blue_Mask | Alpha_Mask
+};
 }

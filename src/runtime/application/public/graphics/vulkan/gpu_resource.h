@@ -134,6 +134,58 @@ struct ShaderState
     bool graphics_pipeline{false};
 };
 
+
+struct StencilOperationState
+{
+    VkStencilOpState fail{VK_STENCIL_OP_KEEP};
+    VkStencilOpState pass{VK_STENCIL_OP_KEEP};
+    VkStencilOpState depth_fail{VK_STENCIL_OP_KEEP};
+    VkCompareOp compare_op{VK_COMPARE_OP_ALWAYS};
+    uint32_t compare_mask{0xff};
+    uint32_t write_mask{0xff};
+    uint32_t reference{0xff};
+};
+
+struct DepthStencilCreation
+{
+    StencilOperationState front;
+    StencilOperationState back;
+    VkCompareOp depth_compare_op{VK_COMPARE_OP_ALWAYS};
+    uint8_t depth_enabled:1;
+    uint8_t depth_write_enabled:1;
+    uint8_t stencil_enabled:1;
+    uint8_t pad:5;
+};
+
+struct BlendState
+{
+    VkBlendFactor source_color{VK_BLEND_FACTOR_ONE};
+    VkBlendFactor destination_color{VK_BLEND_FACTOR_ONE};
+    VkBlendOp color_blend_op{VK_BLEND_OP_ADD};
+
+    VkBlendFactor source_alpha{VK_BLEND_FACTOR_ONE};
+    VkBlendFactor destination_alpha{VK_BLEND_FACTOR_ONE};
+    VkBlendOp alpha_blend_op{VK_BLEND_OP_ADD};
+    ColorWriteEnabledMask color_write_mask{ColorWriteEnabledMask::All_Mask};
+
+    uint8_t blend_enabled:1;
+    uint8_t separate_blend:1;
+    uint8_t pad:6;
+
+    BlendState():blend_enabled(0), separate_blend(0){};
+    BlendState& SetColor(VkBlendFactor in_source_color, VkBlendFactor in_destination_color, VkBlendOp in_color_blend_op);
+    BlendState& SetAlpha(VkBlendFactor in_source_alpha, VkBlendFactor in_destination_alpha, VkBlendOp in_alpha_blend_op);
+    BlendState& SetColorWriteMask(ColorWriteEnabledMask in_mask);
+};
+
+struct BlendStateCreation
+{
+    BlendState blend_states[MaxSwapchainImages];
+    uint32_t active_states{0};
+    BlendStateCreation& Reset();
+    BlendState& AddBlendState();
+};
+
 struct Pipeline
 {
     VkPipeline pipeline;
@@ -143,6 +195,9 @@ struct Pipeline
     const DescriptorSetLayout* descriptor_set_layout[GMAXDescriptorSetLayouts];
     DescriptorSetLayoutHandle descriptor_set_layout_handle[GMAXDescriptorSetLayouts];
 
+    uint32_t num_active_layouts{0};
+    DepthStencilCreation depth_stencil;
+    BlendStateCreation blend_state;
     // todo
 
 
