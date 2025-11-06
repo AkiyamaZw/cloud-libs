@@ -4,28 +4,11 @@
 #include <array>
 #include <map>
 #include <ranges>
-
+#include <algorithm>
+#include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
-#define VMA_IMPLEMENTATION
-#include "graphics/vulkan/vk_mem_alloc.h"
-
-
-// clang-format off
-#ifdef WIN32
-	#define VK_USE_PLATFORM_WIN32_KHR
-	#define GLFW_INCLUDE_VULKAN
-	#include "Windows.h"
-	#include <vulkan/vulkan_win32.h>
-	#include "GLFW/glfw3.h"
-	#define GLFW_EXPOSE_NATIVE_WIN32
-	#include "GLFW/glfw3native.h"
-#elif defined(__APPLE__)
-	#define GLFW_INCLUDE_VULKAN
-	#include "GLFW/glfw3.h"
-#endif
-// clang-format on
-
+ #include "graphics/vulkan/vk_mem_alloc.h"
 
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
@@ -36,7 +19,7 @@
 namespace cloud::vulkan
 {
 
-struct GpuDevice
+typedef struct _GpuDevice
 {
     /* basic api object */
     VkInstance instance;
@@ -72,7 +55,7 @@ struct GpuDevice
     uint32_t swapchain_height;
     uint32_t swapchain_image_count;
 
-    VmaAllocator vma_allocator;
+     VmaAllocator vma_allocator;
 
     /* sync */
     std::array<VkSemaphore, MaxSwapchainImages> render_complete_semaphore;
@@ -93,10 +76,13 @@ struct GpuDevice
     cloud::ResourcePool pipelines{pipeline_pool_size, sizeof(Pipeline)};
 
 
-} g_vulkan_device;
+}GpuDevice;
+
+GpuDevice g_vulkan_device;
+
 
 static const char *s_instance_layer[] = {
-#ifdef DEBUG
+#ifdef _DEBUG
     "VK_LAYER_KHRONOS_validation",
 #else
     "",
@@ -128,7 +114,7 @@ static const char *s_requested_extensions[] = {
     VK_MVK_IOS_SURFACE_EXTENSION_NAME,
 #endif // VK_USE_PLATFORM_WIN32_KHR
 
-#if defined(DEBUG)
+#if defined(_DEBUG)
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
     VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif // VULKAN_DEBUG_REPORT
@@ -156,7 +142,7 @@ VkDebugUtilsMessengerCreateInfoEXT create_debug_utils_messenger_info()
 {
     VkDebugUtilsMessengerCreateInfoEXT creation_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-    creation_info.pfnUserCallback = debug_utils_callback;
+    creation_info.pfnUserCallback = &debug_utils_callback;
     creation_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
                                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
     creation_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
@@ -167,7 +153,7 @@ VkDebugUtilsMessengerCreateInfoEXT create_debug_utils_messenger_info()
 
 void CreateDebugExt()
 {
-#ifdef DEBUG
+#ifdef _DEBUG
     assert(g_vulkan_device.instance != VK_NULL_HANDLE);
     uint32_t num_instance_extensions;
     vkEnumerateInstanceExtensionProperties(nullptr, &num_instance_extensions, nullptr);
@@ -253,24 +239,24 @@ void CreateInstance(GpuCreateParam &param)
 {
     std::vector<const char *> window_extension;
     uint32_t extension_count = 0;
-    // #ifdef WIN32
-    // 	extension_count = 2;
-    // 	window_extension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    // 	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-    // #elif __APPLE__
+     #ifdef WIN32
+     	extension_count = 2;
+     	window_extension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+     	window_extension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+     #elif __APPLE__
 
-    const char **extension_names = nullptr;
-    extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
-    if (extension_count == 0)
-    {
-        FATAL("[GLFW] cannot get Vulkan Extentions Info!");
-        return;
-    }
-    for (int i = 0; i < extension_count; i++)
-    {
-        window_extension.push_back(extension_names[i]);
-    }
-    // #endif
+        const char **extension_names = nullptr;
+        extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
+        if (extension_count == 0)
+        {
+            FATAL("[GLFW] cannot get Vulkan Extentions Info!");
+            return;
+        }
+        for (int i = 0; i < extension_count; i++)
+        {
+            window_extension.push_back(extension_names[i]);
+        }
+     #endif
 
     std::vector<const char *> extensions;
     for (int i = 0; i < std::size(s_requested_extensions); i++)
@@ -281,19 +267,19 @@ void CreateInstance(GpuCreateParam &param)
     extensions.insert(extensions.end(), window_extension.begin(), window_extension.end());
     extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     uint32_t api_version = 0;
-    succ = UseLatestApiVersion(api_version);
-    check_vk(succ);
-    INFO("api version: {}.{}.{}",
-         VK_VERSION_MAJOR(api_version),
-         VK_VERSION_MINOR(api_version),
-         VK_VERSION_PATCH(api_version));
+	api_version = VK_MAKE_VERSION(1, 4, 0);
+	INFO("api version: {}.{}.{}",
+		 VK_VERSION_MAJOR(api_version),
+		 VK_VERSION_MINOR(api_version),
+		 VK_VERSION_PATCH(api_version));
 
     VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                                  .apiVersion = api_version};
+									  .apiVersion = api_version};
     VkInstanceCreateInfo ins_info = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-                                     .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+                                        .pNext = 0,
+                                     .flags = 0,
                                      .pApplicationInfo = &app_info,
-#ifdef DEBUG
+#ifdef _DEBUG
                                      .enabledLayerCount = std::size(s_instance_layer),
                                      .ppEnabledLayerNames = s_instance_layer,
                                      .enabledExtensionCount = static_cast<uint32_t>(extensions.
@@ -302,11 +288,20 @@ void CreateInstance(GpuCreateParam &param)
 #endif
     };
 
-#ifdef DEBUG
+#ifdef _DEBUG
     const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
         create_debug_utils_messenger_info();
-    ins_info.pNext = &debug_create_info;
+    // ins_info.pNext = &debug_create_info;
 #endif
+
+    // 正确加载函数指针
+    PFN_vkCreateInstance pfnCreateInstance =
+        (PFN_vkCreateInstance)vkGetInstanceProcAddr(nullptr, "vkCreateInstance");
+
+    if (!pfnCreateInstance) {
+        return;
+    }
+
     succ = vkCreateInstance(&ins_info, nullptr, &g_vulkan_device.instance);
     check_vk(succ);
     INFO("[Vulkan Gpu Device] Instance Created..");
@@ -380,7 +375,7 @@ void CreatePhysicalDevice()
 
 void CreateDeviceAndQueue()
 {
-    std::vector<const char *> device_extensions = {"VK_KHR_swapchain", "VK_KHR_portability_subset"};
+    std::vector<const char *> device_extensions = {"VK_KHR_swapchain"};
     const float queue_priority[] = {1.f};
     VkDeviceQueueCreateInfo queue_info[1] = {};
     queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -407,6 +402,7 @@ void CreateDeviceAndQueue()
         nullptr,
         &g_vulkan_device.device);
     check_vk(succ);
+	assert(g_vulkan_device.device != nullptr);
 
     vkGetDeviceQueue(
         g_vulkan_device.device,
@@ -607,16 +603,16 @@ void DestroySwapchain()
     vkDestroySwapchainKHR(g_vulkan_device.device, g_vulkan_device.swapchain, nullptr);
 }
 
-void CreateVmaAllocator()
-{
-    VmaAllocatorCreateInfo allocator_create_info = {};
-    allocator_create_info.physicalDevice = g_vulkan_device.physical_device;
-    allocator_create_info.device = g_vulkan_device.device;
-    allocator_create_info.instance = g_vulkan_device.instance;
+ void CreateVmaAllocator()
+ {
+     VmaAllocatorCreateInfo allocator_create_info = {};
+     allocator_create_info.physicalDevice = g_vulkan_device.physical_device;
+     allocator_create_info.device = g_vulkan_device.device;
+     allocator_create_info.instance = g_vulkan_device.instance;
 
-    VkResult succ = vmaCreateAllocator(&allocator_create_info, &g_vulkan_device.vma_allocator);
-    check_vk(succ);
-}
+     VkResult succ = vmaCreateAllocator(&allocator_create_info, &g_vulkan_device.vma_allocator);
+     check_vk(succ);
+ }
 
 void CreateDescriptorPool()
 {
@@ -650,6 +646,10 @@ void InitGpuDevice(GpuCreateParam &param)
 {
     INFO("[Vulkan Gpu Device] Start init...");
     VkResult succ;
+	// INFO("{}", *(int*) & g_vulkan_device.buffers);
+    
+    g_vulkan_device.swapchain_width = param.width;
+	g_vulkan_device.swapchain_height = param.height;
 
     // instance
     CreateInstance(param);
@@ -675,8 +675,8 @@ void InitGpuDevice(GpuCreateParam &param)
     CreateSwapChain();
     assert(g_vulkan_device.swapchain);
 
-    CreateVmaAllocator();
-    assert(g_vulkan_device.vma_allocator);
+     CreateVmaAllocator();
+     assert(g_vulkan_device.vma_allocator);
 
     CreateDescriptorPool();
     assert(g_vulkan_device.descriptor_pool);
@@ -699,7 +699,7 @@ void ShutdownGpuDevice()
 
     vkDestroyQueryPool(g_vulkan_device.device, g_vulkan_device.timestamp_query_pool, nullptr);
     vkDestroyDescriptorPool(g_vulkan_device.device, g_vulkan_device.descriptor_pool, nullptr);
-    vmaDestroyAllocator(g_vulkan_device.vma_allocator);
+    // vmaDestroyAllocator(g_vulkan_device.vma_allocator);
     DestroySwapchain();
     vkDestroyDevice(g_vulkan_device.device, nullptr);
     vkDestroySurfaceKHR(g_vulkan_device.instance, g_vulkan_device.window_surface, nullptr);

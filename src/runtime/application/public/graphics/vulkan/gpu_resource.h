@@ -1,6 +1,6 @@
 #pragma once
 #include "gpu_enums.h"
-#include "vulkan/vulkan.h"
+#include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
 
 namespace cloud::vulkan

@@ -4,13 +4,13 @@ file(GLOB_RECURSE HEAD_FILES    ${CMAKE_CURRENT_SOURCE_DIR}/public/*.h
                                 ${CMAKE_CURRENT_SOURCE_DIR}/private/*.inc)
 file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/private/*.cpp)
 
-add_library(${PROJECT_NAME} STATIC ${HEAD_FILES} ${SOURCE_FILES})
+add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
         cloud_minicore
 		PRIVATE
-        ${vulkan_lib}
 		glfw
+        ${vulkan_lib}
 )
 MESSAGE(STATUS ${vulkan_lib})
 target_include_directories(${PROJECT_NAME}
