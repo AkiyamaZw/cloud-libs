@@ -32,7 +32,7 @@ class AppLogger
 
 #define INFO(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::info, __VA_ARGS__)
 
-#define DEBUG(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::debug, __VA_ARGS__)
+#define DEBUG_INFO(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::debug, __VA_ARGS__)
 
 #define WARN(...) SPDLOG_LOGGER_CALL(__SYS_LOGGER, spdlog::level::warn, __VA_ARGS__)
 
