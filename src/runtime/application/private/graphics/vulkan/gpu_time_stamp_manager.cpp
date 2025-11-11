@@ -1,4 +1,4 @@
-#include "graphics/vulkan/GPUTimeStampManager.h"
+#include "graphics/vulkan/gpu_time_stamp_manager.h"
 
 namespace cloud::vulkan
 {
@@ -9,7 +9,7 @@ GPUTimestampManager::GPUTimestampManager(uint16_t queries_per_frame, uint16_t ma
     const uint32_t data_per_query = 2; // [start, end]
     const size_t free_space = sizeof(GPUTimestamp) * queries_per_frame * max_frames +
         sizeof(uint64_t) * queries_per_frame * max_frames * data_per_query;
-    uint8_t *raw_memory = malloc(free_space);
+    uint8_t *raw_memory = (uint8_t*)malloc(free_space);
     timestamps_ = reinterpret_cast<GPUTimestamp *>(raw_memory);
     timestamps_data_ = reinterpret_cast<uint64_t *>(raw_memory + sizeof(GPUTimestamp) * queries_per_frame * max_frames);
     Reset();

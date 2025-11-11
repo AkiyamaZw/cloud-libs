@@ -1,5 +1,6 @@
 #include "graphic_application.h"
 #include "runtime_log.h"
+#include "graphics/vulkan/vulkan_device.h"
 
 #ifndef NEO_GLFW_INCLUDE
 #define NEO_GLFW_INCLUDE
@@ -99,6 +100,7 @@ void InitModules()
 	InitWindow(&GAppContext);
 	GpuCreateParam param{
 		.window = GAppContext.window_ptr, .width = GAppContext.width, .height = GAppContext.height};
+
 	CreateRenderer(param);
 }
 

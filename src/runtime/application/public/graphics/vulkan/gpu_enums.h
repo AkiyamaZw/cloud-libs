@@ -8,6 +8,13 @@ static constexpr uint32_t GlobalPoolElements = 128;
 static constexpr uint8_t GMaxShaderStages = 5;
 static constexpr uint8_t GMAXDescriptorSetLayouts=8;
 
+enum class QueueType
+{
+    Graphics,
+    Compute,
+    CopyTransfer,
+    Count
+};
 
 enum class RenderPassOperation
 {
@@ -83,6 +90,22 @@ enum class  FillMode
     Wireframe,
     Solid,
     Point,
+    Count
+};
+
+enum class ResourceUpdateType
+{
+    Buffer,
+    Texture,
+    Pipeline,
+    Sampler,
+    DescriptorSetLayout,
+    DescriptorSet,
+    RenderPass,
+    Framebuffer,
+    ShaderState,
+    TextureView,
+    PagePool,
     Count
 };
 }

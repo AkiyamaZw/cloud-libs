@@ -29,6 +29,8 @@ struct ResourceDefine
     using ResourceHandle = uint32_t;
 };
 
+using TResourceHandle = ResourceDefine::ResourceHandle;
+
 #define HANDLE_DECLARE(name) \
     struct name##Handle{ ResourceDefine::ResourceHandle index; }
 
@@ -38,7 +40,21 @@ HANDLE_DECLARE(DescriptorSetLayout);
 HANDLE_DECLARE(ShaderState);
 HANDLE_DECLARE(Pipeline);
 HANDLE_DECLARE(Sampler);
+HANDLE_DECLARE(DescriptorSet);
 
+struct ResourceUpdate
+{
+    TResourceHandle handle;
+    ResourceUpdateType type;
+    uint32_t current_frame;
+    uint32_t deleting;
+};
+
+struct DescriptorSetUpdate
+{
+    DescriptorSetHandle handle;
+    uint32_t frame_issued{0};
+};
 
 struct Buffer
 {
@@ -68,6 +84,18 @@ struct Sampler
     VkSamplerAddressMode address_mode_w{VK_SAMPLER_ADDRESS_MODE_REPEAT};
     VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
     const char *name{nullptr};
+};
+
+struct SamplerCreation
+{
+    const char* name;
+    VkFilter min_filter{VK_FILTER_NEAREST};
+    VkFilter mag_filter{VK_FILTER_NEAREST};
+    VkSamplerMipmapMode mip_filter{VK_SAMPLER_MIPMAP_MODE_NEAREST};
+    VkSamplerAddressMode address_mode_u{VK_SAMPLER_ADDRESS_MODE_REPEAT};
+    VkSamplerAddressMode address_mode_v{VK_SAMPLER_ADDRESS_MODE_REPEAT};
+    VkSamplerAddressMode address_mode_w{VK_SAMPLER_ADDRESS_MODE_REPEAT};
+    VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
 };
 
 struct Texture

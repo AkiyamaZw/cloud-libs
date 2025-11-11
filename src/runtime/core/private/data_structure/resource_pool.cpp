@@ -4,8 +4,6 @@
 
 namespace cloud
 {
-static const uint32_t INVALID_NUM = 0xffffffff;
-
 ResourcePool::ResourcePool(uint32_t pool_size, uint32_t resource_size)
     : pool_size_(pool_size), resource_size_(resource_size)
 {

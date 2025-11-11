@@ -1,4 +1,5 @@
 #include "graphics/vulkan/vulkan_device.h"
+#include "graphics/vulkan/vulkan_device.h"
 #include "runtime_log.h"
 #include "data_structure/resource_pool.h"
 #include <array>
@@ -9,6 +10,7 @@
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
+#include "graphics/vulkan/command_buffer.h"
 
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
@@ -22,7 +24,7 @@
 
 namespace cloud::vulkan
 {
-typedef struct _GpuDevice
+struct _GpuDevice
 {
 	/* basic api object */
 	VkInstance instance;
@@ -84,9 +86,104 @@ typedef struct _GpuDevice
     static constexpr uint32_t sampler_pool_size = 32;
     cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
 
-} GpuDevice;
 
-GpuDevice g_vulkan_device;
+    std::array<CommandBuffer*, 128> queued_command_buffers;
+    uint32_t num_allocated_command_buffers{0};
+    uint32_t num_queued_command_buffers{0};
+
+    uint32_t vulkan_image_index{0};
+    uint32_t current_frame{0};
+    uint32_t previous_frame{0};
+    uint64_t absolute_frame{0};
+    bool timestamps_enabled{false};
+
+    std::vector<ResourceUpdate> resource_deletion_queue{16};
+    std::vector<DescriptorSetUpdate> descriptor_set_updates{16};
+
+
+    // resource
+    BufferHandle fullscreen_vertex_buffer;
+    SamplerHandle default_sampler;
+};
+
+
+struct CommandBufferRing
+{
+    static const uint16_t GMaxThreads = 1;
+    static const uint16_t GMaxPools = MaxSwapchainImages*GMaxThreads;
+    static const uint16_t GBuffersPerPool = 4;
+    static const uint16_t GMaxBuffers = GBuffersPerPool * GMaxPools;
+
+    VkCommandPool vk_command_pool[GMaxPools];
+    CommandBuffer command_buffer[GMaxBuffers];
+    uint8_t next_free_per_thread_frame[GMaxPools];
+    void Init(_GpuDevice* gpu);
+    void Destroy(_GpuDevice* gpu);
+    void Reset(_GpuDevice* gpu, uint32_t frame_index);
+    static uint32_t IndexInPool(uint32_t index){return (uint16_t)index / GBuffersPerPool;}
+    CommandBuffer* GetCommandBuffer(uint32_t frame_index, bool begin);
+    CommandBuffer* GetCommandBufferInstant(uint32_t frame_index, bool begin);
+} g_vulkan_cmd_buffer_ring;
+
+
+void CommandBufferRing::Init(_GpuDevice* gpu)
+{
+    for (uint32_t i = 0; i < GMaxPools; i++)
+    {
+        VkCommandPoolCreateInfo cmd_pool_info{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr,};
+        cmd_pool_info.queueFamilyIndex = gpu->queue_family;
+        cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        check_vk(vkCreateCommandPool(gpu->device, &cmd_pool_info, nullptr, &vk_command_pool[i]));
+    }
+
+    for (uint32_t i=0; i< GMaxBuffers; i++)
+    {
+        VkCommandBufferAllocateInfo cmd_alloc_cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr};
+        const uint32_t pool_index = IndexInPool(i);
+        cmd_alloc_cmd.commandPool = vk_command_pool[pool_index];
+        cmd_alloc_cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmd_alloc_cmd.commandBufferCount = 1;
+        check_vk(vkAllocateCommandBuffers(gpu->device, &cmd_alloc_cmd, &command_buffer[i].vk_command_buffer));
+        command_buffer[i].handle = i;
+        command_buffer[i].Reset();
+    }
+}
+
+void CommandBufferRing::Destroy(_GpuDevice* gpu)
+{
+    for (uint32_t i=0; i<GMaxPools;++i)
+    {
+        vkDestroyCommandPool(gpu->device, vk_command_pool[i], nullptr);
+    }
+}
+
+void CommandBufferRing::Reset(_GpuDevice* gpu, uint32_t frame_index)
+{
+    for (uint32_t i=0; i<GMaxThreads;++i)
+    {
+        vkResetCommandPool(gpu->device, vk_command_pool[frame_index*GMaxThreads + i], 0);
+    }
+}
+
+CommandBuffer * CommandBufferRing::GetCommandBuffer(uint32_t frame_index, bool begin)
+{
+    CommandBuffer* cmd_buffer = &command_buffer[frame_index * GBuffersPerPool];
+    if (begin)
+    {
+        cmd_buffer->Reset();
+        VkCommandBufferBeginInfo begin_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd_buffer->vk_command_buffer, &begin_info);
+    }
+    return cmd_buffer;
+}
+
+CommandBuffer * CommandBufferRing::GetCommandBufferInstant(uint32_t frame_index, bool begin)
+{
+    CommandBuffer* cmd_buffer = &command_buffer[frame_index * GBuffersPerPool+1];
+    return cmd_buffer;
+}
+
 
 static const char *s_instance_layer[] = {
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
@@ -158,10 +255,10 @@ VkDebugUtilsMessengerCreateInfoEXT create_debug_utils_messenger_info()
 	return creation_info;
 }
 
-void CreateDebugExt()
+void CreateDebugExt(_GpuDevice* gpu)
 {
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
-	assert(g_vulkan_device.instance != VK_NULL_HANDLE);
+	assert(gpu->instance != VK_NULL_HANDLE);
 	uint32_t num_instance_extensions;
 	vkEnumerateInstanceExtensionProperties(nullptr, &num_instance_extensions, nullptr);
 	std::vector<VkExtensionProperties> extensions(num_instance_extensions);
@@ -171,9 +268,9 @@ void CreateDebugExt()
 	});
 	if (result != extensions.end())
 	{
-		g_vulkan_device.debug_utils_extension_present = true;
+		gpu->debug_utils_extension_present = true;
 	}
-	if (!g_vulkan_device.debug_utils_extension_present)
+	if (!gpu->debug_utils_extension_present)
 	{
 		INFO("[Vulkan Device] Extension {} for debugging non presenting",
 			 VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -182,15 +279,15 @@ void CreateDebugExt()
 	{
 		PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT =
 			(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-				g_vulkan_device.instance, "vkCreateDebugUtilsMessengerEXT");
+				gpu->instance, "vkCreateDebugUtilsMessengerEXT");
 		VkDebugUtilsMessengerCreateInfoEXT debug_msger_create_info =
 			create_debug_utils_messenger_info();
-		vkCreateDebugUtilsMessengerEXT(g_vulkan_device.instance,
+		vkCreateDebugUtilsMessengerEXT(gpu->instance,
 									   &debug_msger_create_info,
 									   nullptr,
-									   &g_vulkan_device.debug_utils_messenger);
+									   &gpu->debug_utils_messenger);
 	}
-	check_true(g_vulkan_device.debug_utils_messenger != VK_NULL_HANDLE);
+	check_true(gpu->debug_utils_messenger != VK_NULL_HANDLE);
 	INFO("[Vulkan GPU Device] DebugUtilsMessenger Created..");
 #endif
 }
@@ -233,7 +330,7 @@ VkResult UseLatestApiVersion(uint32_t &api_version)
 	return VK_SUCCESS;
 }
 
-void CreateInstance(GpuCreateParam &param)
+void CreateInstance(_GpuDevice* gpu, GpuCreateParam &param)
 {
 	std::vector<const char *> window_extension;
 	uint32_t extension_count = 0;
@@ -290,20 +387,20 @@ void CreateInstance(GpuCreateParam &param)
 		create_debug_utils_messenger_info();
 	ins_info.pNext = &debug_create_info;
 
-	succ = vkCreateInstance(&ins_info, nullptr, &g_vulkan_device.instance);
+	succ = vkCreateInstance(&ins_info, nullptr, &gpu->instance);
 	check_vk(succ);
 	INFO("[Vulkan Gpu Device] Instance Created..");
 }
 
-void CreatePhysicalDevice()
+void CreatePhysicalDevice(_GpuDevice* gpu)
 {
 	uint32_t num_physical_device = 0;
 	VkResult succ =
-		vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, nullptr);
+		vkEnumeratePhysicalDevices(gpu->instance, &num_physical_device, nullptr);
 	check_vk(succ);
 
 	std::vector<VkPhysicalDevice> gpus(num_physical_device);
-	succ = vkEnumeratePhysicalDevices(g_vulkan_device.instance, &num_physical_device, gpus.data());
+	succ = vkEnumeratePhysicalDevices(gpu->instance, &num_physical_device, gpus.data());
 	check_vk(succ);
 	VkPhysicalDeviceProperties device_property;
 	VkPhysicalDevice discrate_device = VK_NULL_HANDLE;
@@ -311,13 +408,13 @@ void CreatePhysicalDevice()
 
 	for (uint32_t index = 0; index < num_physical_device; ++index)
 	{
-		vkGetPhysicalDeviceProperties(gpus[index], &g_vulkan_device.physical_device_properties);
+		vkGetPhysicalDeviceProperties(gpus[index], &gpu->physical_device_properties);
 		const VkPhysicalDeviceType device_type =
-			g_vulkan_device.physical_device_properties.deviceType;
+			gpu->physical_device_properties.deviceType;
 		if (device_type == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 		{
 			if (get_family_queue(
-					gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
+					gpus[index], gpu->window_surface, gpu->queue_family))
 			{
 				discrate_device = gpus[index];
 				break;
@@ -327,7 +424,7 @@ void CreatePhysicalDevice()
 		if (device_type == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
 		{
 			if (get_family_queue(
-					gpus[index], g_vulkan_device.window_surface, g_vulkan_device.queue_family))
+					gpus[index], gpu->window_surface, gpu->queue_family))
 			{
 				intergrate_device = gpus[index];
 				break;
@@ -337,26 +434,26 @@ void CreatePhysicalDevice()
 	}
 	if (discrate_device != VK_NULL_HANDLE)
 	{
-		g_vulkan_device.physical_device = discrate_device;
+		gpu->physical_device = discrate_device;
 	}
 	else if (intergrate_device != VK_NULL_HANDLE)
 	{
-		g_vulkan_device.physical_device = intergrate_device;
+		gpu->physical_device = intergrate_device;
 	}
-	check_true(g_vulkan_device.physical_device != VK_NULL_HANDLE);
-	g_vulkan_device.gpu_timestamp_frequency =
-		g_vulkan_device.physical_device_properties.limits.timestampPeriod / (1000 * 1000);
-	g_vulkan_device.ubo_alignment =
-		g_vulkan_device.physical_device_properties.limits.minUniformBufferOffsetAlignment;
-	g_vulkan_device.ssbo_alignment =
-		g_vulkan_device.physical_device_properties.limits.minStorageBufferOffsetAlignment;
+	check_true(gpu->physical_device != VK_NULL_HANDLE);
+	gpu->gpu_timestamp_frequency =
+		gpu->physical_device_properties.limits.timestampPeriod / (1000 * 1000);
+	gpu->ubo_alignment =
+		gpu->physical_device_properties.limits.minUniformBufferOffsetAlignment;
+	gpu->ssbo_alignment =
+		gpu->physical_device_properties.limits.minStorageBufferOffsetAlignment;
 
 	INFO("[vulkan device] select gpu {}, gpu_timestamp_frequency:{:.8f}",
-		 g_vulkan_device.physical_device_properties.deviceName,
-		 g_vulkan_device.gpu_timestamp_frequency);
+		 gpu->physical_device_properties.deviceName,
+		 gpu->gpu_timestamp_frequency);
 }
 
-void CreateDeviceAndQueue()
+void CreateDeviceAndQueue(_GpuDevice* gpu)
 {
 #ifdef WIN32
     std::vector<const char *> device_extensions = {"VK_KHR_swapchain"};
@@ -366,13 +463,13 @@ void CreateDeviceAndQueue()
 	const float queue_priority[] = {1.f};
 	VkDeviceQueueCreateInfo queue_info[1] = {};
 	queue_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_info[0].queueFamilyIndex = g_vulkan_device.queue_family;
+	queue_info[0].queueFamilyIndex = gpu->queue_family;
 	queue_info[0].queueCount = 1;
 	queue_info[0].pQueuePriorities = queue_priority;
 
 	VkPhysicalDeviceFeatures2 physical_features2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
 
-	vkGetPhysicalDeviceFeatures2(g_vulkan_device.physical_device, &physical_features2);
+	vkGetPhysicalDeviceFeatures2(gpu->physical_device, &physical_features2);
 	physical_features2.features.robustBufferAccess = VK_FALSE;
 
 	VkDeviceCreateInfo device_cinfo = {};
@@ -384,12 +481,12 @@ void CreateDeviceAndQueue()
 	device_cinfo.pNext = &physical_features2;
 
 	VkResult succ = vkCreateDevice(
-		g_vulkan_device.physical_device, &device_cinfo, nullptr, &g_vulkan_device.device);
+		gpu->physical_device, &device_cinfo, nullptr, &gpu->device);
 	check_vk(succ);
-	assert(g_vulkan_device.device != nullptr);
+	assert(gpu->device != nullptr);
 
 	vkGetDeviceQueue(
-		g_vulkan_device.device, g_vulkan_device.queue_family, 0, &g_vulkan_device.queue);
+		gpu->device, gpu->queue_family, 0, &gpu->queue);
 }
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
@@ -408,7 +505,8 @@ VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 	}
 }
 
-void SetPresentMode(PresentMode in_present_mode,
+void SetPresentMode(_GpuDevice* gpu,
+                    PresentMode in_present_mode,
 					VkPresentModeKHR &out_vk_present_mode,
 					uint32_t &out_swapchain_count,
 					PresentMode &out_present_mode)
@@ -416,10 +514,10 @@ void SetPresentMode(PresentMode in_present_mode,
 	uint32_t supported_cnt = 0;
 	static VkPresentModeKHR present_mode[8];
 	vkGetPhysicalDeviceSurfacePresentModesKHR(
-		g_vulkan_device.physical_device, g_vulkan_device.window_surface, &supported_cnt, nullptr);
+		gpu->physical_device, gpu->window_surface, &supported_cnt, nullptr);
 	check_true(supported_cnt > 0);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(g_vulkan_device.physical_device,
-											  g_vulkan_device.window_surface,
+	vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->physical_device,
+											  gpu->window_surface,
 											  &supported_cnt,
 											  present_mode);
 	bool mode_found = false;
@@ -437,7 +535,7 @@ void SetPresentMode(PresentMode in_present_mode,
 	out_present_mode = mode_found ? in_present_mode : PresentMode::VSync;
 }
 
-void CreateSwapChain()
+void CreateSwapChain(_GpuDevice* gpu)
 {
 	constexpr VkFormat surface_image_format[] = {VK_FORMAT_B8G8R8A8_UNORM,
 												 VK_FORMAT_R8G8B8A8_UNORM,
@@ -446,10 +544,10 @@ void CreateSwapChain()
 	constexpr VkColorSpaceKHR surface_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 	uint32_t supported_count;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(
-		g_vulkan_device.physical_device, g_vulkan_device.window_surface, &supported_count, nullptr);
+		gpu->physical_device, gpu->window_surface, &supported_count, nullptr);
 	std::vector<VkSurfaceFormatKHR> supported_format(supported_count);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkan_device.physical_device,
-										 g_vulkan_device.window_surface,
+	vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->physical_device,
+										 gpu->window_surface,
 										 &supported_count,
 										 supported_format.data());
 
@@ -461,7 +559,7 @@ void CreateSwapChain()
 			if (supported_format[j].format == surface_image_format[i] &&
 				supported_format[j].colorSpace == surface_color_space)
 			{
-				g_vulkan_device.window_surface_format = supported_format[j];
+				gpu->window_surface_format = supported_format[j];
 				format_found = true;
 				break;
 			}
@@ -472,18 +570,19 @@ void CreateSwapChain()
 		}
 	}
 	check_true(format_found);
-	g_vulkan_device.swapchain_output.Reset();
-	g_vulkan_device.swapchain_output.SetColorFormat(g_vulkan_device.window_surface_format.format);
+	gpu->swapchain_output.Reset();
+	gpu->swapchain_output.SetColorFormat(gpu->window_surface_format.format);
 
-	SetPresentMode(g_vulkan_device.present_mode,
-				   g_vulkan_device.vk_present_mode,
-				   g_vulkan_device.swapchain_image_count,
-				   g_vulkan_device.present_mode);
+	SetPresentMode(gpu,
+	gpu->present_mode,
+				   gpu->vk_present_mode,
+				   gpu->swapchain_image_count,
+				   gpu->present_mode);
 
 	VkBool32 surface_supported;
-	vkGetPhysicalDeviceSurfaceSupportKHR(g_vulkan_device.physical_device,
-										 g_vulkan_device.queue_family,
-										 g_vulkan_device.window_surface,
+	vkGetPhysicalDeviceSurfaceSupportKHR(gpu->physical_device,
+										 gpu->queue_family,
+										 gpu->window_surface,
 										 &surface_supported);
 	if (surface_supported != VK_TRUE)
 	{
@@ -492,7 +591,7 @@ void CreateSwapChain()
 
 	VkSurfaceCapabilitiesKHR surface_capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-		g_vulkan_device.physical_device, g_vulkan_device.window_surface, &surface_capabilities);
+		gpu->physical_device, gpu->window_surface, &surface_capabilities);
 
 	VkExtent2D swapchain_extent = surface_capabilities.currentExtent;
 	if (swapchain_extent.width == UINT32_MAX)
@@ -507,18 +606,18 @@ void CreateSwapChain()
 	INFO("Create swapchain {}, {} - Saved {} {}, min image {}\n",
 		 swapchain_extent.width,
 		 swapchain_extent.height,
-		 g_vulkan_device.swapchain_width,
-		 g_vulkan_device.swapchain_height,
+         gpu->swapchain_width,
+         gpu->swapchain_height,
 		 surface_capabilities.minImageCount);
-	g_vulkan_device.swapchain_width = swapchain_extent.width;
-	g_vulkan_device.swapchain_height = swapchain_extent.height;
+    gpu->swapchain_width = swapchain_extent.width;
+	gpu->swapchain_height = swapchain_extent.height;
 
 	VkSwapchainCreateInfoKHR swapchain_create_info = {};
 	swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	swapchain_create_info.pNext = nullptr;
-	swapchain_create_info.surface = g_vulkan_device.window_surface;
-	swapchain_create_info.minImageCount = g_vulkan_device.swapchain_image_count;
-	swapchain_create_info.imageFormat = g_vulkan_device.window_surface_format.format;
+	swapchain_create_info.surface = gpu->window_surface;
+	swapchain_create_info.minImageCount = gpu->swapchain_image_count;
+	swapchain_create_info.imageFormat = gpu->window_surface_format.format;
 	swapchain_create_info.imageExtent = swapchain_extent;
 	swapchain_create_info.clipped = VK_TRUE;
 	swapchain_create_info.imageArrayLayers = 1;
@@ -527,29 +626,29 @@ void CreateSwapChain()
 	swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	swapchain_create_info.preTransform = surface_capabilities.currentTransform;
 	swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	swapchain_create_info.presentMode = g_vulkan_device.vk_present_mode;
+	swapchain_create_info.presentMode = gpu->vk_present_mode;
 
 	VkResult succ = vkCreateSwapchainKHR(
-		g_vulkan_device.device, &swapchain_create_info, nullptr, &g_vulkan_device.swapchain);
+		gpu->device, &swapchain_create_info, nullptr, &gpu->swapchain);
 	check_vk(succ);
 
-	succ = vkGetSwapchainImagesKHR(g_vulkan_device.device,
-								   g_vulkan_device.swapchain,
-								   &g_vulkan_device.swapchain_image_count,
+	succ = vkGetSwapchainImagesKHR(gpu->device,
+								   gpu->swapchain,
+								   &gpu->swapchain_image_count,
 								   nullptr);
 	check_vk(succ);
 
-	vkGetSwapchainImagesKHR(g_vulkan_device.device,
-							g_vulkan_device.swapchain,
-							&g_vulkan_device.swapchain_image_count,
-							g_vulkan_device.swapchain_images.data());
+	vkGetSwapchainImagesKHR(gpu->device,
+							gpu->swapchain,
+							&gpu->swapchain_image_count,
+							gpu->swapchain_images.data());
 
-	for (size_t i = 0; i < g_vulkan_device.swapchain_image_count; i++)
+	for (size_t i = 0; i < gpu->swapchain_image_count; i++)
 	{
 		VkImageViewCreateInfo info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
 		info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		info.format = g_vulkan_device.window_surface_format.format;
-		info.image = g_vulkan_device.swapchain_images[i];
+		info.format = gpu->window_surface_format.format;
+		info.image = gpu->swapchain_images[i];
 		info.subresourceRange.levelCount = 1;
 		info.subresourceRange.layerCount = 1;
 		info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -558,34 +657,34 @@ void CreateSwapChain()
 		info.components.b = VK_COMPONENT_SWIZZLE_B;
 		info.components.a = VK_COMPONENT_SWIZZLE_A;
 		succ = vkCreateImageView(
-			g_vulkan_device.device, &info, nullptr, &g_vulkan_device.swapchain_image_views[i]);
+			gpu->device, &info, nullptr, &gpu->swapchain_image_views[i]);
 	}
 }
 
-void DestroySwapchain()
+void DestroySwapchain(_GpuDevice* gpu)
 {
-	for (size_t i = 0; i < g_vulkan_device.swapchain_image_count; i++)
+	for (size_t i = 0; i < gpu->swapchain_image_count; i++)
 	{
 		vkDestroyImageView(
-			g_vulkan_device.device, g_vulkan_device.swapchain_image_views[i], nullptr);
+			gpu->device, gpu->swapchain_image_views[i], nullptr);
 		// vkDestroyFramebuffer(g_vulkan_device.device, g_vulkan_device.swapchain_freamebuffers[i],
 		// nullptr);
 	}
-	vkDestroySwapchainKHR(g_vulkan_device.device, g_vulkan_device.swapchain, nullptr);
+	vkDestroySwapchainKHR(gpu->device, gpu->swapchain, nullptr);
 }
 
-void CreateVmaAllocator()
+void CreateVmaAllocator(_GpuDevice* gpu)
 {
 	VmaAllocatorCreateInfo allocator_create_info = {};
-	allocator_create_info.physicalDevice = g_vulkan_device.physical_device;
-	allocator_create_info.device = g_vulkan_device.device;
-	allocator_create_info.instance = g_vulkan_device.instance;
+	allocator_create_info.physicalDevice = gpu->physical_device;
+	allocator_create_info.device = gpu->device;
+	allocator_create_info.instance = gpu->instance;
 
-	VkResult succ = vmaCreateAllocator(&allocator_create_info, &g_vulkan_device.vma_allocator);
+	VkResult succ = vmaCreateAllocator(&allocator_create_info, &gpu->vma_allocator);
 	check_vk(succ);
 }
 
-void CreateDescriptorPool()
+void CreateDescriptorPool(_GpuDevice* gpu)
 {
 	VkDescriptorPoolSize descriptor_pool_size[] = {
 		{VK_DESCRIPTOR_TYPE_SAMPLER, GlobalPoolElements},
@@ -605,11 +704,11 @@ void CreateDescriptorPool()
 	pool_create_info.poolSizeCount = (uint32_t)ArraySize(descriptor_pool_size);
 	pool_create_info.pPoolSizes = descriptor_pool_size;
 	VkResult succ = vkCreateDescriptorPool(
-		g_vulkan_device.device, &pool_create_info, nullptr, &g_vulkan_device.descriptor_pool);
+		gpu->device, &pool_create_info, nullptr, &gpu->descriptor_pool);
 	check_vk(succ);
 }
 
-void CreateQueryPool(const GpuCreateParam &param)
+void CreateQueryPool(_GpuDevice* gpu, const GpuCreateParam &param)
 {
     VkQueryPoolCreateInfo pool_create_info = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
                                               nullptr,
@@ -619,97 +718,140 @@ void CreateQueryPool(const GpuCreateParam &param)
                                                   MaxSwapchainImages,
                                               0};
     vkCreateQueryPool(
-        g_vulkan_device.device, &pool_create_info, nullptr, &g_vulkan_device.timestamp_query_pool);
+        gpu->device, &pool_create_info, nullptr, &gpu->timestamp_query_pool);
 }
 
 
-void CreateSyncMarkers()
+void CreateSyncMarkers(_GpuDevice* gpu)
 {
     VkSemaphoreCreateInfo semaphore_create_info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     for (size_t i=0; i< MaxSwapchainImages; ++i)
     {
-        vkCreateSemaphore(g_vulkan_device.device, &semaphore_create_info, nullptr, &g_vulkan_device.render_complete_semaphore[i]);
-        vkCreateSemaphore(g_vulkan_device.device, &semaphore_create_info, nullptr, &g_vulkan_device.image_acquired_semaphore[i]);
+        vkCreateSemaphore(gpu->device, &semaphore_create_info, nullptr, &gpu->render_complete_semaphore[i]);
+        vkCreateSemaphore(gpu->device, &semaphore_create_info, nullptr, &gpu->image_acquired_semaphore[i]);
         VkFenceCreateInfo fence_create_info = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
         fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-        vkCreateFence(g_vulkan_device.device, &fence_create_info, nullptr, &g_vulkan_device.command_buffer_fence[i]);
+        vkCreateFence(gpu->device, &fence_create_info, nullptr, &gpu->command_buffer_fence[i]);
     }
 }
 
-void DestroySyncMarkers()
+void DestroySyncMarkers(_GpuDevice* gpu)
 {
-    for (size_t i = 0; i < g_vulkan_device.swapchain_image_count; ++i)
+    for (size_t i = 0; i < gpu->swapchain_image_count; ++i)
     {
-        vkDestroySemaphore(g_vulkan_device.device, g_vulkan_device.render_complete_semaphore[i], nullptr);
-        vkDestroySemaphore(g_vulkan_device.device, g_vulkan_device.image_acquired_semaphore[i], nullptr);
-        vkDestroyFence(g_vulkan_device.device, g_vulkan_device.command_buffer_fence[i], nullptr);
+        vkDestroySemaphore(gpu->device, gpu->render_complete_semaphore[i], nullptr);
+        vkDestroySemaphore(gpu->device, gpu->image_acquired_semaphore[i], nullptr);
+        vkDestroyFence(gpu->device, gpu->command_buffer_fence[i], nullptr);
     }
 }
 
-void InitGpuDevice(GpuCreateParam &param)
+GpuDevice * GpuDevice::Inst()
 {
+    static GpuDevice instance;
+    return &instance;
+}
+
+GpuDevice::~GpuDevice()
+{
+    impl_ = nullptr;
+}
+
+void GpuDevice::InitGpuDevice(GpuCreateParam &param)
+{
+    impl_ = new _GpuDevice();
+
 	INFO("[Vulkan Gpu Device] Start init...");
 	VkResult succ;
 
 	// instance
-	CreateInstance(param);
-	assert(g_vulkan_device.instance);
+	CreateInstance(impl_, param);
+	assert(impl_->instance);
 
 	// messenger
-	CreateDebugExt();
+	CreateDebugExt(impl_);
 
 	// surface creation
-	g_vulkan_device.swapchain_width = param.width;
-	g_vulkan_device.swapchain_height = param.height;
-	succ = glfwCreateWindowSurface(g_vulkan_device.instance,
+	impl_->swapchain_width = param.width;
+	impl_->swapchain_height = param.height;
+	succ = glfwCreateWindowSurface(impl_->instance,
 								   static_cast<GLFWwindow *>(param.window),
 								   nullptr,
-								   &g_vulkan_device.window_surface);
+								   &impl_->window_surface);
 	check_vk(succ);
 
-	CreatePhysicalDevice();
-	assert(g_vulkan_device.physical_device);
+	CreatePhysicalDevice(impl_);
+	assert(impl_->physical_device);
 
-	CreateDeviceAndQueue();
-	assert(g_vulkan_device.device);
-	assert(g_vulkan_device.queue);
+	CreateDeviceAndQueue(impl_);
+	assert(impl_->device);
+	assert(impl_->queue);
 
-	CreateSwapChain();
-	assert(g_vulkan_device.swapchain);
+	CreateSwapChain(impl_);
+	assert(impl_->swapchain);
 
-	CreateVmaAllocator();
-	assert(g_vulkan_device.vma_allocator);
+	CreateVmaAllocator(impl_);
+	assert(impl_->vma_allocator);
 
-	CreateDescriptorPool();
-	assert(g_vulkan_device.descriptor_pool);
+	CreateDescriptorPool(impl_);
+	assert(impl_->descriptor_pool);
 
-    CreateQueryPool(param);
-	assert(g_vulkan_device.timestamp_query_pool);
+    CreateQueryPool(impl_, param);
+	assert(impl_->timestamp_query_pool);
 
-    CreateSyncMarkers();
-    assert(g_vulkan_device.render_complete_semaphore[0]);
-    assert(g_vulkan_device.image_acquired_semaphore[0]);
-    assert(g_vulkan_device.command_buffer_fence[0]);
+    CreateSyncMarkers(impl_);
+    assert(impl_->render_complete_semaphore[0]);
+    assert(impl_->image_acquired_semaphore[0]);
+    assert(impl_->command_buffer_fence[0]);
+
+    g_vulkan_cmd_buffer_ring.Init(impl_);
+
+
+   SamplerCreation sc{};
+    sc.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sc.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sc.min_filter = VK_FILTER_LINEAR;
+    sc.mag_filter = VK_FILTER_LINEAR;
+    sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sc.name = "Sampler Default";
+    // impl_->default_sampler = CreateSampler(sc);
 }
 
-void ShutdownGpuDevice()
+void GpuDevice::ShutdownGpuDevice()
 {
-
-    DestroySyncMarkers();
-	vkDestroyQueryPool(g_vulkan_device.device, g_vulkan_device.timestamp_query_pool, nullptr);
-	vkDestroyDescriptorPool(g_vulkan_device.device, g_vulkan_device.descriptor_pool, nullptr);
-	vmaDestroyAllocator(g_vulkan_device.vma_allocator);
-	DestroySwapchain();
-	vkDestroyDevice(g_vulkan_device.device, nullptr);
-	vkDestroySurfaceKHR(g_vulkan_device.instance, g_vulkan_device.window_surface, nullptr);
+    g_vulkan_cmd_buffer_ring.Destroy(impl_);
+    DestroySyncMarkers(impl_);
+	vkDestroyQueryPool(impl_->device, impl_->timestamp_query_pool, nullptr);
+	vkDestroyDescriptorPool(impl_->device, impl_->descriptor_pool, nullptr);
+	vmaDestroyAllocator(impl_->vma_allocator);
+	DestroySwapchain(impl_);
+	vkDestroyDevice(impl_->device, nullptr);
+	vkDestroySurfaceKHR(impl_->instance, impl_->window_surface, nullptr);
 
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
 	auto vkDestroyDebugUtilsMessengerEXT =
 		(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-			g_vulkan_device.instance, "vkDestroyDebugUtilsMessengerEXT");
+			impl_->instance, "vkDestroyDebugUtilsMessengerEXT");
 	vkDestroyDebugUtilsMessengerEXT(
-		g_vulkan_device.instance, g_vulkan_device.debug_utils_messenger, nullptr);
+		impl_->instance, impl_->debug_utils_messenger, nullptr);
 #endif
-	vkDestroyInstance(g_vulkan_device.instance, nullptr);
+	vkDestroyInstance(impl_->instance, nullptr);
 }
+
+
+// Sampler* AccessResource(SamplerHandle handle)
+// {
+// }
+
+
+// SamplerHandle CreateSampler(const SamplerCreation &creation)
+// {
+//     SamplerHandle handle{g_vulkan_device.samplers.FetchResource()};
+//     if (handle.index == ResourcePool::INVALID_NUM)
+//     {
+//         return handle;
+//     }
+//     // Sampler* sampler = AccessSampler(handle);
+// }
+
 } // namespace cloud::vulkan
