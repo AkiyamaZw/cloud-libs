@@ -1,5 +1,6 @@
 #pragma once
-#include "gpu_enums.h"
+#include "graphics/core/gpu_enum.h"
+#include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
 
@@ -24,25 +25,22 @@ struct RenderPassOutput
                                    RenderPassOperation stencil_op);
 };
 
-struct ResourceDefine
+using ResourceHandle = render::ResourceHandle;
+using BufferHandle = render::BufferHandle;
+using TextureHandle = render::TextureHandle;
+using DescriptorSetLayoutHandle = render::DescriptorSetLayoutHandle;
+using PipelineHandle = render::PipelineHandle;
+using SamplerHandle = render::SamplerHandle;
+using ShaderStateHandle = render::ShaderStateHandle;
+
+struct BufferDescription
 {
-    using ResourceHandle = uint32_t;
+
 };
-
-#define HANDLE_DECLARE(name) \
-    struct name##Handle{ ResourceDefine::ResourceHandle index; }
-
-HANDLE_DECLARE(Buffer);
-HANDLE_DECLARE(Texture);
-HANDLE_DECLARE(DescriptorSetLayout);
-HANDLE_DECLARE(ShaderState);
-HANDLE_DECLARE(Pipeline);
-HANDLE_DECLARE(Sampler);
-
 
 struct Buffer
 {
-    BufferHandle handle;
+    render::BufferHandle handle;
     BufferHandle parent_handle;
     VkBuffer buffer;
     VmaAllocation allocation;
@@ -130,7 +128,7 @@ struct DescriptorSetLayout
 struct DescriptorSet
 {
     VkDescriptorSet descriptor_set;
-    ResourceDefine::ResourceHandle* resources{nullptr};
+    ResourceHandle* resources{nullptr};
     SamplerHandle* samplers{nullptr};
     uint16_t* bindings{nullptr};
     const DescriptorSetLayout* layout{nullptr};
