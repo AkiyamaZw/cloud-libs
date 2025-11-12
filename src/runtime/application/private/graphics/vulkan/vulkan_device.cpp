@@ -1,5 +1,4 @@
 #include "graphics/vulkan/vulkan_device.h"
-#include "graphics/vulkan/vulkan_device.h"
 #include "runtime_log.h"
 #include "data_structure/resource_pool.h"
 #include <array>

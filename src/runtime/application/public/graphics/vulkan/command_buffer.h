@@ -15,7 +15,7 @@ struct CommandBuffer
     bool is_recoding;
     uint32_t handle;
     uint32_t current_command;
-    TResourceHandle resource_handle;
+    ResourceHandle resource_handle;
     QueueType queue_type;
     uint32_t buffer_size{0};
     bool backed {false};

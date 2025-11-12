@@ -101,12 +101,12 @@ void InitModules()
 	GpuCreateParam param{
 		.window = GAppContext.window_ptr, .width = GAppContext.width, .height = GAppContext.height};
 
-	CreateRenderer(param);
+	render::CreateRenderer(param);
 }
 
 void ShutdownModules()
 {
-	DestroyRenderer();
+	render::DestroyRenderer();
 	DestoryWindow(&GAppContext);
 }
 

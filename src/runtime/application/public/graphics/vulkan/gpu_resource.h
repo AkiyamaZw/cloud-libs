@@ -32,10 +32,19 @@ using DescriptorSetLayoutHandle = render::DescriptorSetLayoutHandle;
 using PipelineHandle = render::PipelineHandle;
 using SamplerHandle = render::SamplerHandle;
 using ShaderStateHandle = render::ShaderStateHandle;
+using DescriptorSetHandle = render::ResourceHandle;
 
-struct BufferDescription
+struct ResourceUpdate
 {
+    ResourceUpdateType type;
+    ResourceHandle handle;
+    uint32_t current_frame;
+};
 
+struct DescriptorSetUpdate
+{
+    DescriptorSetHandle descriptor_set;
+    uint32_t current_frame;
 };
 
 struct Buffer
