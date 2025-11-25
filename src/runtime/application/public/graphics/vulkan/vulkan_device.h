@@ -12,7 +12,7 @@ public:
     ~GpuDevice();
     void InitGpuDevice(GpuCreateParam &param);
     void ShutdownGpuDevice();
-    // SamplerHandle CreateSampler(const SamplerCreation& creation);
+    SamplerHandle CreateSampler(const render::SamplerCreation& creation);
 private:
     _GpuDevice* impl_{nullptr};
 };

@@ -1,5 +1,8 @@
 #pragma once
 #include <cstdint>
+#include "graphics/vulkan/minimal_extern.h"
+#include "graphics/core/gpu_enum.h"
+
 
 namespace cloud::vulkan
 {
@@ -108,4 +111,12 @@ enum class ResourceUpdateType
     PagePool,
     Count
 };
+
+
+///---- convert function-----
+void ToVKEnum(const render::FilterMode mode, VkFilter& out_filter);
+void ToVKEnum(const render::FilterMode mode, VkSamplerMipmapMode& out_mipmap_mode);
+void ToVKEnum(const render::AddressMode mode, VkSamplerAddressMode &out_address_mode);
+void ToVKEnum(const render::ReductionMode mode, VkSamplerReductionMode &out_reduction_mode);
+
 }

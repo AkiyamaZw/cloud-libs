@@ -837,20 +837,18 @@ void GpuDevice::ShutdownGpuDevice()
 	vkDestroyInstance(impl_->instance, nullptr);
 }
 
+SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
+{
+    SamplerHandle handle = {impl_->samplers.FetchResource()};
+    if (handle.index == ResourcePool::INVALID_NUM)
+    {
+        return handle;
+    }
 
-// Sampler* AccessResource(SamplerHandle handle)
-// {
-// }
+    // VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    // sampler_info.minFilter = creation.min_filter;
+}
 
 
-// SamplerHandle CreateSampler(const SamplerCreation &creation)
-// {
-//     SamplerHandle handle{g_vulkan_device.samplers.FetchResource()};
-//     if (handle.index == ResourcePool::INVALID_NUM)
-//     {
-//         return handle;
-//     }
-//     // Sampler* sampler = AccessSampler(handle);
-// }
 
 } // namespace cloud::vulkan

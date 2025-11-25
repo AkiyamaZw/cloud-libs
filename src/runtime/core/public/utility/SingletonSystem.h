@@ -7,7 +7,7 @@ namespace cloud
 
 struct SingletonSystem
 {
-    virtual ~SingletonSystem() = 0;
+    virtual ~SingletonSystem() = default;
     virtual void Init() = 0;
     virtual void Exit() = 0 ;
 };

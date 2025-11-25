@@ -1,4 +1,7 @@
 #include "data_structure/resource_pool.h"
+
+#include <sys/socket.h>
+
 #include "runtime_log.h"
 
 
@@ -21,6 +24,11 @@ ResourcePool::ResourcePool(uint32_t pool_size, uint32_t resource_size)
 
 ResourcePool::~ResourcePool()
 {
+    Shutdown();
+}
+
+void ResourcePool::Shutdown()
+{
     if (free_indices_head_ != 0)
     {
         WARN("Resource pool destroyed with unreleased resources");
@@ -30,7 +38,9 @@ ResourcePool::~ResourcePool()
         }
     }
     assert(used_indices_ == 0);
-    free(memory_);
+    if (memory_ != nullptr)
+        free(memory_);
+    memory_ = nullptr;
 }
 
 uint32_t ResourcePool::FetchResource()

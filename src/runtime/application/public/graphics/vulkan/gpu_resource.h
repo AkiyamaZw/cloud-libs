@@ -1,5 +1,6 @@
 #pragma once
 #include "graphics/core/gpu_enum.h"
+#include "graphics/core/gpu_resource.h"
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
