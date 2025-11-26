@@ -10,25 +10,26 @@
 
 namespace cloud::render
 {
+
 struct BufferResource: public Resource
 {
     BufferHandle buffer_;
     uint32_t pool_index_;
-    static constexpr std::string_view resource_type = "buffer_resource";
+    static constexpr std::string_view resource_type{"buffer_resource"};
     BufferHandle handle;
     uint32_t pool_index;
 };
 
 struct TextureResource: public Resource
 {
-    static constexpr char* resource_type = "texture_resource";
+    static constexpr std::string_view resource_type{"texture_resource"};
     TextureHandle handle;
     uint32_t pool_index;
 };
 
 struct SamplerResource: public Resource
 {
-    static constexpr std::string_view  resource_type = "sampler_resource";
+    static constexpr std::string_view resource_type{"sampler_resource"};
     SamplerHandle handle;
     uint32_t pool_index;
 };
@@ -69,6 +70,8 @@ public:
     SamplerResource* CreateSampler(const SamplerCreation& creation);
 
     TypedResourcePool<SamplerResource> samplers_;
+
+    GpuDevice * gpu_device_;
 
 };
 } // namespace cloud

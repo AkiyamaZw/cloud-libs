@@ -1,7 +1,4 @@
 #include "data_structure/resource_pool.h"
-
-#include <sys/socket.h>
-
 #include "runtime_log.h"
 
 

@@ -5,14 +5,14 @@
 namespace cloud::vulkan
 {
 struct _GpuDevice;
-class GpuDevice
+class GpuDevice: public render::GpuDevice
 {
 public:
     static GpuDevice* Inst();
-    ~GpuDevice();
-    void InitGpuDevice(GpuCreateParam &param);
-    void ShutdownGpuDevice();
-    SamplerHandle CreateSampler(const render::SamplerCreation& creation);
+    ~GpuDevice() override;
+    void InitGpuDevice(GpuCreateParam &param) override;
+    void ShutdownGpuDevice() override;
+    SamplerHandle CreateSampler(const render::SamplerCreation& creation) override;
 private:
     _GpuDevice* impl_{nullptr};
 };

@@ -26,6 +26,7 @@ void Renderer::Init()
 void Renderer::Exit()
 {
     samplers_.Shutdown();
+    gpu_device_->ShutdownGpuDevice();
 }
 
 void Renderer::BeginFrame()
@@ -45,7 +46,7 @@ SamplerResource * Renderer::CreateSampler(const SamplerCreation& creation)
     SamplerResource * sampler = samplers_.Fetch();
     if (sampler)
     {
-        SamplerHandle handle = vulkan::GpuDevice::Inst()->CreateSampler(creation);
+        SamplerHandle handle = gpu_device_->CreateSampler(creation);
         sampler->handle = handle;
         sampler->name = creation.name;
 
@@ -56,12 +57,13 @@ SamplerResource * Renderer::CreateSampler(const SamplerCreation& creation)
 void CreateRenderer(GpuCreateParam &param)
 {
     Renderer* renderer = Renderer::Inst();
-    vulkan::GpuDevice::Inst()->InitGpuDevice(param);
+    GpuDevice * device = CreateGpuDevice(param.type_device);
+    device->InitGpuDevice(param);
+    renderer->gpu_device_ = device;
 }
 
 void DestroyRenderer()
 {
-    vulkan::GpuDevice::Inst()->ShutdownGpuDevice();
     Renderer::Inst()->Exit();
 }
 } // namespace cloud

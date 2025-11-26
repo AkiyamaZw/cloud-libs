@@ -847,6 +847,7 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 
     // VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     // sampler_info.minFilter = creation.min_filter;
+    return handle;
 }
 
 
