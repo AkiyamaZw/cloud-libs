@@ -10,7 +10,7 @@ Renderer * Renderer::Inst()
 }
 
 Renderer::Renderer(const RendererCreation &creation)
-    :samplers_(128)
+    :samplers_(128), gpu_device_(nullptr)
 {
 
 }

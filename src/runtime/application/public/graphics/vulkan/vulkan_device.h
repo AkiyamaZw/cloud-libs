@@ -12,7 +12,13 @@ public:
     ~GpuDevice() override;
     void InitGpuDevice(GpuCreateParam &param) override;
     void ShutdownGpuDevice() override;
+
     SamplerHandle CreateSampler(const render::SamplerCreation& creation) override;
+    void DestroySampler(const SamplerHandle& handle);
+    Sampler* AccessSampler(const SamplerHandle& handle);
+    const Sampler* AccessSampler(const SamplerHandle& handle) const;
+
+
 private:
     _GpuDevice* impl_{nullptr};
 };

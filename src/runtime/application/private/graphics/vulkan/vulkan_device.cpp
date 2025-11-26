@@ -11,6 +11,8 @@
 #include "graphics/vulkan/vk_mem_alloc.h"
 #include "graphics/vulkan/command_buffer.h"
 
+#include <corecrt_io.h>
+
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
 #define check_vk(succ)                                                                             \
 	if ((succ) != VK_SUCCESS)                                                                      \
@@ -103,6 +105,8 @@ struct _GpuDevice
     // resource
     BufferHandle fullscreen_vertex_buffer;
     SamplerHandle default_sampler;
+
+    SamplerHandle CreateSampler(const SamplerCreation& creation);
 };
 
 
@@ -844,9 +848,20 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
     {
         return handle;
     }
+    Sampler* sampler = AccessSampler(handle);
+    SamplerCreation sampler_creation{};
+    sampler_creation.name = creation.name.data();
+    ToVKEnum(creation.min_filter, sampler_creation.min_filter);
+    ToVKEnum(creation.mag_filter, sampler_creation.mag_filter);
+    ToVKEnum(creation.mip_filter, sampler_creation.mip_filter);
+    ToVKEnum(creation.address_mode_u, sampler_creation.address_mode_u);
+    ToVKEnum(creation.address_mode_v, sampler_creation.address_mode_v);
+    ToVKEnum(creation.address_mode_w, sampler_creation.address_mode_w);
+    ToVKEnum(creation.reduction_mode, sampler_creation.reduction_mode);
+    impl_->CreateSampler(sampler_creation);
 
-    // VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-    // sampler_info.minFilter = creation.min_filter;
+
+
     return handle;
 }
 
