@@ -16,6 +16,8 @@ assert(false);                                                                  
 
 #define check_true(succ) assert(succ)
 
+#define ArraySize(array) (sizeof(array) / sizeof(array)[0])
+
 static constexpr uint32_t MaxSwapchainImages = 3;
 static constexpr uint32_t GlobalPoolElements = 128;
 static constexpr uint8_t GMaxShaderStages = 5;

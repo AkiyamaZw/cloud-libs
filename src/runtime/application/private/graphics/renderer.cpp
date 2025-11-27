@@ -4,66 +4,50 @@ namespace cloud::render
 {
 Renderer g_render(RendererCreation{});
 
-Renderer * Renderer::Inst()
-{
-    return &g_render;
-}
+Renderer *Renderer::Inst() { return &g_render; }
 
 Renderer::Renderer(const RendererCreation &creation)
-    :samplers_(128), gpu_device_(nullptr)
-{
-
-}
-
-Renderer::~Renderer()
+	: samplers_(128)
+	, gpu_device_(nullptr)
 {
 }
 
-void Renderer::Init()
-{
-}
+Renderer::~Renderer() {}
+
+void Renderer::Init() {}
 
 void Renderer::Exit()
 {
-    samplers_.Shutdown();
-    gpu_device_->ShutdownGpuDevice();
+	samplers_.Shutdown();
+	gpu_device_->ShutdownGpuDevice();
+	delete gpu_device_;
 }
 
-void Renderer::BeginFrame()
-{
-}
+void Renderer::BeginFrame() {}
 
-void Renderer::EndFrame()
-{
-}
+void Renderer::EndFrame() {}
 
-void Renderer::ResizeSwapChain(uint32_t width, uint32_t height)
-{
-}
+void Renderer::ResizeSwapChain(uint32_t width, uint32_t height) {}
 
-SamplerResource * Renderer::CreateSampler(const SamplerCreation& creation)
+SamplerResource *Renderer::CreateSampler(const SamplerCreation &creation)
 {
-    SamplerResource * sampler = samplers_.Fetch();
-    if (sampler)
-    {
-        SamplerHandle handle = gpu_device_->CreateSampler(creation);
-        sampler->handle = handle;
-        sampler->name = creation.name;
-
-    }
-    return sampler;
+	SamplerResource *sampler = samplers_.Fetch();
+	if (sampler)
+	{
+		SamplerHandle handle = gpu_device_->CreateSampler(creation);
+		sampler->handle = handle;
+		sampler->name = creation.name;
+	}
+	return sampler;
 }
 
 void CreateRenderer(GpuCreateParam &param)
 {
-    Renderer* renderer = Renderer::Inst();
-    GpuDevice * device = CreateGpuDevice(param.type_device);
-    device->InitGpuDevice(param);
-    renderer->gpu_device_ = device;
+	Renderer *renderer = Renderer::Inst();
+	GpuDevice *device = CreateGpuDevice(param.type_device);
+	device->InitGpuDevice(param);
+	renderer->gpu_device_ = device;
 }
 
-void DestroyRenderer()
-{
-    Renderer::Inst()->Exit();
-}
-} // namespace cloud
+void DestroyRenderer() { Renderer::Inst()->Exit(); }
+} // namespace cloud::render
