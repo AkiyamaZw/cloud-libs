@@ -791,6 +791,8 @@ void GpuDevice::InitGpuDevice(GpuCreateParam &param)
 	assert(impl_->device);
 	assert(impl_->queue);
 
+    infra::InitVulkanInterface(impl_->device);
+
 	CreateSwapChain(impl_);
 	assert(impl_->swapchain);
 
@@ -811,7 +813,7 @@ void GpuDevice::InitGpuDevice(GpuCreateParam &param)
     g_vulkan_cmd_buffer_ring.Init(impl_);
 
 
-   SamplerCreation sc{};
+    SamplerCreation sc{};
     sc.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sc.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -819,12 +821,15 @@ void GpuDevice::InitGpuDevice(GpuCreateParam &param)
     sc.mag_filter = VK_FILTER_LINEAR;
     sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     sc.name = "Sampler Default";
-    // impl_->default_sampler = CreateSampler(sc);
+    impl_->default_sampler = CreateSampler(sc);
 }
 
 void GpuDevice::ShutdownGpuDevice()
 {
+
     g_vulkan_cmd_buffer_ring.Destroy(impl_);
+    DestroySampler(impl_->default_sampler);
+
     DestroySyncMarkers(impl_);
 	vkDestroyQueryPool(impl_->device, impl_->timestamp_query_pool, nullptr);
 	vkDestroyDescriptorPool(impl_->device, impl_->descriptor_pool, nullptr);
@@ -845,12 +850,6 @@ void GpuDevice::ShutdownGpuDevice()
 
 SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 {
-    SamplerHandle handle = {impl_->samplers.FetchResource()};
-    if (handle.index == ResourcePool::INVALID_NUM)
-    {
-        return handle;
-    }
-    Sampler* sampler = AccessSampler(handle);
     SamplerCreation sampler_creation{};
     sampler_creation.name = creation.name.data();
     ToVKEnum(creation.min_filter, sampler_creation.min_filter);
@@ -860,10 +859,9 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
     ToVKEnum(creation.address_mode_v, sampler_creation.address_mode_v);
     ToVKEnum(creation.address_mode_w, sampler_creation.address_mode_w);
     ToVKEnum(creation.reduction_mode, sampler_creation.reduction_mode);
-    infra::CreateSampler(impl_->device, sampler_creation, sampler->sampler);
-    impl_->SetResourceName(VK_OBJECT_TYPE_SAMPLER, (uint64_t)sampler->sampler, creation.name.data());
-    return handle;
+    return CreateSampler(sampler_creation);
 }
+
 void GpuDevice::DestroySampler(const SamplerHandle &handle)
 {
     if (handle.index < impl_->samplers.GetCapacity())
@@ -874,6 +872,18 @@ void GpuDevice::DestroySampler(const SamplerHandle &handle)
     {
         WARN("release sampler handle with error handle index {}", handle.index);
     }
+}
+SamplerHandle GpuDevice::CreateSampler(const SamplerCreation &creation)
+{
+    SamplerHandle handle = {impl_->samplers.FetchResource()};
+    if (handle.index == ResourcePool::INVALID_NUM)
+    {
+        return handle;
+    }
+    Sampler* sampler = AccessSampler(handle);
+    infra::CreateSampler(impl_->device, creation, sampler->sampler);
+    impl_->SetResourceName(VK_OBJECT_TYPE_SAMPLER, reinterpret_cast<uint64_t>(sampler->sampler), creation.name);
+    return handle;
 }
 
 Sampler *GpuDevice::AccessSampler(const SamplerHandle &handle)

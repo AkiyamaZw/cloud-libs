@@ -3,6 +3,19 @@
 namespace cloud::vulkan::infra
 {
 PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectNameEXT;
+PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabelEXT;
+PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabelEXT;
+
+void InitVulkanInterface(VkDevice device, bool debug_message)
+{
+    if (debug_message)
+    {
+        pfnSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT" );
+        pfnCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT" );
+        pfnCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT" );
+    }
+}
+
 
 void SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char *name)
 {
@@ -13,7 +26,7 @@ void SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const 
     pfnSetDebugUtilsObjectNameEXT(device, &name_info);
 }
 
-void CreateSampler(VkDevice device, const SamplerCreation& creation, VkSampler sampler)
+void CreateSampler(VkDevice device, const SamplerCreation& creation, VkSampler& sampler)
 {
     VkSamplerCreateInfo create_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     create_info.addressModeU = creation.address_mode_u;
