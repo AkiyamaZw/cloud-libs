@@ -16,6 +16,7 @@ public:
     void ReleaseAllResources();
     void* Access(uint32_t index);
     const void* Access(uint32_t index) const;
+    uint32_t GetCapacity() const {return pool_size_;};
 
 protected:
     uint8_t *memory_{nullptr};

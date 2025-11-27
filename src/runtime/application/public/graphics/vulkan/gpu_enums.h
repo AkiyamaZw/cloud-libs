@@ -1,11 +1,21 @@
 #pragma once
 #include <cstdint>
+#include <cassert>
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/core/gpu_enum.h"
 
 
 namespace cloud::vulkan
 {
+#define check_vk(succ)                                                                             \
+if ((succ) != VK_SUCCESS)                                                                      \
+{                                                                                              \
+printf("%d", succ);                                                                        \
+assert(false);                                                                             \
+}
+
+#define check_true(succ) assert(succ)
+
 static constexpr uint32_t MaxSwapchainImages = 3;
 static constexpr uint32_t GlobalPoolElements = 128;
 static constexpr uint8_t GMaxShaderStages = 5;

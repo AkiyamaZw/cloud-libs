@@ -15,6 +15,7 @@ public:
 
     SamplerHandle CreateSampler(const render::SamplerCreation& creation) override;
     void DestroySampler(const SamplerHandle& handle);
+private:
     Sampler* AccessSampler(const SamplerHandle& handle);
     const Sampler* AccessSampler(const SamplerHandle& handle) const;
 

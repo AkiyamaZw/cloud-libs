@@ -10,18 +10,12 @@
 #include "graphics/vulkan/gpu_resource.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
 #include "graphics/vulkan/command_buffer.h"
+#include "graphics/vulkan/vulkan_interface.h"
 
 #include <corecrt_io.h>
 
 #define ArraySize(array) (sizeof(array) / sizeof(array)[0])
-#define check_vk(succ)                                                                             \
-	if ((succ) != VK_SUCCESS)                                                                      \
-	{                                                                                              \
-		printf("%d", succ);                                                                        \
-		assert(false);                                                                             \
-	}
 
-#define check_true(succ) assert(succ)
 
 namespace cloud::vulkan
 {
@@ -106,7 +100,7 @@ struct _GpuDevice
     BufferHandle fullscreen_vertex_buffer;
     SamplerHandle default_sampler;
 
-    SamplerHandle CreateSampler(const SamplerCreation& creation);
+    void SetResourceName(VkObjectType type, uint64_t handle, const char* name);
 };
 
 
@@ -128,6 +122,13 @@ struct CommandBufferRing
     CommandBuffer* GetCommandBufferInstant(uint32_t frame_index, bool begin);
 } g_vulkan_cmd_buffer_ring;
 
+void _GpuDevice::SetResourceName(VkObjectType type, uint64_t handle, const char *name)
+{
+    if (debug_utils_extension_present)
+    {
+        infra::SetResourceName(device, type, handle, name);
+    }
+}
 
 void CommandBufferRing::Init(_GpuDevice* gpu)
 {
@@ -748,6 +749,7 @@ void DestroySyncMarkers(_GpuDevice* gpu)
     }
 }
 
+
 GpuDevice * GpuDevice::Inst()
 {
     static GpuDevice instance;
@@ -858,13 +860,30 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
     ToVKEnum(creation.address_mode_v, sampler_creation.address_mode_v);
     ToVKEnum(creation.address_mode_w, sampler_creation.address_mode_w);
     ToVKEnum(creation.reduction_mode, sampler_creation.reduction_mode);
-    impl_->CreateSampler(sampler_creation);
-
-
-
+    infra::CreateSampler(impl_->device, sampler_creation, sampler->sampler);
+    impl_->SetResourceName(VK_OBJECT_TYPE_SAMPLER, (uint64_t)sampler->sampler, creation.name.data());
     return handle;
 }
+void GpuDevice::DestroySampler(const SamplerHandle &handle)
+{
+    if (handle.index < impl_->samplers.GetCapacity())
+    {
+        impl_->resource_deletion_queue.push_back({ResourceUpdateType::Sampler, handle.index, impl_->current_frame});
+    }
+    else
+    {
+        WARN("release sampler handle with error handle index {}", handle.index);
+    }
+}
 
+Sampler *GpuDevice::AccessSampler(const SamplerHandle &handle)
+{
+    return static_cast<Sampler *>(impl_->samplers.Access(handle.index));
+}
 
+const Sampler *GpuDevice::AccessSampler(const SamplerHandle &handle) const
+{
+    return static_cast<const Sampler *>(impl_->samplers.Access(handle.index));
+}
 
 } // namespace cloud::vulkan
