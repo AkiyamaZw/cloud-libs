@@ -1,4 +1,6 @@
 #pragma once
+#include "gpu_resource_manager.h"
+#include <memory>
 #include <vector>
 #include <array>
 #include "data_structure/resource_pool.h"
@@ -6,10 +8,12 @@
 #include "graphics/vulkan/gpu_resource.h"
 #include "graphics/vulkan/command_buffer.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
+#include "graphics/device.h"
 
 namespace cloud::vulkan
 {
 struct DeviceBase;
+class GPUResourceManager;
 
 struct CommandBufferRing
 {
@@ -29,9 +33,13 @@ struct CommandBufferRing
 	CommandBuffer *GetCommandBufferInstant(uint32_t frame_index, bool begin);
 };
 
+/* this class define:
+ * 1. data used in  gpudevice
+ * 2. manager class interest in operating part of data
+ */
 struct DeviceBase
 {
-    virtual ~DeviceBase();
+	virtual ~DeviceBase();
 	/* basic api object */
 	VkInstance instance;
 	VkPhysicalDevice physical_device;
@@ -74,6 +82,7 @@ struct DeviceBase
 	std::array<VkFence, MaxSwapchainImages> command_buffer_fence;
 
 	/* resource */
+	std::unique_ptr<GPUResourceManager> gpu_resource_manager{nullptr};
 	static constexpr uint32_t buffer_pool_size = 4096;
 	cloud::ResourcePool buffers{buffer_pool_size, sizeof(Buffer)};
 	static constexpr uint32_t texture_pool_size = 512;
@@ -110,15 +119,8 @@ struct DeviceBase
 	SamplerHandle default_sampler;
 
   public:
-	void SetResourceName(VkObjectType type, uint64_t handle, const char *name);
 	void Init(GpuCreateParam &param);
 	void Shutdown();
-
-  public:
-	SamplerHandle CreateSampler(const SamplerCreation &creation);
-	void DestroySampler(const SamplerHandle &handle);
-	Sampler *AccessSampler(const SamplerHandle &handle);
-	const Sampler *AccessSampler(const SamplerHandle &handle) const;
 
   private:
 	void CreateInstance(GpuCreateParam &param);
@@ -126,15 +128,12 @@ struct DeviceBase
 	void CreatePhysicalDevice();
 	void CreateDeviceAndQueue();
 	void CreateSwapChain();
-	void DestroySwapchain();
+	void DestroySwapChain();
 	void CreateVmaAllocator();
 	void CreateDescriptorPool();
 	void CreateQueryPool(const GpuCreateParam &param);
 	void CreateSyncMarkers();
 	void DestroySyncMarkers();
-
-    void ReleaseResourcesInDeletionQueue();
-    void DestroySamplerInstance(ResourceHandle handle);
 };
 
 } // namespace cloud::vulkan

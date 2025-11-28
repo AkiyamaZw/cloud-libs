@@ -24,6 +24,10 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 	ToVKEnum(creation.address_mode_v, sampler_creation.address_mode_v);
 	ToVKEnum(creation.address_mode_w, sampler_creation.address_mode_w);
 	ToVKEnum(creation.reduction_mode, sampler_creation.reduction_mode);
-	return DeviceBase::CreateSampler(sampler_creation);
+	return gpu_resource_manager->CreateSampler(sampler_creation);
+}
+void GpuDevice::DestroySampler(const SamplerHandle &handle)
+{
+	gpu_resource_manager->DestroySampler(handle, current_frame);
 }
 } // namespace cloud::vulkan

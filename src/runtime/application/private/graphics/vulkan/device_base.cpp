@@ -70,18 +70,7 @@ CommandBuffer *CommandBufferRing::GetCommandBufferInstant(uint32_t frame_index, 
 	CommandBuffer *cmd_buffer = &command_buffer[frame_index * GBuffersPerPool + 1];
 	return cmd_buffer;
 }
-DeviceBase::~DeviceBase()
-{
-    INFO("vulkan device destroyed");
-}
-
-void DeviceBase::SetResourceName(VkObjectType type, uint64_t handle, const char *name)
-{
-	if (debug_utils_extension_present)
-	{
-		infra::SetResourceName(device, type, handle, name);
-	}
-}
+DeviceBase::~DeviceBase() { INFO("vulkan device destroyed"); }
 
 static const char *s_instance_layer[] = {
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
@@ -530,7 +519,7 @@ void DeviceBase::CreateSwapChain()
 	}
 }
 
-void DeviceBase::DestroySwapchain()
+void DeviceBase::DestroySwapChain()
 {
 	for (size_t i = 0; i < swapchain_image_count; i++)
 	{
@@ -609,54 +598,6 @@ void DeviceBase::DestroySyncMarkers()
 		vkDestroyFence(device, command_buffer_fence[i], nullptr);
 	}
 }
-void DeviceBase::ReleaseResourcesInDeletionQueue()
-{
-    for (uint32_t i=0; i<resource_deletion_queue.size(); i++)
-    {
-        ResourceUpdate &r = resource_deletion_queue[i];
-        if (r.current_frame == -1)
-        {
-            continue;
-        }
-        switch (r.type)
-        {
-        case ResourceUpdateType::Buffer:
-            break;
-        case ResourceUpdateType::Texture:
-            break;
-        case ResourceUpdateType::Pipeline:
-            break;
-        case ResourceUpdateType::Sampler:
-            DestroySamplerInstance(r.handle);
-            break;
-        case ResourceUpdateType::DescriptorSetLayout:
-            break;
-        case ResourceUpdateType::DescriptorSet:
-            break;
-        case ResourceUpdateType::RenderPass:
-            break;
-        case ResourceUpdateType::Framebuffer:
-            break;
-        case ResourceUpdateType::ShaderState:
-            break;
-        case ResourceUpdateType::TextureView:
-            break;
-        case ResourceUpdateType::PagePool:
-            break;
-        case ResourceUpdateType::Count:
-            break;
-        }
-    }
-}
-void DeviceBase::DestroySamplerInstance(ResourceHandle handle)
-{
-    Sampler* sampler = (Sampler*)samplers.Access(handle);
-    if (sampler)
-    {
-        vkDestroySampler(device, sampler->sampler, nullptr);
-    }
-    samplers.ReleaseResource(handle);
-}
 
 void DeviceBase::Init(GpuCreateParam &param)
 {
@@ -698,11 +639,18 @@ void DeviceBase::Init(GpuCreateParam &param)
 	CreateQueryPool(param);
 	assert(timestamp_query_pool);
 
+	gpu_resource_manager = std::make_unique<GPUResourceManager>(device,
+																samplers,
+																shaders,
+																pipelines,
+																descriptor_sets,
+																resource_deletion_queue,
+																descriptor_set_updates,
+																debug_utils_extension_present);
 	CreateSyncMarkers();
 	assert(render_complete_semaphore[0]);
 	assert(image_acquired_semaphore[0]);
 	assert(command_buffer_fence[0]);
-
 	g_vulkan_cmd_buffer_ring.Init(this);
 
 	SamplerCreation sc{};
@@ -713,66 +661,28 @@ void DeviceBase::Init(GpuCreateParam &param)
 	sc.mag_filter = VK_FILTER_LINEAR;
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sc.name = "Sampler Default";
-	default_sampler = CreateSampler(sc);
-}
-
-SamplerHandle DeviceBase::CreateSampler(const SamplerCreation &creation)
-{
-	SamplerHandle handle = {samplers.FetchResource()};
-	if (handle.index == ResourcePool::INVALID_NUM)
-	{
-		return handle;
-	}
-	Sampler *sampler = AccessSampler(handle);
-	infra::CreateSampler(device, creation, sampler->sampler);
-	SetResourceName(
-		VK_OBJECT_TYPE_SAMPLER, reinterpret_cast<uint64_t>(sampler->sampler), creation.name);
-	return handle;
-}
-
-void DeviceBase::DestroySampler(const SamplerHandle &handle)
-{
-	if (handle.index < samplers.GetCapacity())
-	{
-		resource_deletion_queue.push_back(
-			{ResourceUpdateType::Sampler, handle.index, current_frame});
-	}
-	else
-	{
-		WARN("release sampler handle with error handle index {}", handle.index);
-	}
-}
-
-Sampler *DeviceBase::AccessSampler(const SamplerHandle &handle)
-{
-	return static_cast<Sampler *>(samplers.Access(handle.index));
-}
-
-const Sampler *DeviceBase::AccessSampler(const SamplerHandle &handle) const
-{
-	return static_cast<const Sampler *>(samplers.Access(handle.index));
+	default_sampler = gpu_resource_manager->CreateSampler(sc);
 }
 
 void DeviceBase::Shutdown()
 {
 
 	g_vulkan_cmd_buffer_ring.Destroy(this);
-	DestroySampler(default_sampler);
-    ReleaseResourcesInDeletionQueue();
+	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
+	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
 
-    samplers.Shutdown();
-    pipelines.Shutdown();
-    shaders.Shutdown();
-    descriptor_sets.Shutdown();
+	samplers.Shutdown();
+	pipelines.Shutdown();
+	shaders.Shutdown();
+	descriptor_sets.Shutdown();
 
 	DestroySyncMarkers();
 	vkDestroyQueryPool(device, timestamp_query_pool, nullptr);
 	vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
 	vmaDestroyAllocator(vma_allocator);
-	DestroySwapchain();
+	DestroySwapChain();
 	vkDestroyDevice(device, nullptr);
 	vkDestroySurfaceKHR(instance, window_surface, nullptr);
-
 
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
 	auto vkDestroyDebugUtilsMessengerEXT =

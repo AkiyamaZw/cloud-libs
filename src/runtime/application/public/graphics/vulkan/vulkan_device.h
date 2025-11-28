@@ -7,16 +7,18 @@ namespace cloud::vulkan
 {
 struct DeviceBase;
 
+/* this class implement GpuDevice interface */
 class GpuDevice
-	: public render::GpuDevice
-	, public DeviceBase
+	: public DeviceBase
+	, public render::GpuDevice
 {
   public:
 	~GpuDevice() override;
-    TypeDevice GetTypeDevice() const override {return TypeDevice::Vulkan;};
+	TypeDevice GetTypeDevice() const override { return TypeDevice::Vulkan; };
 	void InitGpuDevice(GpuCreateParam &param) override;
 	void ShutdownGpuDevice() override;
 
 	SamplerHandle CreateSampler(const render::SamplerCreation &creation) override;
+	void DestroySampler(const SamplerHandle &handle) override;
 };
 } // namespace cloud::vulkan
