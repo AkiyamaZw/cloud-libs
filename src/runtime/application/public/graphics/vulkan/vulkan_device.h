@@ -12,8 +12,8 @@ class GpuDevice
 	, public DeviceBase
 {
   public:
-	static GpuDevice *Inst();
 	~GpuDevice() override;
+    TypeDevice GetTypeDevice() const override {return TypeDevice::Vulkan;};
 	void InitGpuDevice(GpuCreateParam &param) override;
 	void ShutdownGpuDevice() override;
 

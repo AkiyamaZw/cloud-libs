@@ -6,11 +6,6 @@
 
 namespace cloud::vulkan
 {
-GpuDevice *GpuDevice::Inst()
-{
-	static GpuDevice instance;
-	return &instance;
-}
 
 GpuDevice::~GpuDevice() {}
 

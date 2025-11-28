@@ -7,8 +7,16 @@ GpuDevice *CreateGpuDevice(const TypeDevice &type)
 {
 	if (type == TypeDevice::Vulkan)
 	{
-		return vulkan::GpuDevice::Inst();
+		return new vulkan::GpuDevice();
 	}
 	return nullptr;
+}
+
+void DestroyGpuDevice(GpuDevice* device)
+{
+    if (device->GetTypeDevice() == TypeDevice::Vulkan)
+    {
+        delete device;
+    }
 }
 } // namespace cloud::render

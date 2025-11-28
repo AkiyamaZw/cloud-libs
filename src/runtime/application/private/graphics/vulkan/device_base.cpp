@@ -2,6 +2,8 @@
 #include "graphics/vulkan/vulkan_interface.h"
 #include "runtime_log.h"
 
+#include <algorithm>
+
 namespace cloud::vulkan
 {
 CommandBufferRing g_vulkan_cmd_buffer_ring;
@@ -67,6 +69,10 @@ CommandBuffer *CommandBufferRing::GetCommandBufferInstant(uint32_t frame_index, 
 {
 	CommandBuffer *cmd_buffer = &command_buffer[frame_index * GBuffersPerPool + 1];
 	return cmd_buffer;
+}
+DeviceBase::~DeviceBase()
+{
+    INFO("vulkan device destroyed");
 }
 
 void DeviceBase::SetResourceName(VkObjectType type, uint64_t handle, const char *name)
@@ -603,6 +609,54 @@ void DeviceBase::DestroySyncMarkers()
 		vkDestroyFence(device, command_buffer_fence[i], nullptr);
 	}
 }
+void DeviceBase::ReleaseResourcesInDeletionQueue()
+{
+    for (uint32_t i=0; i<resource_deletion_queue.size(); i++)
+    {
+        ResourceUpdate &r = resource_deletion_queue[i];
+        if (r.current_frame == -1)
+        {
+            continue;
+        }
+        switch (r.type)
+        {
+        case ResourceUpdateType::Buffer:
+            break;
+        case ResourceUpdateType::Texture:
+            break;
+        case ResourceUpdateType::Pipeline:
+            break;
+        case ResourceUpdateType::Sampler:
+            DestroySamplerInstance(r.handle);
+            break;
+        case ResourceUpdateType::DescriptorSetLayout:
+            break;
+        case ResourceUpdateType::DescriptorSet:
+            break;
+        case ResourceUpdateType::RenderPass:
+            break;
+        case ResourceUpdateType::Framebuffer:
+            break;
+        case ResourceUpdateType::ShaderState:
+            break;
+        case ResourceUpdateType::TextureView:
+            break;
+        case ResourceUpdateType::PagePool:
+            break;
+        case ResourceUpdateType::Count:
+            break;
+        }
+    }
+}
+void DeviceBase::DestroySamplerInstance(ResourceHandle handle)
+{
+    Sampler* sampler = (Sampler*)samplers.Access(handle);
+    if (sampler)
+    {
+        vkDestroySampler(device, sampler->sampler, nullptr);
+    }
+    samplers.ReleaseResource(handle);
+}
 
 void DeviceBase::Init(GpuCreateParam &param)
 {
@@ -704,6 +758,12 @@ void DeviceBase::Shutdown()
 
 	g_vulkan_cmd_buffer_ring.Destroy(this);
 	DestroySampler(default_sampler);
+    ReleaseResourcesInDeletionQueue();
+
+    samplers.Shutdown();
+    pipelines.Shutdown();
+    shaders.Shutdown();
+    descriptor_sets.Shutdown();
 
 	DestroySyncMarkers();
 	vkDestroyQueryPool(device, timestamp_query_pool, nullptr);
@@ -712,6 +772,7 @@ void DeviceBase::Shutdown()
 	DestroySwapchain();
 	vkDestroyDevice(device, nullptr);
 	vkDestroySurfaceKHR(instance, window_surface, nullptr);
+
 
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
 	auto vkDestroyDebugUtilsMessengerEXT =

@@ -31,6 +31,7 @@ struct CommandBufferRing
 
 struct DeviceBase
 {
+    virtual ~DeviceBase();
 	/* basic api object */
 	VkInstance instance;
 	VkPhysicalDevice physical_device;
@@ -131,6 +132,9 @@ struct DeviceBase
 	void CreateQueryPool(const GpuCreateParam &param);
 	void CreateSyncMarkers();
 	void DestroySyncMarkers();
+
+    void ReleaseResourcesInDeletionQueue();
+    void DestroySamplerInstance(ResourceHandle handle);
 };
 
 } // namespace cloud::vulkan

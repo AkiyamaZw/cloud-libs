@@ -20,7 +20,8 @@ void Renderer::Exit()
 {
 	samplers_.Shutdown();
 	gpu_device_->ShutdownGpuDevice();
-	delete gpu_device_;
+    DestroyGpuDevice(gpu_device_);
+    gpu_device_ = nullptr;
 }
 
 void Renderer::BeginFrame() {}
