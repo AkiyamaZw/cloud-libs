@@ -640,6 +640,7 @@ void DeviceBase::Init(GpuCreateParam &param)
 	assert(timestamp_query_pool);
 
 	gpu_resource_manager = std::make_unique<GPUResourceManager>(device,
+																buffers,
 																samplers,
 																shaders,
 																pipelines,

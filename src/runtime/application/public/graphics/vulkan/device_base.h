@@ -101,6 +101,12 @@ struct DeviceBase
 	static constexpr uint32_t sampler_pool_size = 32;
 	cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
 
+	uint32_t dynamic_max_per_frame_size{0};
+	BufferHandle dynamic_buffer;
+	uint8_t *dynamic_mapped_memory{nullptr};
+	uint32_t dynamic_allocated_size{0};
+	uint32_t dynamic_per_frame_size{1024 * 1024 * 10};
+
 	std::array<CommandBuffer *, 128> queued_command_buffers;
 	uint32_t num_allocated_command_buffers{0};
 	uint32_t num_queued_command_buffers{0};

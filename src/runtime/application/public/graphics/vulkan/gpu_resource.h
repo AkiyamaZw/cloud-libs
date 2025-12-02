@@ -48,6 +48,15 @@ struct DescriptorSetUpdate
 	uint32_t current_frame;
 };
 
+struct BufferCreation
+{
+	VkBufferUsageFlags usage_flags{0};
+	ResourceUsageType usage_type{ResourceUsageType::Immutable};
+	uint32_t size{0};
+	void *initial_data{nullptr};
+	const char *name;
+};
+
 struct Buffer
 {
 	render::BufferHandle handle;

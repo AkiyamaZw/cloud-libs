@@ -5,6 +5,7 @@
 namespace cloud::vulkan
 {
 GPUResourceManager::GPUResourceManager(VkDevice device,
+									   ResourcePool &buffers,
 									   ResourcePool &samplers,
 									   ResourcePool &shaders,
 									   ResourcePool &pipelines,
@@ -13,6 +14,7 @@ GPUResourceManager::GPUResourceManager(VkDevice device,
 									   std::vector<DescriptorSetUpdate> &descriptor_set_updates,
 									   bool debug_utils_extension_present)
 	: device_(device)
+	, buffers_(&buffers)
 	, samplers_(&samplers)
 	, shaders_(&shaders)
 	, pipelines_(&pipelines)
@@ -106,6 +108,32 @@ void GPUResourceManager::DestroySamplerInstance(ResourceHandle handle) const
 		vkDestroySampler(device_, sampler->sampler, nullptr);
 	}
 	samplers_->ReleaseResource(handle);
+}
+
+BufferHandle GPUResourceManager::CreateBuffer(const BufferCreation &creation)
+{
+	BufferHandle handle = {buffers_->FetchResource()};
+	if (handle.index == ResourcePool::INVALID_NUM)
+	{
+		return handle;
+	}
+	Buffer *buffer = Access<Buffer>(handle.index, *buffers_);
+	buffer->name = creation.name;
+	buffer->size = creation.size;
+	buffer->usage_type = creation.usage_type;
+	buffer->usage_flags = creation.usage_flags;
+	buffer->handle = handle;
+	buffer->global_offset = 0;
+	buffer->parent_handle = BufferHandle{ResourcePool::INVALID_NUM};
+	static const VkBufferUsageFlags buffer_usage_mask = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+														VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+														VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	const bool use_global_buffer = (creation.usage_flags & buffer_usage_mask) != 0;
+	if (creation.usage_type == ResourceUsageType::Dynamic && use_global_buffer)
+	{
+		buffer->parent_handle = dynamic_buffer;
+		return handle;
+	};
 }
 
 } // namespace cloud::vulkan

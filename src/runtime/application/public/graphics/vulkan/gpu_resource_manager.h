@@ -11,6 +11,7 @@ class GPUResourceManager
 {
   public:
 	GPUResourceManager(VkDevice device,
+					   ResourcePool &buffers,
 					   ResourcePool &samplers,
 					   ResourcePool &shaders,
 					   ResourcePool &pipelines,
@@ -21,18 +22,20 @@ class GPUResourceManager
 	~GPUResourceManager();
 
 	void SetResourceName(VkObjectType type, uint64_t handle, const char *name);
+	void ReleaseResourcesInDeletionQueue() const;
 
 	SamplerHandle CreateSampler(const SamplerCreation &creation);
 	void DestroySampler(const SamplerHandle &handle, const uint32_t &frame_index);
-
-	void ReleaseResourcesInDeletionQueue() const;
 	void DestroySamplerInstance(ResourceHandle handle) const;
+
+	BufferHandle CreateBuffer(const BufferCreation &creation);
 
 	template <typename T>
 	T *Access(const ResourceHandle &handle, ResourcePool &pool);
 
   private:
 	VkDevice device_;
+	ResourcePool *buffers_;
 	ResourcePool *samplers_;
 	ResourcePool *shaders_;
 	ResourcePool *pipelines_;
