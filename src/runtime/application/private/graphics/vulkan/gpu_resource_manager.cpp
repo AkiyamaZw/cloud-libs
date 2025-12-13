@@ -1,24 +1,19 @@
 #include "graphics/vulkan/gpu_resource_manager.h"
 #include "graphics/vulkan/vulkan_interface.h"
+#include "graphics/vulkan/device_base.h"
 #include "runtime_log.h"
 
 namespace cloud::vulkan
 {
 GPUResourceManager::GPUResourceManager(VkDevice device,
-									   ResourcePool &buffers,
-									   ResourcePool &samplers,
-									   ResourcePool &shaders,
-									   ResourcePool &pipelines,
-									   ResourcePool &descriptor_sets,
+									   VmaAllocator allocator,
+									   ComponentResource &device_resource,
 									   std::vector<ResourceUpdate> &resource_deletion_queue,
 									   std::vector<DescriptorSetUpdate> &descriptor_set_updates,
 									   bool debug_utils_extension_present)
 	: device_(device)
-	, buffers_(&buffers)
-	, samplers_(&samplers)
-	, shaders_(&shaders)
-	, pipelines_(&pipelines)
-	, descriptor_sets_(&descriptor_sets)
+	, allocator_(allocator)
+	, device_resource_(device_resource)
 	, resource_deletion_queue_(resource_deletion_queue)
 	, descriptor_set_updates_(descriptor_set_updates)
 	, debug_utils_extension_present_(debug_utils_extension_present)
@@ -37,12 +32,12 @@ void GPUResourceManager::SetResourceName(VkObjectType type, uint64_t handle, con
 
 SamplerHandle GPUResourceManager::CreateSampler(const SamplerCreation &creation)
 {
-	SamplerHandle handle = {samplers_->FetchResource()};
+	SamplerHandle handle = {device_resource_.samplers.FetchResource()};
 	if (handle.index == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
-	Sampler *sampler = Access<Sampler>(handle.index, *samplers_);
+	Sampler *sampler = Access<Sampler>(handle.index, device_resource_.samplers);
 	infra::CreateSampler(device_, creation, sampler->sampler);
 	SetResourceName(
 		VK_OBJECT_TYPE_SAMPLER, reinterpret_cast<uint64_t>(sampler->sampler), creation.name);
@@ -50,7 +45,7 @@ SamplerHandle GPUResourceManager::CreateSampler(const SamplerCreation &creation)
 }
 void GPUResourceManager::DestroySampler(const SamplerHandle &handle, const uint32_t &frame_index)
 {
-	if (handle.index < samplers_->GetCapacity())
+	if (handle.index < device_resource_.samplers.GetCapacity())
 	{
 		resource_deletion_queue_.push_back(
 			{ResourceUpdateType::Sampler, handle.index, frame_index});
@@ -103,21 +98,21 @@ void GPUResourceManager::ReleaseResourcesInDeletionQueue() const
 
 void GPUResourceManager::DestroySamplerInstance(ResourceHandle handle) const
 {
-	if (auto sampler = static_cast<Sampler *>(samplers_->Access(handle)))
+	if (auto sampler = static_cast<Sampler *>(device_resource_.samplers.Access(handle)))
 	{
 		vkDestroySampler(device_, sampler->sampler, nullptr);
 	}
-	samplers_->ReleaseResource(handle);
+	device_resource_.samplers.ReleaseResource(handle);
 }
 
 BufferHandle GPUResourceManager::CreateBuffer(const BufferCreation &creation)
 {
-	BufferHandle handle = {buffers_->FetchResource()};
+	BufferHandle handle = {device_resource_.buffers.FetchResource()};
 	if (handle.index == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
-	Buffer *buffer = Access<Buffer>(handle.index, *buffers_);
+	Buffer *buffer = Access<Buffer>(handle.index, device_resource_.buffers);
 	buffer->name = creation.name;
 	buffer->size = creation.size;
 	buffer->usage_type = creation.usage_type;
@@ -131,9 +126,33 @@ BufferHandle GPUResourceManager::CreateBuffer(const BufferCreation &creation)
 	const bool use_global_buffer = (creation.usage_flags & buffer_usage_mask) != 0;
 	if (creation.usage_type == ResourceUsageType::Dynamic && use_global_buffer)
 	{
-		buffer->parent_handle = dynamic_buffer;
+		buffer->parent_handle = device_resource_.dynamic_buffer;
 		return handle;
 	};
+	VkBufferCreateInfo buffer_create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+	buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | creation.usage_flags;
+	buffer_create_info.size = creation.size > 0 ? creation.size : 1;
+
+	VmaAllocationCreateInfo allocation_create_info{};
+	allocation_create_info.flags = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
+	allocation_create_info.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+	VmaAllocationInfo allocation_info{};
+	vmaCreateBuffer(allocator_,
+					&buffer_create_info,
+					&allocation_create_info,
+					&buffer->buffer,
+					&buffer->allocation,
+					&allocation_info);
+	SetResourceName(VK_OBJECT_TYPE_BUFFER, (uint64_t)buffer->buffer, creation.name);
+	buffer->memory = allocation_info.deviceMemory;
+	if (creation.initial_data)
+	{
+		void *data;
+		vmaMapMemory(allocator_, buffer->allocation, &data);
+		memcpy(data, creation.initial_data, (size_t)creation.size);
+		vmaUnmapMemory(allocator_, buffer->allocation);
+	}
+	return handle;
 }
 
 } // namespace cloud::vulkan

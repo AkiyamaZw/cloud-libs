@@ -640,11 +640,8 @@ void DeviceBase::Init(GpuCreateParam &param)
 	assert(timestamp_query_pool);
 
 	gpu_resource_manager = std::make_unique<GPUResourceManager>(device,
-																buffers,
-																samplers,
-																shaders,
-																pipelines,
-																descriptor_sets,
+																vma_allocator,
+																device_resource,
 																resource_deletion_queue,
 																descriptor_set_updates,
 																debug_utils_extension_present);
@@ -663,6 +660,17 @@ void DeviceBase::Init(GpuCreateParam &param)
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sc.name = "Sampler Default";
 	default_sampler = gpu_resource_manager->CreateSampler(sc);
+
+	device_resource.dynamic_per_frame_size = 1024 * 1024 * 10;
+	BufferCreation buffer_create_info;
+	buffer_create_info.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+									 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+									 VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+	buffer_create_info.usage_type = ResourceUsageType::Immutable;
+	buffer_create_info.size = device_resource.dynamic_per_frame_size * MaxSwapchainImages;
+	buffer_create_info.name = "Dynamic_Persistent_Buffer";
+	device_resource.dynamic_buffer = gpu_resource_manager->CreateBuffer(buffer_create_info);
 }
 
 void DeviceBase::Shutdown()
@@ -672,10 +680,10 @@ void DeviceBase::Shutdown()
 	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
 
-	samplers.Shutdown();
-	pipelines.Shutdown();
-	shaders.Shutdown();
-	descriptor_sets.Shutdown();
+	device_resource.samplers.Shutdown();
+	device_resource.pipelines.Shutdown();
+	device_resource.shaders.Shutdown();
+	device_resource.descriptor_sets.Shutdown();
 
 	DestroySyncMarkers();
 	vkDestroyQueryPool(device, timestamp_query_pool, nullptr);

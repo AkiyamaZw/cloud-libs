@@ -15,6 +15,33 @@ namespace cloud::vulkan
 struct DeviceBase;
 class GPUResourceManager;
 
+struct ComponentResource
+{
+	static constexpr uint32_t buffer_pool_size = 4096;
+	cloud::ResourcePool buffers{buffer_pool_size, sizeof(Buffer)};
+	static constexpr uint32_t texture_pool_size = 512;
+	cloud::ResourcePool textures{texture_pool_size, sizeof(Texture)};
+	static constexpr uint32_t render_pass_pool_size = 256;
+	cloud::ResourcePool render_passes{render_pass_pool_size, sizeof(RenderPass)};
+	static constexpr uint32_t descriptor_layout_pool_size = 128;
+	cloud::ResourcePool descriptor_set_layout{descriptor_layout_pool_size,
+											  sizeof(DescriptorSetLayout)};
+	static constexpr uint32_t pipeline_pool_size = 128;
+	cloud::ResourcePool pipelines{pipeline_pool_size, sizeof(Pipeline)};
+	static constexpr uint32_t shader_pool_size = 128;
+	cloud::ResourcePool shaders{shader_pool_size, sizeof(ShaderState)};
+	static constexpr uint32_t descriptor_set_pool_size = 256;
+	cloud::ResourcePool descriptor_sets{descriptor_set_pool_size, sizeof(DescriptorSet)};
+	static constexpr uint32_t sampler_pool_size = 32;
+	cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
+
+	uint32_t dynamic_max_per_frame_size{0};
+	BufferHandle dynamic_buffer;
+	uint8_t *dynamic_mapped_memory{nullptr};
+	uint32_t dynamic_allocated_size{0};
+	uint32_t dynamic_per_frame_size{1024 * 1024 * 10};
+};
+
 struct CommandBufferRing
 {
 	static const uint16_t GMaxThreads = 1;
@@ -83,29 +110,7 @@ struct DeviceBase
 
 	/* resource */
 	std::unique_ptr<GPUResourceManager> gpu_resource_manager{nullptr};
-	static constexpr uint32_t buffer_pool_size = 4096;
-	cloud::ResourcePool buffers{buffer_pool_size, sizeof(Buffer)};
-	static constexpr uint32_t texture_pool_size = 512;
-	cloud::ResourcePool textures{texture_pool_size, sizeof(Texture)};
-	static constexpr uint32_t render_pass_pool_size = 256;
-	cloud::ResourcePool render_passes{render_pass_pool_size, sizeof(RenderPass)};
-	static constexpr uint32_t descriptor_layout_pool_size = 128;
-	cloud::ResourcePool descriptor_set_layout{descriptor_layout_pool_size,
-											  sizeof(DescriptorSetLayout)};
-	static constexpr uint32_t pipeline_pool_size = 128;
-	cloud::ResourcePool pipelines{pipeline_pool_size, sizeof(Pipeline)};
-	static constexpr uint32_t shader_pool_size = 128;
-	cloud::ResourcePool shaders{shader_pool_size, sizeof(ShaderState)};
-	static constexpr uint32_t descriptor_set_pool_size = 256;
-	cloud::ResourcePool descriptor_sets{descriptor_set_pool_size, sizeof(DescriptorSet)};
-	static constexpr uint32_t sampler_pool_size = 32;
-	cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
-
-	uint32_t dynamic_max_per_frame_size{0};
-	BufferHandle dynamic_buffer;
-	uint8_t *dynamic_mapped_memory{nullptr};
-	uint32_t dynamic_allocated_size{0};
-	uint32_t dynamic_per_frame_size{1024 * 1024 * 10};
+	ComponentResource device_resource;
 
 	std::array<CommandBuffer *, 128> queued_command_buffers;
 	uint32_t num_allocated_command_buffers{0};
