@@ -6,16 +6,14 @@
 
 namespace cloud::vulkan
 {
+struct ComponentResource;
 
 class GPUResourceManager
 {
   public:
 	GPUResourceManager(VkDevice device,
-					   ResourcePool &buffers,
-					   ResourcePool &samplers,
-					   ResourcePool &shaders,
-					   ResourcePool &pipelines,
-					   ResourcePool &descriptor_sets,
+					   VmaAllocator allocator,
+					   ComponentResource &device_resource,
 					   std::vector<ResourceUpdate> &resource_deletion_queue,
 					   std::vector<DescriptorSetUpdate> &descriptor_set_updates,
 					   bool debug_utils_extension_present);
@@ -35,11 +33,8 @@ class GPUResourceManager
 
   private:
 	VkDevice device_;
-	ResourcePool *buffers_;
-	ResourcePool *samplers_;
-	ResourcePool *shaders_;
-	ResourcePool *pipelines_;
-	ResourcePool *descriptor_sets_;
+	VmaAllocator allocator_;
+	ComponentResource &device_resource_;
 	std::vector<ResourceUpdate> &resource_deletion_queue_;
 	std::vector<DescriptorSetUpdate> &descriptor_set_updates_;
 	bool debug_utils_extension_present_{false};
