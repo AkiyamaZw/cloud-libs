@@ -677,6 +677,7 @@ void DeviceBase::Shutdown()
 {
 
 	g_vulkan_cmd_buffer_ring.Destroy(this);
+	gpu_resource_manager->DestroyBuffer(device_resource.dynamic_buffer, current_frame);
 	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
 

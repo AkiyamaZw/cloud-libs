@@ -27,6 +27,8 @@ class GPUResourceManager
 	void DestroySamplerInstance(ResourceHandle handle) const;
 
 	BufferHandle CreateBuffer(const BufferCreation &creation);
+	void DestroyBuffer(const BufferHandle &handle, const uint32_t &frame_index);
+	void DestroyBufferInstance(ResourceHandle handle) const;
 
 	template <typename T>
 	T *Access(const ResourceHandle &handle, ResourcePool &pool);

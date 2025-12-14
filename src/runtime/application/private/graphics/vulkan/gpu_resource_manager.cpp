@@ -68,6 +68,7 @@ void GPUResourceManager::ReleaseResourcesInDeletionQueue() const
 		switch (r.type)
 		{
 		case ResourceUpdateType::Buffer:
+			DestroyBufferInstance(r.handle);
 			break;
 		case ResourceUpdateType::Texture:
 			break;
@@ -153,6 +154,28 @@ BufferHandle GPUResourceManager::CreateBuffer(const BufferCreation &creation)
 		vmaUnmapMemory(allocator_, buffer->allocation);
 	}
 	return handle;
+}
+
+void GPUResourceManager::DestroyBuffer(const BufferHandle &handle, const uint32_t &frame_index)
+{
+	if (handle.index < device_resource_.buffers.GetCapacity())
+	{
+		resource_deletion_queue_.push_back({ResourceUpdateType::Buffer, handle.index, frame_index});
+	}
+	else
+	{
+		WARN("Graphics error: try to free invalid buffer {}", handle.index);
+	}
+}
+
+void GPUResourceManager::DestroyBufferInstance(ResourceHandle handle) const
+{
+	auto *buffer = static_cast<Buffer *>(device_resource_.buffers.Access(handle));
+	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
+	{
+		vmaDestroyBuffer(allocator_, buffer->buffer, buffer->allocation);
+	}
+	device_resource_.buffers.ReleaseResource(handle);
 }
 
 } // namespace cloud::vulkan
