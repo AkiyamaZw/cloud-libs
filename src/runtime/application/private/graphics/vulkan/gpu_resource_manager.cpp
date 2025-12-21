@@ -136,14 +136,15 @@ BufferHandle GPUResourceManager::CreateBuffer(const BufferCreation &creation)
 
 	VmaAllocationCreateInfo allocation_create_info{};
 	allocation_create_info.flags = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
-	allocation_create_info.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+	allocation_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 	VmaAllocationInfo allocation_info{};
-	vmaCreateBuffer(allocator_,
+	auto succ = vmaCreateBuffer(allocator_,
 					&buffer_create_info,
 					&allocation_create_info,
 					&buffer->buffer,
 					&buffer->allocation,
 					&allocation_info);
+	check_vk(succ);
 	SetResourceName(VK_OBJECT_TYPE_BUFFER, (uint64_t)buffer->buffer, creation.name);
 	buffer->memory = allocation_info.deviceMemory;
 	if (creation.initial_data)
