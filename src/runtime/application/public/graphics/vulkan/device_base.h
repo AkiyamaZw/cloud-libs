@@ -122,8 +122,8 @@ struct DeviceBase
 	uint64_t absolute_frame{0};
 	bool timestamps_enabled{false};
 
-	std::vector<ResourceUpdate> resource_deletion_queue{16};
-	std::vector<DescriptorSetUpdate> descriptor_set_updates{16};
+	std::vector<ResourceUpdate> resource_deletion_queue;
+	std::vector<DescriptorSetUpdate> descriptor_set_updates;
 
 	// resource
 	BufferHandle fullscreen_vertex_buffer;

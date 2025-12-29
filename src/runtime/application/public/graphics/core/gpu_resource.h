@@ -6,15 +6,23 @@
 
 namespace cloud::render
 {
+
+struct MapBufferParameter
+{
+	BufferHandle handle;
+	uint32_t offset{0};
+	uint32_t size{0};
+};
+
 struct SamplerCreation
 {
-    std::string_view name;
-    FilterMode min_filter;
-    FilterMode mag_filter;
-    FilterMode mip_filter;
-    AddressMode address_mode_u;
-    AddressMode address_mode_v;
-    AddressMode address_mode_w;
-    ReductionMode reduction_mode;
+	std::string_view name;
+	FilterMode min_filter;
+	FilterMode mag_filter;
+	FilterMode mip_filter;
+	AddressMode address_mode_u;
+	AddressMode address_mode_v;
+	AddressMode address_mode_w;
+	ReductionMode reduction_mode;
 };
-}
+} // namespace cloud::render

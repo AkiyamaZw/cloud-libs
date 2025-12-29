@@ -1,6 +1,7 @@
 #include "graphics/vulkan/gpu_resource_manager.h"
 #include "graphics/vulkan/vulkan_interface.h"
 #include "graphics/vulkan/device_base.h"
+#include "data_structure/memory.h"
 #include "runtime_log.h"
 
 namespace cloud::vulkan
@@ -139,11 +140,11 @@ BufferHandle GPUResourceManager::CreateBuffer(const BufferCreation &creation)
 	allocation_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 	VmaAllocationInfo allocation_info{};
 	auto succ = vmaCreateBuffer(allocator_,
-					&buffer_create_info,
-					&allocation_create_info,
-					&buffer->buffer,
-					&buffer->allocation,
-					&allocation_info);
+								&buffer_create_info,
+								&allocation_create_info,
+								&buffer->buffer,
+								&buffer->allocation,
+								&allocation_info);
 	check_vk(succ);
 	SetResourceName(VK_OBJECT_TYPE_BUFFER, (uint64_t)buffer->buffer, creation.name);
 	buffer->memory = allocation_info.deviceMemory;
@@ -177,6 +178,38 @@ void GPUResourceManager::DestroyBufferInstance(ResourceHandle handle) const
 		vmaDestroyBuffer(allocator_, buffer->buffer, buffer->allocation);
 	}
 	device_resource_.buffers.ReleaseResource(handle);
+}
+
+void *GPUResourceManager::DynamicAllocate(uint32_t size)
+{
+	void *memory = device_resource_.dynamic_mapped_memory + device_resource_.dynamic_allocated_size;
+	device_resource_.dynamic_allocated_size += (uint32_t)cloud::MemoryAlign(size, GUboAlignment);
+	return memory;
+}
+
+void *GPUResourceManager::MapBuffer(const render::MapBufferParameter &param)
+{
+	if (param.handle.index == ResourcePool::INVALID_NUM)
+		return nullptr;
+	Buffer *buffer = static_cast<Buffer *>(device_resource_.buffers.Access(param.handle.index));
+	if (buffer->parent_handle.index == device_resource_.dynamic_buffer.index)
+	{
+		buffer->global_offset = device_resource_.dynamic_allocated_size;
+		return DynamicAllocate(param.size == 0 ? buffer->size : param.size);
+	}
+	void *data;
+	vmaMapMemory(allocator_, buffer->allocation, &data);
+	return data;
+}
+
+void GPUResourceManager::UnMapBuffer(const render::MapBufferParameter &param)
+{
+	if (param.handle.index == ResourcePool::INVALID_NUM)
+		return;
+	Buffer *buffer = Access<Buffer>(param.handle.index, device_resource_.buffers);
+	if (buffer->parent_handle.index == device_resource_.dynamic_buffer.index)
+		return;
+	vmaUnmapMemory(allocator_, buffer->allocation);
 }
 
 } // namespace cloud::vulkan

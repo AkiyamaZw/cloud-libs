@@ -671,12 +671,17 @@ void DeviceBase::Init(GpuCreateParam &param)
 	buffer_create_info.size = device_resource.dynamic_per_frame_size * MaxSwapchainImages;
 	buffer_create_info.name = "Dynamic_Persistent_Buffer";
 	device_resource.dynamic_buffer = gpu_resource_manager->CreateBuffer(buffer_create_info);
+	render::MapBufferParameter map_buffer_param{device_resource.dynamic_buffer, 0, 0};
+	device_resource.dynamic_mapped_memory =
+		(uint8_t *)gpu_resource_manager->MapBuffer(map_buffer_param);
 }
 
 void DeviceBase::Shutdown()
 {
 
 	g_vulkan_cmd_buffer_ring.Destroy(this);
+	render::MapBufferParameter map_buffer_param{device_resource.dynamic_buffer, 0, 0};
+	gpu_resource_manager->UnMapBuffer(map_buffer_param);
 	gpu_resource_manager->DestroyBuffer(device_resource.dynamic_buffer, current_frame);
 	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();

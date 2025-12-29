@@ -33,6 +33,10 @@ class GPUResourceManager
 	template <typename T>
 	T *Access(const ResourceHandle &handle, ResourcePool &pool);
 
+	void *DynamicAllocate(uint32_t size);
+	void *MapBuffer(const render::MapBufferParameter &param);
+	void UnMapBuffer(const render::MapBufferParameter &param);
+
   private:
 	VkDevice device_;
 	VmaAllocator allocator_;
