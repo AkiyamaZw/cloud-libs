@@ -1,7 +1,6 @@
 #include "graphics/vulkan/device_base.h"
 #include "graphics/vulkan/vulkan_interface.h"
 #include "runtime_log.h"
-
 #include <algorithm>
 
 namespace cloud::vulkan
@@ -708,4 +707,108 @@ void DeviceBase::Shutdown()
 	vkDestroyInstance(instance, nullptr);
 }
 
+} // namespace cloud::vulkan
+
+namespace cloud::vulkan
+{
+bool InitializeContextInstance(VulaknDeviceContext::InstanceData &instance_data,
+							   const GpuCreateParam &param)
+{
+#ifdef WIN32
+	instance_data.enabled_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+	instance_data.enabled_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif __APPLE__
+
+	const char **extension_names = nullptr;
+	extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
+	if (extension_count == 0)
+	{
+		FATAL("[GLFW] cannot get Vulkan Extentions Info!");
+		return;
+	}
+	for (int i = 0; i < extension_count; i++)
+	{
+		instance_data.enabled_extensions.push_back(extension_names[i]);
+	}
+#endif
+	VkResult succ;
+	instance_data.enabled_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+	uint32_t api_version = 0;
+	succ = UseLatestApiVersion(api_version);
+	check_vk(succ);
+	INFO("api version: {}.{}.{}",
+		 VK_VERSION_MAJOR(api_version),
+		 VK_VERSION_MINOR(api_version),
+		 VK_VERSION_PATCH(api_version));
+
+	VkApplicationInfo app_info = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+								  .apiVersion = api_version};
+	VkInstanceCreateInfo ins_info = {
+		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+		.pApplicationInfo = &app_info,
+#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+		.enabledLayerCount = std::size(s_instance_layer),
+		.ppEnabledLayerNames = s_instance_layer,
+		.enabledExtensionCount = static_cast<uint32_t>(instance_data.enabled_extensions.size()),
+		.ppEnabledExtensionNames = instance_data.enabled_extensions.data()
+#endif
+	};
+
+	const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
+		create_debug_utils_messenger_info();
+	ins_info.pNext = &debug_create_info;
+
+	succ = vkCreateInstance(&ins_info, nullptr, &instance_data.instance);
+	check_vk(succ);
+	INFO("[Vulkan Gpu Device] Instance Created..");
+
+	// create debug info
+#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+	assert(instance_data.instance != VK_NULL_HANDLE);
+	uint32_t num_instance_extensions;
+	vkEnumerateInstanceExtensionProperties(nullptr, &num_instance_extensions, nullptr);
+	std::vector<VkExtensionProperties> extensions(num_instance_extensions);
+	vkEnumerateInstanceExtensionProperties(nullptr, &num_instance_extensions, extensions.data());
+	const auto &result = std::find_if(extensions.begin(), extensions.end(), [](const auto &rhs) {
+		return !strcmp(rhs.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	});
+	if (result != extensions.end())
+	{
+		instance_data.debug_utils_extension_present = true;
+	}
+	if (!instance_data.debug_utils_extension_present)
+	{
+		INFO("[Vulkan Device] Extension {} for debugging non presenting",
+			 VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	}
+	else
+	{
+		PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT =
+			(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+				instance_data.instance, "vkCreateDebugUtilsMessengerEXT");
+		VkDebugUtilsMessengerCreateInfoEXT debug_msger_create_info =
+			create_debug_utils_messenger_info();
+		vkCreateDebugUtilsMessengerEXT(
+			instance_data.instance, &debug_msger_create_info, nullptr, &instance_data.debug_utils_messenger);
+	}
+	check_true(instance_data.debug_utils_messenger != VK_NULL_HANDLE);
+	INFO("[Vulkan GPU Device] DebugUtilsMessenger Created..");
+#endif
+
+	return true;
+}
+
+bool DestroyContextInstance(VulaknDeviceContext::InstanceData &instance_data)
+{
+#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+	auto vkDestroyDebugUtilsMessengerEXT =
+		(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+			instance_data.instance, "vkDestroyDebugUtilsMessengerEXT");
+	vkDestroyDebugUtilsMessengerEXT(
+		instance_data.instance, instance_data.debug_utils_messenger, nullptr);
+#endif
+	vkDestroyInstance(instance_data.instance, nullptr);
+	return true;
+}
 } // namespace cloud::vulkan

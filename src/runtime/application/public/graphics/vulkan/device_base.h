@@ -64,6 +64,19 @@ struct CommandBufferRing
  * 1. data used in  gpudevice
  * 2. manager class interest in operating part of data
  */
+struct VulaknDeviceContext
+{
+	struct InstanceData
+	{
+		VkInstance instance;
+		VkDebugReportCallbackEXT debug_callback{VK_NULL_HANDLE};
+		VkDebugUtilsMessengerEXT debug_utils_messenger{VK_NULL_HANDLE};
+		std::vector<const char *> enabled_extensions;
+		std::vector<const char *> enabled_layers;
+		bool debug_utils_extension_present{false};
+	} instance_data;
+};
+
 struct DeviceBase
 {
 	virtual ~DeviceBase();
@@ -128,6 +141,8 @@ struct DeviceBase
 	// resource
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
+	
+	VulaknDeviceContext vulakn_device_context;
 
   public:
 	void Init(GpuCreateParam &param);
@@ -146,5 +161,8 @@ struct DeviceBase
 	void CreateSyncMarkers();
 	void DestroySyncMarkers();
 };
+
+bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context, const GpuCreateParam &param);
+bool DestroyContextInstance(VulaknDeviceContext::InstanceData &context);
 
 } // namespace cloud::vulkan
