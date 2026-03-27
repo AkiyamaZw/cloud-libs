@@ -6,3 +6,4 @@ lib
 .DS_Store
 .vs
 .cache
+cmake-build-debug-visual-studio
