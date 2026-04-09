@@ -1,8 +1,8 @@
 #include "graphics/vulkan/gpu_resource_manager.h"
 #include "graphics/vulkan/vulkan_interface.h"
 #include "graphics/vulkan/device_base.h"
-#include "data_structure/memory.h"
-#include "runtime_log.h"
+#include "core/data_structure/memory.h"
+#include "core/runtime_log.h"
 
 namespace cloud::vulkan
 {

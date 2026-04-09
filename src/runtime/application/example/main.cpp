@@ -1,5 +1,5 @@
 #include "graphic_application.h"
-#include "runtime_log.h"
+#include "core/runtime_log.h"
 
 int main()
 {

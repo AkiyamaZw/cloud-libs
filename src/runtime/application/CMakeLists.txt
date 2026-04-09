@@ -7,7 +7,7 @@ file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/private/*.cpp)
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
         PUBLIC
-        cloud_minicore
+        core_runtime
 		PRIVATE
 		glfw
         ${vulkan_lib}

@@ -2,7 +2,7 @@
 #include <vector>
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_resource.h"
-#include "data_structure/resource_pool.h"
+#include "core/data_structure/resource_pool.h"
 
 namespace cloud::vulkan
 {

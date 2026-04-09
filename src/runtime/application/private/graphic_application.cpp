@@ -1,5 +1,6 @@
 #include "graphic_application.h"
-#include "runtime_log.h"
+#include "core/runtime_log.h"
+#include "core/app_utils.h"
 #include "graphics/vulkan/vulkan_device.h"
 
 #ifndef NEO_GLFW_INCLUDE

@@ -1,5 +1,5 @@
 #include "graphics/vulkan/gpu_enums.h"
-#include "runtime_log.h"
+#include "core/runtime_log.h"
 
 namespace cloud::vulkan
 {

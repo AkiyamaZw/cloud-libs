@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 #include <array>
-#include "data_structure/resource_pool.h"
+#include "core/data_structure/resource_pool.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_resource.h"
 #include "graphics/vulkan/command_buffer.h"
@@ -141,7 +141,7 @@ struct DeviceBase
 	// resource
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
-	
+
 	VulaknDeviceContext vulakn_device_context;
 
   public:
@@ -162,7 +162,8 @@ struct DeviceBase
 	void DestroySyncMarkers();
 };
 
-bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context, const GpuCreateParam &param);
+bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context,
+							   const GpuCreateParam &param);
 bool DestroyContextInstance(VulaknDeviceContext::InstanceData &context);
 
 } // namespace cloud::vulkan
