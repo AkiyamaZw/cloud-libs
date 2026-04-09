@@ -718,13 +718,13 @@ bool InitializeContextInstance(VulaknDeviceContext::InstanceData &instance_data,
 	instance_data.enabled_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 	instance_data.enabled_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif __APPLE__
-
+	uint32_t extension_count = 0;
 	const char **extension_names = nullptr;
 	extension_names = glfwGetRequiredInstanceExtensions(&extension_count);
 	if (extension_count == 0)
 	{
 		FATAL("[GLFW] cannot get Vulkan Extentions Info!");
-		return;
+		return false;
 	}
 	for (int i = 0; i < extension_count; i++)
 	{
@@ -789,8 +789,10 @@ bool InitializeContextInstance(VulaknDeviceContext::InstanceData &instance_data,
 				instance_data.instance, "vkCreateDebugUtilsMessengerEXT");
 		VkDebugUtilsMessengerCreateInfoEXT debug_msger_create_info =
 			create_debug_utils_messenger_info();
-		vkCreateDebugUtilsMessengerEXT(
-			instance_data.instance, &debug_msger_create_info, nullptr, &instance_data.debug_utils_messenger);
+		vkCreateDebugUtilsMessengerEXT(instance_data.instance,
+									   &debug_msger_create_info,
+									   nullptr,
+									   &instance_data.debug_utils_messenger);
 	}
 	check_true(instance_data.debug_utils_messenger != VK_NULL_HANDLE);
 	INFO("[Vulkan GPU Device] DebugUtilsMessenger Created..");
