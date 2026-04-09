@@ -42,7 +42,7 @@ struct AppContext
 
 void GLFWErrorUserDefinedCallback(int error, const char *description)
 {
-	FATAL("[Glfw] error {}, {}", error, description);
+	FATAL("[Glfw] error %d, %s", error, description);
 }
 
 void InputCallback(GLFWwindow *window, int key, int scancode, int action, int mods)

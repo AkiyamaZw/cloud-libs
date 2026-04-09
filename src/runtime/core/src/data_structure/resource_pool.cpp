@@ -28,7 +28,7 @@ void ResourcePool::Shutdown()
 		WARN("Resource pool destroyed with unreleased resources");
 		for (uint32_t i = 0; i < free_indices_head_; i++)
 		{
-			WARN("\tResource {}", free_indices_[i]);
+			WARN("\tResource %d", free_indices_[i]);
 		}
 	}
 	assert(used_indices_ == 0);

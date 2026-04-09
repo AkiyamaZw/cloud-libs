@@ -71,7 +71,6 @@ void *AppLogger::Logger() { return GetInstance()->impl_->logger_.get(); }
 void AppLogger::Log(LogLevel level, const char *fmt, ...)
 {
 	auto logger = GetInstance()->impl_->logger_;
-	// 直接通过数组索引获取spdlog级别，无需调用to_spdlog_level
 	auto spd_level = log_level_map[static_cast<int>(level)];
 
 	if (logger->should_log(spd_level))
@@ -79,13 +78,32 @@ void AppLogger::Log(LogLevel level, const char *fmt, ...)
 		va_list args;
 		va_start(args, fmt);
 
-		// 计算所需的缓冲区大小
-		int size = vsnprintf(nullptr, 0, fmt, args) + 1;
-		std::vector<char> buffer(size);
-		vsnprintf(buffer.data(), size, fmt, args);
+		// 使用静态缓冲区来减少内存分配，适用于大多数短日志消息
+		static constexpr size_t STACK_BUFFER_SIZE = 256;
+		char stack_buffer[STACK_BUFFER_SIZE];
 
+		// 尝试在栈缓冲区中格式化
+		int size = vsnprintf(stack_buffer, STACK_BUFFER_SIZE, fmt, args);
+
+		if (size < 0)
+		{
+			// 格式化失败
+			va_end(args);
+			return;
+		}
+
+		if (size < STACK_BUFFER_SIZE)
+		{
+			logger->log(spd_level, stack_buffer);
+		}
+		else
+		{
+			// 栈缓冲区不够大，使用动态分配
+			std::vector<char> buffer(size + 1);
+			vsnprintf(buffer.data(), buffer.size(), fmt, args);
+			logger->log(spd_level, buffer.data());
+		}
 		va_end(args);
-		logger->log(spd_level, buffer.data());
 	}
 }
 } // namespace cloud

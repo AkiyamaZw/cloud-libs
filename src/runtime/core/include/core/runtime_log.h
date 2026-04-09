@@ -2,9 +2,6 @@
 #include <memory>
 #include <cstdint>
 
-#define NEO_XSTR(s) NEO_STR(s)
-#define NEO_STR(s) #s
-
 namespace cloud
 {
 
@@ -37,7 +34,6 @@ class AppLogger
 	static constexpr uint8_t queue_size_{5};
 };
 
-// 新的宏定义，使用自定义级别
 #define INFO(...) cloud::AppLogger::Log(cloud::LogLevel::Info, __VA_ARGS__)
 #define DEBUG_INFO(...) cloud::AppLogger::Log(cloud::LogLevel::Debug, __VA_ARGS__)
 #define WARN(...) cloud::AppLogger::Log(cloud::LogLevel::Warn, __VA_ARGS__)

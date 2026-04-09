@@ -1,5 +1,5 @@
 #include "core/app_utils.h"
-#include "core/runtime_log.h"
+#include <cstdlib>
 
 namespace cloud
 {

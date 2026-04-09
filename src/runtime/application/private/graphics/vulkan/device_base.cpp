@@ -115,7 +115,7 @@ static VkBool32 debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT seve
 									 const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
 									 void *user_data)
 {
-	INFO(" MessageID: {} {}\nMessage: {}\n\n",
+	INFO(" MessageID: %s %d\nMessage: %s\n\n",
 		 callback_data->pMessageIdName,
 		 callback_data->messageIdNumber,
 		 callback_data->pMessage);
@@ -158,7 +158,7 @@ void DeviceBase::CreateDebugExt()
 	}
 	if (!debug_utils_extension_present)
 	{
-		INFO("[Vulkan Device] Extension {} for debugging non presenting",
+		INFO("[Vulkan Device] Extension %s for debugging non presenting",
 			 VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
 	else
@@ -248,7 +248,7 @@ void DeviceBase::CreateInstance(GpuCreateParam &param)
 	uint32_t api_version = 0;
 	succ = UseLatestApiVersion(api_version);
 	check_vk(succ);
-	INFO("api version: {}.{}.{}",
+	INFO("api version: %d.%d.%d",
 		 VK_VERSION_MAJOR(api_version),
 		 VK_VERSION_MINOR(api_version),
 		 VK_VERSION_PATCH(api_version));
@@ -325,7 +325,7 @@ void DeviceBase::CreatePhysicalDevice()
 	ubo_alignment = physical_device_properties.limits.minUniformBufferOffsetAlignment;
 	ssbo_alignment = physical_device_properties.limits.minStorageBufferOffsetAlignment;
 
-	INFO("[vulkan device] select gpu {}, gpu_timestamp_frequency:{:.8f}",
+	INFO("[vulkan device] select gpu %s, gpu_timestamp_frequency:%f",
 		 physical_device_properties.deviceName,
 		 gpu_timestamp_frequency);
 }
@@ -468,7 +468,7 @@ void DeviceBase::CreateSwapChain()
 											 surface_capabilities.minImageExtent.height,
 											 surface_capabilities.maxImageExtent.height);
 	}
-	INFO("Create swapchain {}, {} - Saved {} {}, min image {}\n",
+	INFO("Create swapchain %d, %d - Saved %d %d, min image %d\n",
 		 swapchain_extent.width,
 		 swapchain_extent.height,
 		 swapchain_width,
@@ -736,7 +736,7 @@ bool InitializeContextInstance(VulaknDeviceContext::InstanceData &instance_data,
 	uint32_t api_version = 0;
 	succ = UseLatestApiVersion(api_version);
 	check_vk(succ);
-	INFO("api version: {}.{}.{}",
+	INFO("api version: %d.%d.%d",
 		 VK_VERSION_MAJOR(api_version),
 		 VK_VERSION_MINOR(api_version),
 		 VK_VERSION_PATCH(api_version));
@@ -779,7 +779,7 @@ bool InitializeContextInstance(VulaknDeviceContext::InstanceData &instance_data,
 	}
 	if (!instance_data.debug_utils_extension_present)
 	{
-		INFO("[Vulkan Device] Extension {} for debugging non presenting",
+		INFO("[Vulkan Device] Extension %s for debugging non presenting",
 			 VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
 	else

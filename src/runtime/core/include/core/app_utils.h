@@ -2,6 +2,9 @@
 
 namespace cloud
 {
+#define NEO_XSTR(s) NEO_STR(s)
+#define NEO_STR(s) #s
+
 namespace Utility
 {
 /**

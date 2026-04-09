@@ -53,7 +53,7 @@ void GPUResourceManager::DestroySampler(const SamplerHandle &handle, const uint3
 	}
 	else
 	{
-		WARN("release sampler handle with error handle index {}", handle.index);
+		WARN("release sampler handle with error handle index %d", handle.index);
 	}
 }
 
@@ -166,7 +166,7 @@ void GPUResourceManager::DestroyBuffer(const BufferHandle &handle, const uint32_
 	}
 	else
 	{
-		WARN("Graphics error: try to free invalid buffer {}", handle.index);
+		WARN("Graphics error: try to free invalid buffer %d", handle.index);
 	}
 }
 
