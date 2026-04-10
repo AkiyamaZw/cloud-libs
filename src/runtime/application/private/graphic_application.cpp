@@ -2,6 +2,7 @@
 #include "core/runtime_log.h"
 #include "core/app_utils.h"
 #include "graphics/vulkan/vulkan_device.h"
+#include <chrono>
 
 #ifndef NEO_GLFW_INCLUDE
 #define NEO_GLFW_INCLUDE
