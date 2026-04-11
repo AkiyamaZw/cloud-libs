@@ -1,5 +1,5 @@
 #include "graphics/renderer.h"
-#include "graphics/vulkan/vulkan_device.h"
+#include "graphics/device.h"
 namespace cloud::render
 {
 Renderer g_render(RendererCreation{});
@@ -20,8 +20,8 @@ void Renderer::Exit()
 {
 	samplers_.Shutdown();
 	gpu_device_->ShutdownGpuDevice();
-    DestroyGpuDevice(gpu_device_);
-    gpu_device_ = nullptr;
+	DestroyGpuDevice(gpu_device_);
+	gpu_device_ = nullptr;
 }
 
 void Renderer::BeginFrame() {}

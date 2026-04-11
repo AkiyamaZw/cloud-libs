@@ -12,11 +12,11 @@ GpuDevice *CreateGpuDevice(const TypeDevice &type)
 	return nullptr;
 }
 
-void DestroyGpuDevice(GpuDevice* device)
+void DestroyGpuDevice(GpuDevice *device)
 {
-    if (device->GetTypeDevice() == TypeDevice::Vulkan)
-    {
-        delete device;
-    }
+	if (device->GetTypeDevice() == TypeDevice::Vulkan)
+	{
+		delete device;
+	}
 }
 } // namespace cloud::render

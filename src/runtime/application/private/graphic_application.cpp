@@ -1,25 +1,8 @@
 #include "graphic_application.h"
 #include "core/runtime_log.h"
 #include "core/app_utils.h"
-#include "graphics/vulkan/vulkan_device.h"
+#include "core/window/window.h"
 #include <chrono>
-
-#ifndef NEO_GLFW_INCLUDE
-#define NEO_GLFW_INCLUDE
-#ifdef WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_INCLUDE_VULKAN
-#include "GLFW/glfw3.h"
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include "GLFW/glfw3native.h"
-#elif defined(__APPLE__)
-// #define VK_USE_PLATFORM_MAXOS_MVK
-#define GLFW_INCLUDE_VULKAN
-#include "GLFW/glfw3.h"
-// #define GLFW_EXPOSE_NATIVE_COCOA
-// #include "GLFW/glfw3native.h"
-#endif
-#endif
 #include "graphics/renderer.h"
 
 namespace cloud
@@ -35,73 +18,59 @@ struct AppContext
 	int width;
 	int height;
 	std::string title;
-	void *window_ptr{nullptr};
+	window::IWindow *window{nullptr};
 	std::vector<std::string_view> window_extension;
 	bool should_exit{false};
 	TimerData frame_ts;
 } GAppContext;
 
-void GLFWErrorUserDefinedCallback(int error, const char *description)
-{
-	FATAL("[Glfw] error %d, %s", error, description);
-}
-
-void InputCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
-{
-	if (key == GLFW_KEY_ESCAPE)
-	{
-		glfwSetWindowShouldClose(window, 1);
-	}
-}
-
 void InitWindow(AppContext *context)
 {
-	glfwSetErrorCallback(GLFWErrorUserDefinedCallback);
-	if (!glfwInit())
+	context->window = window::CreateWindow();
+	if (!context->window)
 	{
-		FATAL("Initialize GLFW Failed!");
+		FATAL("Create window failed!");
 		return;
 	}
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	GLFWwindow *window_handle =
-		glfwCreateWindow(context->width, context->height, context->title.c_str(), nullptr, nullptr);
-	if (!window_handle)
-	{
-		FATAL("[GLFW]window create failed!");
-		return;
-	}
-	if (!glfwVulkanSupported())
-	{
-		FATAL("[GLFW] Vulkan not suppported!");
-		return;
-	}
-	// glfwMakeContextCurrent(window_handle);
-	glfwSetKeyCallback((GLFWwindow *)window_handle, InputCallback);
 
-	context->window_ptr = window_handle;
+	window::WindowCreateInfo create_info;
+	create_info.width = context->width;
+	create_info.height = context->height;
+	create_info.title = context->title;
+
+	if (!context->window->Initialize(create_info))
+	{
+		FATAL("Initialize window failed!");
+		window::DestroyWindow(context->window);
+		context->window = nullptr;
+		return;
+	}
 }
 
 void UpdateWindow(AppContext *context)
 {
-	glfwPollEvents();
-	context->should_exit = glfwWindowShouldClose((GLFWwindow *)context->window_ptr);
+	if (context->window)
+	{
+		context->window->PollEvents();
+		context->should_exit = context->window->ShouldClose();
+	}
 }
 
 void DestoryWindow(AppContext *context)
 {
-	if (context->window_ptr)
+	if (context->window)
 	{
-		glfwDestroyWindow((GLFWwindow *)context->window_ptr);
-		context->window_ptr = nullptr;
-		glfwTerminate();
+		window::DestroyWindow(context->window);
+		context->window = nullptr;
 	}
 }
 
 void InitModules()
 {
 	InitWindow(&GAppContext);
-	GpuCreateParam param{
-		.window = GAppContext.window_ptr, .width = GAppContext.width, .height = GAppContext.height};
+	GpuCreateParam param{.window = GAppContext.window->GetNativeWindow(),
+						 .width = GAppContext.width,
+						 .height = GAppContext.height};
 
 	render::CreateRenderer(param);
 }

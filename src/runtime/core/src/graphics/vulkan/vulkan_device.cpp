@@ -27,7 +27,5 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 	return gpu_resource_manager->CreateSampler(sampler_creation);
 }
 void GpuDevice::DestroySampler(const SamplerHandle &handle)
-{
-	gpu_resource_manager->DestroySampler(handle, current_frame);
-}
+{ gpu_resource_manager->DestroySampler(handle, current_frame); }
 } // namespace cloud::vulkan

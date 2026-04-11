@@ -1,29 +1,58 @@
-set(PROJECT_NAME cloud_minicore)
-file(GLOB_RECURSE HEAD_FILES    ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
-                                ${CMAKE_CURRENT_SOURCE_DIR}/include/*.inc)
-file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+# Include common build utilities
+include(${CMAKE_SOURCE_DIR}/tool/cmake/CloudBuild.cmake)
 
-add_library(${PROJECT_NAME}_obj OBJECT ${HEAD_FILES} ${SOURCE_FILES})
-target_include_directories(${PROJECT_NAME}_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(${PROJECT_NAME}_obj PRIVATE spdlog)
-set_target_properties(${PROJECT_NAME}_obj PROPERTIES FOLDER modules/core)
-
-add_library(core_runtime STATIC
-	$<TARGET_OBJECTS:${PROJECT_NAME}_obj>
+# Cloud Minicore Object Library
+add_object_library(cloud_minicore_obj modules/core
+    HEADER_PATTERNS
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.inc
+    SOURCE_PATTERNS
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp
+    INCLUDES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    LIBS PRIVATE spdlog glfw
 )
 
-target_link_libraries(
-		core_runtime
-        PUBLIC
+# Graphics Object Library
+add_object_library(graphics_obj modules/core
+    HEADER_PATTERNS
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/graphics/*.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/graphics/*.inc
+    SOURCE_PATTERNS
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/graphics/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/graphics/vulkan/*.cpp
+    INCLUDES
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${vulkan_include}
+            ${EXTERN_LIB_DIR}/glfw/include
+    LIBS PRIVATE spdlog ${vulkan_lib} glfw
+)
+
+# Core Runtime Library
+add_library(core_runtime STATIC
+    $<TARGET_OBJECTS:cloud_minicore_obj>
+    $<TARGET_OBJECTS:graphics_obj>
+)
+
+target_link_libraries(core_runtime
+    PUBLIC
         spdlog
+        ${vulkan_lib}
+        glfw
 )
 
 target_include_directories(core_runtime
-	PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 set_target_properties(core_runtime PROPERTIES FOLDER modules)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEAD_FILES} ${SOURCE_FILES})
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
+    ${${PROJECT_NAME}_obj_HEAD_FILES}
+    ${graphics_obj_HEAD_FILES}
+    ${${PROJECT_NAME}_obj_SOURCE_FILES}
+    ${graphics_obj_SOURCE_FILES}
+)
+
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/example)
