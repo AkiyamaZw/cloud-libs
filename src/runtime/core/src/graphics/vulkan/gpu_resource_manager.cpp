@@ -206,7 +206,7 @@ void GPUResourceManager::UnMapBuffer(const render::MapBufferParameter &param)
 {
 	if (param.handle.index == ResourcePool::INVALID_NUM)
 		return;
-	Buffer *buffer = Access<Buffer>(param.handle.index, device_resource_.buffers);
+	Buffer *buffer = static_cast<Buffer *>(device_resource_.buffers.Access(param.handle.index));
 	if (buffer->parent_handle.index == device_resource_.dynamic_buffer.index)
 		return;
 	vmaUnmapMemory(allocator_, buffer->allocation);

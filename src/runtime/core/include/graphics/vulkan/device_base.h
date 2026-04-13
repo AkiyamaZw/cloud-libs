@@ -3,12 +3,20 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <chrono>
 #include "core/data_structure/resource_pool.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_resource.h"
 #include "graphics/vulkan/command_buffer.h"
 #include "graphics/vulkan/vk_mem_alloc.h"
 #include "graphics/device.h"
+
+// Uniform Buffer Object for shader
+struct UniformBufferObject
+{
+	float time;
+	float resolution[2];
+};
 
 namespace cloud::vulkan
 {
@@ -147,6 +155,12 @@ struct DeviceBase
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
 
+	// uniform buffer for shader
+	BufferHandle uniform_buffer;
+	VkDescriptorSetLayout descriptor_set_layout;
+	VkDescriptorSet descriptor_set;
+	std::chrono::high_resolution_clock::time_point start_time;
+
 	VulaknDeviceContext vulakn_device_context;
 
   public:
@@ -170,8 +184,8 @@ struct DeviceBase
 	void CreateFramebuffers();
 	void CreateGraphicsPipeline();
 	void CreatePipelineLayout();
-	VkShaderModule CreateShaderModule(const std::vector<char>& code);
-	std::vector<char> LoadShader(const std::string& filename);
+	VkShaderModule CreateShaderModule(const std::vector<char> &code);
+	std::vector<char> LoadShader(const std::string &filename);
 };
 
 bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context,

@@ -79,7 +79,7 @@ void AppLogger::Log(LogLevel level, const char *fmt, ...)
 		va_start(args, fmt);
 
 		// 使用静态缓冲区来减少内存分配，适用于大多数短日志消息
-		static constexpr size_t STACK_BUFFER_SIZE = 256;
+		static constexpr size_t STACK_BUFFER_SIZE = 1024;
 		char stack_buffer[STACK_BUFFER_SIZE];
 
 		// 尝试在栈缓冲区中格式化

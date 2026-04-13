@@ -19,6 +19,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(EXTERN_LIB_DIR ${PROJECT_SOURCE_DIR}/extern)
 link_directories(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
+# set resource root path
+set(RESOURCE_ROOT_DIR ${PROJECT_SOURCE_DIR}/resource)
+add_compile_definitions(RESOURCE_ROOT_DIR="${RESOURCE_ROOT_DIR}")
+
 include(${PROJECT_SOURCE_DIR}/tool/cmake/vulkan.cmake)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extern)

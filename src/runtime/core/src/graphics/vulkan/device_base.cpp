@@ -413,9 +413,9 @@ void SetPresentMode(DeviceBase *gpu,
 void DeviceBase::CreateSwapChain()
 {
 	constexpr VkFormat surface_image_format[] = {VK_FORMAT_B8G8R8A8_UNORM,
-														 VK_FORMAT_R8G8B8A8_UNORM,
-														 VK_FORMAT_B8G8R8_UNORM,
-														 VK_FORMAT_R8G8B8_UNORM};
+												 VK_FORMAT_R8G8B8A8_UNORM,
+												 VK_FORMAT_B8G8R8_UNORM,
+												 VK_FORMAT_R8G8B8_UNORM};
 	constexpr VkColorSpaceKHR surface_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 	uint32_t supported_count;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -467,15 +467,15 @@ void DeviceBase::CreateSwapChain()
 											surface_capabilities.minImageExtent.width,
 											surface_capabilities.maxImageExtent.width);
 		swapchain_extent.height = std::clamp(swapchain_extent.height,
-											surface_capabilities.minImageExtent.height,
-											surface_capabilities.maxImageExtent.height);
+											 surface_capabilities.minImageExtent.height,
+											 surface_capabilities.maxImageExtent.height);
 	}
 	INFO("Create swapchain %d, %d - Saved %d %d, min image %d\n",
-		swapchain_extent.width,
-		swapchain_extent.height,
-		swapchain_width,
-		swapchain_height,
-		surface_capabilities.minImageCount);
+		 swapchain_extent.width,
+		 swapchain_extent.height,
+		 swapchain_width,
+		 swapchain_height,
+		 surface_capabilities.minImageCount);
 	swapchain_width = swapchain_extent.width;
 	swapchain_height = swapchain_extent.height;
 
@@ -557,9 +557,7 @@ void DeviceBase::CreateFramebuffers()
 {
 	for (size_t i = 0; i < swapchain_image_count; i++)
 	{
-		VkImageView attachments[] = {
-			swapchain_image_views[i]
-		};
+		VkImageView attachments[] = {swapchain_image_views[i]};
 
 		VkFramebufferCreateInfo framebuffer_info{};
 		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -570,7 +568,8 @@ void DeviceBase::CreateFramebuffers()
 		framebuffer_info.height = swapchain_height;
 		framebuffer_info.layers = 1;
 
-		VkResult result = vkCreateFramebuffer(device, &framebuffer_info, nullptr, &swapchain_framebuffers[i]);
+		VkResult result =
+			vkCreateFramebuffer(device, &framebuffer_info, nullptr, &swapchain_framebuffers[i]);
 		check_vk(result);
 	}
 	INFO("[Vulkan Gpu Device] Framebuffers Created..");
@@ -623,17 +622,18 @@ void DeviceBase::CreateDescriptorPool()
 void DeviceBase::CreateQueryPool(const GpuCreateParam &param)
 {
 	VkQueryPoolCreateInfo pool_create_info = {VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
-													 nullptr,
-													 0,
-													 VK_QUERY_TYPE_TIMESTAMP,
-													 param.gpu_time_queries_per_frame * 2u *
-														 MaxSwapchainImages,
-													 0};
+											  nullptr,
+											  0,
+											  VK_QUERY_TYPE_TIMESTAMP,
+											  param.gpu_time_queries_per_frame * 2u *
+												  MaxSwapchainImages,
+											  0};
 	vkCreateQueryPool(device, &pool_create_info, nullptr, &timestamp_query_pool);
 }
 
 void DeviceBase::CreatePipelineLayout()
 {
+	// 创建pipeline layout（不需要descriptor set layout）
 	VkPipelineLayoutCreateInfo pipeline_layout_info{};
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_info.setLayoutCount = 0;
@@ -641,7 +641,8 @@ void DeviceBase::CreatePipelineLayout()
 	pipeline_layout_info.pushConstantRangeCount = 0;
 	pipeline_layout_info.pPushConstantRanges = nullptr;
 
-	VkResult result = vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout);
+	VkResult result =
+		vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout);
 	check_vk(result);
 	INFO("[Vulkan Gpu Device] Pipeline Layout Created..");
 }
@@ -703,9 +704,6 @@ void DeviceBase::Init(GpuCreateParam &param)
 	CreateVmaAllocator();
 	assert(vma_allocator);
 
-	CreateDescriptorPool();
-	assert(descriptor_pool);
-
 	CreateQueryPool(param);
 	assert(timestamp_query_pool);
 
@@ -727,6 +725,9 @@ void DeviceBase::Init(GpuCreateParam &param)
 																resource_deletion_queue,
 																descriptor_set_updates,
 																debug_utils_extension_present);
+
+	// 初始化时间
+	start_time = std::chrono::high_resolution_clock::now();
 	CreateSyncMarkers();
 	assert(render_complete_semaphore[0]);
 	assert(image_acquired_semaphore[0]);
@@ -742,28 +743,14 @@ void DeviceBase::Init(GpuCreateParam &param)
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sc.name = "Sampler Default";
 	default_sampler = gpu_resource_manager->CreateSampler(sc);
-
-	device_resource.dynamic_per_frame_size = 1024 * 1024 * 10;
-	BufferCreation buffer_create_info;
-	buffer_create_info.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-									 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-									 VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-	buffer_create_info.usage_type = ResourceUsageType::Immutable;
-	buffer_create_info.size = device_resource.dynamic_per_frame_size * MaxSwapchainImages;
-	buffer_create_info.name = "Dynamic_Persistent_Buffer";
-	device_resource.dynamic_buffer = gpu_resource_manager->CreateBuffer(buffer_create_info);
-	render::MapBufferParameter map_buffer_param{device_resource.dynamic_buffer, 0, 0};
-	device_resource.dynamic_mapped_memory =
-		(uint8_t *)gpu_resource_manager->MapBuffer(map_buffer_param);
 }
 
-VkShaderModule DeviceBase::CreateShaderModule(const std::vector<char>& code)
+VkShaderModule DeviceBase::CreateShaderModule(const std::vector<char> &code)
 {
 	VkShaderModuleCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	create_info.codeSize = code.size();
-	create_info.pCode = reinterpret_cast<const uint32_t*>(code.data());
+	create_info.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
 	VkShaderModule shader_module;
 	VkResult result = vkCreateShaderModule(device, &create_info, nullptr, &shader_module);
@@ -772,73 +759,26 @@ VkShaderModule DeviceBase::CreateShaderModule(const std::vector<char>& code)
 	return shader_module;
 }
 
-std::vector<char> DeviceBase::LoadShader(const std::string& filename)
+std::vector<char> DeviceBase::LoadShader(const std::string &filename)
 {
-	// 尝试从多个位置加载着色器文件
-	std::vector<std::string> possible_paths = {
-		filename,  // 相对路径
-		"shaders/" + filename,  // 相对于当前目录的shaders子目录
-		"shaders\\" + filename,  // 使用反斜杠的路径
-		"../shaders/" + filename,  // 相对于bin/Debug的路径
-		"../shaders\\" + filename,  // 使用反斜杠的路径
-		"../../shaders/" + filename,  // 相对于其他可能的路径
-		"../../shaders\\" + filename,  // 使用反斜杠的路径
-		"../../../shaders/" + filename,  // 相对于更深层目录的路径
-		"../../../shaders\\" + filename,  // 使用反斜杠的路径
-		"D:/private/cloud-libs/shaders/" + filename,  // 绝对路径
-		"D:\\private\\cloud-libs\\shaders\\" + filename  // 使用反斜杠的绝对路径
-	};
+	auto path = std::string(RESOURCE_ROOT_DIR) + "/" + filename; // 资源根路径 + shaders目录
 
-	for (const auto& path : possible_paths) {
-		std::ifstream file(path, std::ios::ate | std::ios::binary);
-		if (file.is_open()) {
-			INFO("Loading shader from: %s", path.c_str());
-			size_t fileSize = (size_t)file.tellg();
-			std::vector<char> buffer(fileSize);
-
-			file.seekg(0);
-			file.read(buffer.data(), fileSize);
-
-			file.close();
-
-			if (buffer.size() > 0) {
-				return buffer;
-			}
+	std::ifstream file(path, std::ios::ate | std::ios::binary);
+	if (file.is_open())
+	{
+		INFO("Loading shader from: %s", path.c_str());
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+		file.close();
+		if (buffer.size() > 0)
+		{
+			return buffer;
 		}
 	}
 
-	// 尝试直接加载文件名（不带路径）
-	std::string just_filename = filename;
-	size_t last_slash = just_filename.find_last_of("/\\");
-	if (last_slash != std::string::npos) {
-		just_filename = just_filename.substr(last_slash + 1);
-	}
-
-	std::vector<std::string> just_filename_paths = {
-		just_filename,  // 直接使用文件名
-		"vert.spv",  // 直接使用文件名
-		"frag.spv"  // 直接使用文件名
-	};
-
-	for (const auto& path : just_filename_paths) {
-		std::ifstream file(path, std::ios::ate | std::ios::binary);
-		if (file.is_open()) {
-			INFO("Loading shader from: %s", path.c_str());
-			size_t fileSize = (size_t)file.tellg();
-			std::vector<char> buffer(fileSize);
-
-			file.seekg(0);
-			file.read(buffer.data(), fileSize);
-
-			file.close();
-
-			if (buffer.size() > 0) {
-				return buffer;
-			}
-		}
-	}
-
-	FATAL("Failed to open shader file: %s", filename.c_str());
+	FATAL("Failed to open shader file: %s", path.c_str());
 	return {};
 }
 
@@ -923,7 +863,8 @@ void DeviceBase::CreateGraphicsPipeline()
 
 	// 颜色混合
 	VkPipelineColorBlendAttachmentState color_blend_attachment{};
-	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+											VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	color_blend_attachment.blendEnable = VK_FALSE;
 
 	VkPipelineColorBlendStateCreateInfo color_blending{};
@@ -948,7 +889,8 @@ void DeviceBase::CreateGraphicsPipeline()
 	pipeline_info.renderPass = render_pass;
 	pipeline_info.subpass = 0;
 
-	VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &graphics_pipeline);
+	VkResult result = vkCreateGraphicsPipelines(
+		device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &graphics_pipeline);
 	check_vk(result);
 
 	vkDestroyShaderModule(device, frag_module, nullptr);
@@ -965,40 +907,24 @@ void DeviceBase::DrawFrame()
 
 	// 获取交换链图像
 	uint32_t image_index;
-	VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_acquired_semaphore[current_frame], VK_NULL_HANDLE, &image_index);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+	VkResult result = vkAcquireNextImageKHR(device,
+											swapchain,
+											UINT64_MAX,
+											image_acquired_semaphore[current_frame],
+											VK_NULL_HANDLE,
+											&image_index);
+	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
 		// 交换链需要重建，这里简化处理
 		return;
-	} else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+	}
+	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+	{
 		check_vk(result);
 	}
 
 	// 获取命令缓冲区
-	CommandBuffer* cmd_buffer = g_vulkan_cmd_buffer_ring.GetCommandBuffer(current_frame, true);
-
-	// 图像布局转换
-	VkImageMemoryBarrier barrier{};
-	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; // 使用UNDEFINED作为旧布局，这样不需要关心当前布局
-	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	barrier.image = swapchain_images[image_index];
-	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	barrier.subresourceRange.baseMipLevel = 0;
-	barrier.subresourceRange.levelCount = 1;
-	barrier.subresourceRange.baseArrayLayer = 0;
-	barrier.subresourceRange.layerCount = 1;
-	barrier.srcAccessMask = 0;
-	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-	vkCmdPipelineBarrier(cmd_buffer->vk_command_buffer,
-			 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // 从管道顶部开始
-			 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			 0,
-			 0, nullptr,
-			 0, nullptr,
-			 1, &barrier);
+	CommandBuffer *cmd_buffer = g_vulkan_cmd_buffer_ring.GetCommandBuffer(current_frame, true);
 
 	// 开始渲染通道
 	VkRenderPassBeginInfo render_pass_info{};
@@ -1012,10 +938,12 @@ void DeviceBase::DrawFrame()
 	render_pass_info.clearValueCount = 1;
 	render_pass_info.pClearValues = &clear_color;
 
-	vkCmdBeginRenderPass(cmd_buffer->vk_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(
+		cmd_buffer->vk_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
 	// 绑定管线
-	vkCmdBindPipeline(cmd_buffer->vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+	vkCmdBindPipeline(
+		cmd_buffer->vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 
 	// 绘制三角形
 	vkCmdDraw(cmd_buffer->vk_command_buffer, 3, 1, 0, 0);
@@ -1023,19 +951,7 @@ void DeviceBase::DrawFrame()
 	// 结束渲染通道
 	vkCmdEndRenderPass(cmd_buffer->vk_command_buffer);
 
-	// 图像布局转换回呈现状态
-	barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	barrier.dstAccessMask = 0;
-
-	vkCmdPipelineBarrier(cmd_buffer->vk_command_buffer,
-					 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-					 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-					 0,
-					 0, nullptr,
-					 0, nullptr,
-					 1, &barrier);
+	// 渲染通道会自动处理图像布局转换，不需要手动转换
 
 	// 结束命令记录
 	vkEndCommandBuffer(cmd_buffer->vk_command_buffer);
@@ -1074,9 +990,12 @@ void DeviceBase::DrawFrame()
 
 	result = vkQueuePresentKHR(queue, &present_info);
 
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	{
 		// 交换链需要重建，这里简化处理
-	} else {
+	}
+	else
+	{
 		check_vk(result);
 	}
 
@@ -1086,12 +1005,27 @@ void DeviceBase::DrawFrame()
 
 void DeviceBase::Shutdown()
 {
+	// 等待所有命令缓冲区完成执行
+	for (uint32_t i = 0; i < MaxSwapchainImages; ++i)
+	{
+		vkWaitForFences(device, 1, &command_buffer_fence[i], VK_TRUE, UINT64_MAX);
+	}
+
+	// 等待所有队列操作完成
+	vkDeviceWaitIdle(device);
 
 	g_vulkan_cmd_buffer_ring.Destroy(this);
 	render::MapBufferParameter map_buffer_param{device_resource.dynamic_buffer, 0, 0};
 	gpu_resource_manager->UnMapBuffer(map_buffer_param);
+
+	// 销毁uniform buffer
+	gpu_resource_manager->DestroyBuffer(uniform_buffer, current_frame);
+
+	// 销毁dynamic buffer和sampler
 	gpu_resource_manager->DestroyBuffer(device_resource.dynamic_buffer, current_frame);
 	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
+
+	// 释放deletion queue中的资源
 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
 
 	device_resource.samplers.Shutdown();
@@ -1101,6 +1035,13 @@ void DeviceBase::Shutdown()
 
 	// 销毁渲染相关资源
 	vkDestroyPipeline(device, graphics_pipeline, nullptr);
+
+	// 销毁descriptor set
+	vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set);
+
+	// 销毁descriptor set layout
+	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, nullptr);
+
 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 	vkDestroyRenderPass(device, render_pass, nullptr);
 
