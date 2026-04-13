@@ -114,6 +114,11 @@ struct DeviceBase
 	uint32_t swapchain_height;
 	uint32_t swapchain_image_count;
 
+	/* render */
+	VkRenderPass render_pass;
+	VkPipelineLayout pipeline_layout;
+	VkPipeline graphics_pipeline;
+
 	VmaAllocator vma_allocator;
 
 	/* sync */
@@ -147,6 +152,7 @@ struct DeviceBase
   public:
 	void Init(GpuCreateParam &param);
 	void Shutdown();
+	void DrawFrame();
 
   private:
 	void CreateInstance(GpuCreateParam &param);
@@ -160,6 +166,12 @@ struct DeviceBase
 	void CreateQueryPool(const GpuCreateParam &param);
 	void CreateSyncMarkers();
 	void DestroySyncMarkers();
+	void CreateRenderPass();
+	void CreateFramebuffers();
+	void CreateGraphicsPipeline();
+	void CreatePipelineLayout();
+	VkShaderModule CreateShaderModule(const std::vector<char>& code);
+	std::vector<char> LoadShader(const std::string& filename);
 };
 
 bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context,

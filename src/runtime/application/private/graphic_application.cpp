@@ -95,10 +95,18 @@ void SetupApp(AppParam *param)
 	{
 		cur_ts = std::chrono::high_resolution_clock::now();
 		GAppContext.frame_ts.last_update_ts = std::chrono::duration_cast<std::chrono::milliseconds>(
-												  cur_ts - GAppContext.frame_ts.start_ts)
-												  .count();
+									cur_ts - GAppContext.frame_ts.start_ts)
+									.count();
 		GAppContext.frame_ts.start_ts = cur_ts;
+		
+		// 开始帧
+		render::Renderer::Inst()->BeginFrame();
+		
+		// 更新窗口
 		UpdateWindow(&GAppContext);
+		
+		// 结束帧（执行渲染）
+		render::Renderer::Inst()->EndFrame();
 	}
 	ShutdownModules();
 }
