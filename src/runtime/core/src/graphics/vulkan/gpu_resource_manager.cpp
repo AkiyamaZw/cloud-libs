@@ -95,6 +95,7 @@ void GPUResourceManager::ReleaseResourcesInDeletionQueue() const
 		case ResourceUpdateType::Count:
 			break;
 		}
+		r.current_frame = InvalidFrameID;
 	}
 }
 

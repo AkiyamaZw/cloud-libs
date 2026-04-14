@@ -34,6 +34,8 @@ using PipelineHandle = render::PipelineHandle;
 using SamplerHandle = render::SamplerHandle;
 using ShaderStateHandle = render::ShaderStateHandle;
 using DescriptorSetHandle = render::ResourceHandle;
+constexpr uint32_t InvalidFrameID = UINT32_MAX;
+
 
 struct ResourceUpdate
 {
@@ -130,6 +132,7 @@ struct RenderPass
 	uint16_t dispatch_x{1};
 	uint16_t dispatch_y{1};
 	uint16_t dispatch_z{1};
+	RenderPassType type;
 
 	uint8_t num_render_targets{0};
 	uint32_t multiview_mask{0};

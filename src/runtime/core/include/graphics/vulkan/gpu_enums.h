@@ -39,6 +39,13 @@ enum class RenderPassOperation
 	Count
 };
 
+enum class RenderPassType
+{
+	Geometry,
+	SwapChain,
+	Compute
+};
+
 enum class PresentMode
 {
 	Immediate,

@@ -899,9 +899,38 @@ void DeviceBase::CreateGraphicsPipeline()
 	INFO("[Vulkan Gpu Device] Graphics Pipeline Created..");
 }
 
-void DeviceBase::DrawFrame()
+void DeviceBase::Commit()
 {
 	// 等待上一帧的fence
+	VkFence *render_complete_fence = &command_buffer_fence[current_frame];
+	VkSemaphore *render_complemte_semaphore = &render_complete_semaphore[current_frame];
+
+	VkCommandBuffer enqueued_command_buffers[4];
+	for (uint32_t i = 0; i < num_queued_command_buffers; i++)
+	{
+		CommandBuffer *cb = queued_command_buffers[i];
+		enqueued_command_buffers[i] = cb->vk_command_buffer;
+		if (cb->is_recoding && cb->current_render_pass &&
+			(cb->current_render_pass->type != RenderPassType::Compute))
+		{
+			vkCmdEndRenderPass(cb->vk_command_buffer);
+		}
+		vkEndCommandBuffer(cb->vk_command_buffer);
+	}
+	VkSemaphore wait_semaphores[] = {image_acquired_semaphore[current_frame]};
+	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+	VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = wait_semaphores;
+	submit_info.pWaitDstStageMask = wait_stages;
+	submit_info.commandBufferCount = num_queued_command_buffers;
+	submit_info.pCommandBuffers = enqueued_command_buffers;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = render_complemte_semaphore;
+	vkQueueSubmit(queue, 1, &submit_info, *render_complete_fence);
+
+	// todo 
+
 	vkWaitForFences(device, 1, &command_buffer_fence[current_frame], VK_TRUE, UINT64_MAX);
 	vkResetFences(device, 1, &command_buffer_fence[current_frame]);
 

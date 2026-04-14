@@ -20,6 +20,6 @@ class GpuDevice
 
 	SamplerHandle CreateSampler(const render::SamplerCreation &creation) override;
 	void DestroySampler(const SamplerHandle &handle) override;
-	void DrawFrame() override;
+	void Present() override;
 };
 } // namespace cloud::vulkan

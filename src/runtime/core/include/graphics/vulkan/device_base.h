@@ -166,7 +166,7 @@ struct DeviceBase
   public:
 	void Init(GpuCreateParam &param);
 	void Shutdown();
-	void DrawFrame();
+	void Commit();
 
   private:
 	void CreateInstance(GpuCreateParam &param);

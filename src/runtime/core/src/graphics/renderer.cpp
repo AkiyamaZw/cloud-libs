@@ -26,7 +26,7 @@ void Renderer::Exit()
 
 void Renderer::BeginFrame() {}
 
-void Renderer::EndFrame() { gpu_device_->DrawFrame(); }
+void Renderer::EndFrame() { gpu_device_->Present(); }
 
 void Renderer::ResizeSwapChain(uint32_t width, uint32_t height) {}
 
