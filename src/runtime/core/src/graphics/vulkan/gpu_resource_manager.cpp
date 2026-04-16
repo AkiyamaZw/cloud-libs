@@ -3,6 +3,7 @@
 #include "graphics/vulkan/device_base.h"
 #include "core/data_structure/memory.h"
 #include "core/runtime_log.h"
+#include "gpu_resource_manager.h"
 
 namespace cloud::vulkan
 {
@@ -59,7 +60,8 @@ void GPUResourceManager::DestroySampler(const SamplerHandle &handle, const uint3
 
 void GPUResourceManager::ReleaseResourcesInDeletionQueue() const
 {
-	for (uint32_t i = 0; i < resource_deletion_queue_.size(); i++)
+	
+	for (uint32_t i = resource_deletion_queue_.size() - 1; i >= 0; i--)
 	{
 		ResourceUpdate &r = resource_deletion_queue_[i];
 		if (r.current_frame == -1)
@@ -96,6 +98,26 @@ void GPUResourceManager::ReleaseResourcesInDeletionQueue() const
 			break;
 		}
 		r.current_frame = InvalidFrameID;
+		std::swap(resource_deletion_queue_.back(), r);
+		resource_deletion_queue_.pop_back();
+	}
+}
+
+void GPUResourceManager::UpdateDynamicBuffer() {
+	const uint32_t used_size = device_resource_.dynamic_allocated_size - (device_resource_.dynamic_per_frame_size*previous_frame);
+	device_resource_.dynamic_per_frame_size = std::max(used_size, device_resource_.dynamic_max_per_frame_size);
+	device_resource_.dynamic_allocated_size = device_resource_.dynamic_per_frame_size * current_frame;
+}
+
+void GPUResourceManager::UpdateDescriptorSet() {
+	if(descriptor_set_updates_.size() > 0){
+		for(uint32_t i=descriptor_set_updates_.size() - 1; i >= 0; i--){
+			DescriptorSetUpdate& update = descriptor_set_updates_[i];
+			UpdateDescriptorSetInternal(update)
+			update.current_frame = InvalidFrameID;
+			std::swap(descriptor_set_updates_.back(), update);
+			descriptor_set_updates_.pop_back();
+		}
 	}
 }
 
@@ -211,6 +233,10 @@ void GPUResourceManager::UnMapBuffer(const render::MapBufferParameter &param)
 	if (buffer->parent_handle.index == device_resource_.dynamic_buffer.index)
 		return;
 	vmaUnmapMemory(allocator_, buffer->allocation);
+}
+
+void GPUResourceManager::UpdateDescriptorSetInternal(DescriptorSetUpdate &update) {
+	// todo 
 }
 
 } // namespace cloud::vulkan

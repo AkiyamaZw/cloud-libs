@@ -22,6 +22,9 @@ class GPUResourceManager
 	void SetResourceName(VkObjectType type, uint64_t handle, const char *name);
 	void ReleaseResourcesInDeletionQueue() const;
 
+	void UpdateDynamicBuffer();
+	void UpdateDescriptorSet();
+
 	SamplerHandle CreateSampler(const SamplerCreation &creation);
 	void DestroySampler(const SamplerHandle &handle, const uint32_t &frame_index);
 	void DestroySamplerInstance(ResourceHandle handle) const;
@@ -37,6 +40,9 @@ class GPUResourceManager
 	void *MapBuffer(const render::MapBufferParameter &param);
 	void UnMapBuffer(const render::MapBufferParameter &param);
 
+protected:
+	void UpdateDescriptorSetInternal(DescriptorSetUpdate &update);
+
   private:
 	VkDevice device_;
 	VmaAllocator allocator_;
@@ -44,6 +50,8 @@ class GPUResourceManager
 	std::vector<ResourceUpdate> &resource_deletion_queue_;
 	std::vector<DescriptorSetUpdate> &descriptor_set_updates_;
 	bool debug_utils_extension_present_{false};
+
+	
 };
 
 template <typename T>

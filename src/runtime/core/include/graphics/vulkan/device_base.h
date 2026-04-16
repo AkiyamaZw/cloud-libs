@@ -83,7 +83,29 @@ struct VulaknDeviceContext
 		std::vector<const char *> enabled_layers;
 		bool debug_utils_extension_present{false};
 	} instance_data;
+
+
+	struct CommandBuffer{
+		std::array<CommandBuffer *, 128> queued_command_buffers;
+		uint32_t num_allocated_command_buffers{0}; // not used now
+		uint32_t num_queued_command_buffers{0};
+	} queued_command_buffers;
+
+	struct SyncSignal{
+		std::array<VkSemaphore, MaxSwapchainImages> render_complete_semaphore;
+		std::array<VkSemaphore, MaxSwapchainImages> image_acquired_semaphore;
+		std::array<VkFence, MaxSwapchainImages> command_buffer_fence;
+	} sync_signal;
+
+	struct FrameAdanceCounter{
+		uint32_t current_frame{0};
+		uint32_t previous_frame{0};
+		uint64_t absolute_frame{0};
+		bool timestamps_enabled{false};
+	} frame_counter;
 };
+
+
 
 struct DeviceBase
 {
@@ -163,9 +185,12 @@ struct DeviceBase
 
 	VulaknDeviceContext vulakn_device_context;
 
+	bool resize{false};
+
   public:
 	void Init(GpuCreateParam &param);
 	void Shutdown();
+	void StartFrame();
 	void Commit();
 
   private:
@@ -186,6 +211,8 @@ struct DeviceBase
 	void CreatePipelineLayout();
 	VkShaderModule CreateShaderModule(const std::vector<char> &code);
 	std::vector<char> LoadShader(const std::string &filename);
+	void AdvanceFrame();
+	void ResizeSwapChain();
 };
 
 bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context,

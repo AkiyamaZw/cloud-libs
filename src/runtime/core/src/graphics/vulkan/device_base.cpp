@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
+#include "device_base.h"
 
 namespace cloud::vulkan
 {
@@ -782,6 +783,16 @@ std::vector<char> DeviceBase::LoadShader(const std::string &filename)
 	return {};
 }
 
+void DeviceBase::AdvanceFrame() {
+	previous_frame = current_frame;
+	current_frame = (current_frame + 1) % swapchain_image_count;
+	++absolute_frame;
+}
+
+void DeviceBase::ResizeSwapChain() {
+
+}
+
 void DeviceBase::CreateGraphicsPipeline()
 {
 	// 加载着色器代码
@@ -901,7 +912,7 @@ void DeviceBase::CreateGraphicsPipeline()
 
 void DeviceBase::Commit()
 {
-	// 等待上一帧的fence
+	// submit command
 	VkFence *render_complete_fence = &command_buffer_fence[current_frame];
 	VkSemaphore *render_complemte_semaphore = &render_complete_semaphore[current_frame];
 
@@ -927,109 +938,37 @@ void DeviceBase::Commit()
 	submit_info.pCommandBuffers = enqueued_command_buffers;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = render_complemte_semaphore;
+
 	vkQueueSubmit(queue, 1, &submit_info, *render_complete_fence);
 
-	// todo 
+	// bake to render buffer
+	VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = render_complemte_semaphore;
+	VkSwapchainKHR swap_chains[] = {swapchain};
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = swap_chains;
+	present_info.pImageIndices = &vulkan_image_index;
+	present_info.pResults = nullptr;
+	VkResult succ = vkQueuePresentKHR(queue, &present_info);
+	check_vk(succ);
 
-	vkWaitForFences(device, 1, &command_buffer_fence[current_frame], VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &command_buffer_fence[current_frame]);
-
-	// 获取交换链图像
-	uint32_t image_index;
-	VkResult result = vkAcquireNextImageKHR(device,
-											swapchain,
-											UINT64_MAX,
-											image_acquired_semaphore[current_frame],
-											VK_NULL_HANDLE,
-											&image_index);
-	if (result == VK_ERROR_OUT_OF_DATE_KHR)
+	num_queued_command_buffers = 0;
+	if (succ == VK_ERROR_OUT_OF_DATE_KHR || succ == VK_SUBOPTIMAL_KHR || resize)
 	{
-		// 交换链需要重建，这里简化处理
+		resize = false;
+		RezieSwapChain();
+
+		AdvanceFrame();
 		return;
 	}
-	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+
+	AdvanceFrame();
+	if (resource_deletion_queue.size() > 0)
 	{
-		check_vk(result);
+		gpu_resource_manager.
 	}
-
-	// 获取命令缓冲区
-	CommandBuffer *cmd_buffer = g_vulkan_cmd_buffer_ring.GetCommandBuffer(current_frame, true);
-
-	// 开始渲染通道
-	VkRenderPassBeginInfo render_pass_info{};
-	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	render_pass_info.renderPass = render_pass;
-	render_pass_info.framebuffer = swapchain_framebuffers[image_index];
-	render_pass_info.renderArea.offset = {0, 0};
-	render_pass_info.renderArea.extent = {swapchain_width, swapchain_height};
-
-	VkClearValue clear_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-	render_pass_info.clearValueCount = 1;
-	render_pass_info.pClearValues = &clear_color;
-
-	vkCmdBeginRenderPass(
-		cmd_buffer->vk_command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-
-	// 绑定管线
-	vkCmdBindPipeline(
-		cmd_buffer->vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-
-	// 绘制三角形
-	vkCmdDraw(cmd_buffer->vk_command_buffer, 3, 1, 0, 0);
-
-	// 结束渲染通道
-	vkCmdEndRenderPass(cmd_buffer->vk_command_buffer);
-
-	// 渲染通道会自动处理图像布局转换，不需要手动转换
-
-	// 结束命令记录
-	vkEndCommandBuffer(cmd_buffer->vk_command_buffer);
-
-	// 提交命令
-	VkSubmitInfo submit_info{};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	VkSemaphore wait_semaphores[] = {image_acquired_semaphore[current_frame]};
-	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-	submit_info.waitSemaphoreCount = 1;
-	submit_info.pWaitSemaphores = wait_semaphores;
-	submit_info.pWaitDstStageMask = wait_stages;
-
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &cmd_buffer->vk_command_buffer;
-
-	VkSemaphore signal_semaphores[] = {render_complete_semaphore[current_frame]};
-	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores = signal_semaphores;
-
-	result = vkQueueSubmit(queue, 1, &submit_info, command_buffer_fence[current_frame]);
-	check_vk(result);
-
-	// 呈现
-	VkPresentInfoKHR present_info{};
-	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = signal_semaphores;
-
-	VkSwapchainKHR swapchains[] = {swapchain};
-	present_info.swapchainCount = 1;
-	present_info.pSwapchains = swapchains;
-	present_info.pImageIndices = &image_index;
-
-	result = vkQueuePresentKHR(queue, &present_info);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-	{
-		// 交换链需要重建，这里简化处理
-	}
-	else
-	{
-		check_vk(result);
-	}
-
-	// 更新当前帧
-	current_frame = (current_frame + 1) % MaxSwapchainImages;
+	gpu_resource_manager.ReleaseResourcesInDeletionQueue();
 }
 
 void DeviceBase::Shutdown()
@@ -1089,6 +1028,23 @@ void DeviceBase::Shutdown()
 	vkDestroyDebugUtilsMessengerEXT(instance, debug_utils_messenger, nullptr);
 #endif
 	vkDestroyInstance(instance, nullptr);
+}
+
+void DeviceBase::StartFrame() {
+	VkFence* render_complete_fence = &command_buffer_fence[current_frame];
+	if (vkGetFenceStatus(device, *render_complete_fence) != VK_SUCCESS)
+	{
+		vkWaitForFences(device, 1, render_complete_fence, VK_TRUE, UINT64_MAX);
+	}
+	vkResetFences(device, 1, render_complete_fence);
+	VkResult succ = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_acquired_semaphore[current_frame], VK_NULL_HANDLE, &vulkan_image_index);
+	if (succ == VK_ERROR_OUT_OF_DATE_KHR ||){
+		ResizeSwapChain();
+	}
+	g_vulkan_cmd_buffer_ring.Reset();
+	gpu_resource_manager.UpdateDynamicBuffer();
+	gpu_resource_manager.UpdateDescriptorSet();
+
 }
 
 } // namespace cloud::vulkan
