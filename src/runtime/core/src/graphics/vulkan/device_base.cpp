@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <fstream>
 #include <string>
-#include "device_base.h"
 
 namespace cloud::vulkan
 {
@@ -722,7 +721,10 @@ void DeviceBase::Init(GpuCreateParam &param)
 
 	gpu_resource_manager = std::make_unique<GPUResourceManager>(device,
 																vma_allocator,
+																descriptor_pool,
+																current_frame,
 																device_resource,
+																default_resource,
 																resource_deletion_queue,
 																descriptor_set_updates,
 																debug_utils_extension_present);
@@ -743,7 +745,7 @@ void DeviceBase::Init(GpuCreateParam &param)
 	sc.mag_filter = VK_FILTER_LINEAR;
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sc.name = "Sampler Default";
-	default_sampler = gpu_resource_manager->CreateSampler(sc);
+	default_resource.default_sampler = gpu_resource_manager->CreateSampler(sc);
 }
 
 VkShaderModule DeviceBase::CreateShaderModule(const std::vector<char> &code)
@@ -991,7 +993,7 @@ void DeviceBase::Shutdown()
 
 	// 销毁dynamic buffer和sampler
 	gpu_resource_manager->DestroyBuffer(device_resource.dynamic_buffer, current_frame);
-	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
+	gpu_resource_manager->DestroySampler(default_resource.default_sampler, current_frame);
 
 	// 释放deletion queue中的资源
 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
@@ -1038,7 +1040,7 @@ void DeviceBase::StartFrame() {
 	}
 	vkResetFences(device, 1, render_complete_fence);
 	VkResult succ = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_acquired_semaphore[current_frame], VK_NULL_HANDLE, &vulkan_image_index);
-	if (succ == VK_ERROR_OUT_OF_DATE_KHR ||){
+	if (succ == VK_ERROR_OUT_OF_DATE_KHR){
 		ResizeSwapChain();
 	}
 	g_vulkan_cmd_buffer_ring.Reset();

@@ -32,8 +32,8 @@ using TextureHandle = render::TextureHandle;
 using DescriptorSetLayoutHandle = render::DescriptorSetLayoutHandle;
 using PipelineHandle = render::PipelineHandle;
 using SamplerHandle = render::SamplerHandle;
+using DescriptorSetHandle = render::DescriptorSetHandle;
 using ShaderStateHandle = render::ShaderStateHandle;
-using DescriptorSetHandle = render::ResourceHandle;
 constexpr uint32_t InvalidFrameID = UINT32_MAX;
 
 

@@ -68,6 +68,14 @@ struct CommandBufferRing
 	CommandBuffer *GetCommandBufferInstant(uint32_t frame_index, bool begin);
 };
 
+struct FrameIndex
+{
+	uint32_t vulkan_image_index{0};
+	uint32_t current_frame{0};
+	uint32_t previous_frame{0};
+	uint64_t absolute_frame{0};
+};
+
 /* this class define:
  * 1. data used in  gpudevice
  * 2. manager class interest in operating part of data
@@ -105,7 +113,10 @@ struct VulaknDeviceContext
 	} frame_counter;
 };
 
-
+struct DefaultResources{
+	BufferHandle fullscreen_vertex_buffer;
+	SamplerHandle default_sampler;
+};
 
 struct DeviceBase
 {
@@ -164,6 +175,7 @@ struct DeviceBase
 	uint32_t num_allocated_command_buffers{0};
 	uint32_t num_queued_command_buffers{0};
 
+
 	uint32_t vulkan_image_index{0};
 	uint32_t current_frame{0};
 	uint32_t previous_frame{0};
@@ -174,6 +186,7 @@ struct DeviceBase
 	std::vector<DescriptorSetUpdate> descriptor_set_updates;
 
 	// resource
+	DefaultResources default_resource;
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
 

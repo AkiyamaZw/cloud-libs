@@ -3,19 +3,24 @@
 #include "graphics/vulkan/device_base.h"
 #include "core/data_structure/memory.h"
 #include "core/runtime_log.h"
-#include "gpu_resource_manager.h"
+
 
 namespace cloud::vulkan
 {
 GPUResourceManager::GPUResourceManager(VkDevice device,
 									   VmaAllocator allocator,
+									   VkDescriptorPool descriptor_pool,
+									   uint32_t &current_frame,
 									   ComponentResource &device_resource,
+									   DefaultResources &default_resource,
 									   std::vector<ResourceUpdate> &resource_deletion_queue,
 									   std::vector<DescriptorSetUpdate> &descriptor_set_updates,
 									   bool debug_utils_extension_present)
 	: device_(device)
 	, allocator_(allocator)
+	, current_frame_(current_frame)
 	, device_resource_(device_resource)
+	, default_resource_(default_resource)
 	, resource_deletion_queue_(resource_deletion_queue)
 	, descriptor_set_updates_(descriptor_set_updates)
 	, debug_utils_extension_present_(debug_utils_extension_present)
@@ -104,16 +109,16 @@ void GPUResourceManager::ReleaseResourcesInDeletionQueue() const
 }
 
 void GPUResourceManager::UpdateDynamicBuffer() {
-	const uint32_t used_size = device_resource_.dynamic_allocated_size - (device_resource_.dynamic_per_frame_size*previous_frame);
+	const uint32_t used_size = device_resource_.dynamic_allocated_size - (device_resource_.dynamic_per_frame_size * previous_frame);
 	device_resource_.dynamic_per_frame_size = std::max(used_size, device_resource_.dynamic_max_per_frame_size);
-	device_resource_.dynamic_allocated_size = device_resource_.dynamic_per_frame_size * current_frame;
+	device_resource_.dynamic_allocated_size = device_resource_.dynamic_per_frame_size * current_frame_;
 }
 
 void GPUResourceManager::UpdateDescriptorSet() {
 	if(descriptor_set_updates_.size() > 0){
 		for(uint32_t i=descriptor_set_updates_.size() - 1; i >= 0; i--){
 			DescriptorSetUpdate& update = descriptor_set_updates_[i];
-			UpdateDescriptorSetInternal(update)
+			UpdateDescriptorSetInternal(update);
 			update.current_frame = InvalidFrameID;
 			std::swap(descriptor_set_updates_.back(), update);
 			descriptor_set_updates_.pop_back();
@@ -203,6 +208,17 @@ void GPUResourceManager::DestroyBufferInstance(ResourceHandle handle) const
 	device_resource_.buffers.ReleaseResource(handle);
 }
 
+void GPUResourceManager::DestroyDescriptorSet(const DescriptorSetHandle &handle, const uint32_t &frame_index) {
+	if (handle.index < device_resource_.descriptor_sets.GetCapacity())
+	{
+		resource_deletion_queue_.push_back(
+			{ResourceUpdateType::DescriptorSet, handle.index, frame_index});
+	}
+	else{
+		WARN("Graphics error: try to free invalid descriptorset %d", handle.index);
+	}
+}
+
 void *GPUResourceManager::DynamicAllocate(uint32_t size)
 {
 	void *memory = device_resource_.dynamic_mapped_memory + device_resource_.dynamic_allocated_size;
@@ -236,7 +252,29 @@ void GPUResourceManager::UnMapBuffer(const render::MapBufferParameter &param)
 }
 
 void GPUResourceManager::UpdateDescriptorSetInternal(DescriptorSetUpdate &update) {
-	// todo 
+	DescriptorSetHandle dummy_delete_dsh = {device_resource_.descriptor_sets.FetchResource()};
+	DescriptorSet *dummy_delete_ds =
+		Access<DescriptorSet>(dummy_delete_dsh.index, device_resource_.descriptor_sets);
+	DescriptorSet* descriptor_set = Access<DescriptorSet>(update.descriptor_set.index, device_resource_.descriptor_sets);
+	const DescriptorSetLayout* descriptor_set_layout = descriptor_set->layout;
+	dummy_delete_ds->descriptor_set = descriptor_set->descriptor_set;
+	dummy_delete_ds->bindings = nullptr;
+	dummy_delete_ds->resources = nullptr;
+	dummy_delete_ds->samplers = nullptr;
+	dummy_delete_ds->num_resources = 0;
+	DestroyDescriptorSet(dummy_delete_dsh, current_frame_);
+
+	VkWriteDescriptorSet descriptor_write[8];
+	VkDescriptorBufferInfo buffer_info[8];
+	VkDescriptorImageInfo image_info[8];
+	Sampler *vk_default_sampler =
+		Access<Sampler>(default_resource_.default_sampler.index, device_resource_.samplers);
+	
+	VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+	alloc_info.descriptorPool = device_resource_.descriptor_pool;
+
+
+
 }
 
 } // namespace cloud::vulkan
