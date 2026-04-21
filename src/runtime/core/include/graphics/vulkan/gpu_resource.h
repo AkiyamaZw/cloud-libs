@@ -36,7 +36,6 @@ using DescriptorSetHandle = render::DescriptorSetHandle;
 using ShaderStateHandle = render::ShaderStateHandle;
 constexpr uint32_t InvalidFrameID = UINT32_MAX;
 
-
 struct ResourceUpdate
 {
 	ResourceUpdateType type;

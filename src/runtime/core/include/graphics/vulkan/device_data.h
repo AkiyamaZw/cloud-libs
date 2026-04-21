@@ -1,9 +1,12 @@
-#pragma
+#pragma once
+#include "command_buffer.h"
+
 #include <vector>
 #include <array>
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
+#include "core/data_structure/resource_pool.h"
 
 namespace cloud::vulkan
 {
@@ -39,13 +42,14 @@ struct WindowData
 
 	PresentMode present_mode{PresentMode::VSync};
 	VkPresentModeKHR vk_present_mode;
-	
+
 	RenderPassOutput swapchain_output;
 	VkSwapchainKHR swapchain;
 	std::array<VkImage, MaxSwapchainImages> swapchain_images;
 	std::array<VkImageView, MaxSwapchainImages> swapchain_image_views;
 	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_framebuffers;
 	uint32_t swapchain_image_count;
+	uint32_t vulkan_image_index{0};
 };
 
 struct RenderPipelineData
@@ -55,17 +59,39 @@ struct RenderPipelineData
 	VkPipeline graphics_pipeline;
 };
 
-struct ResourceData
+struct DeviceResourcePoolData
 {
-	VmaAllocator vma_allocator;
+	static constexpr uint32_t buffer_pool_size = 4096;
+	cloud::ResourcePool buffers{buffer_pool_size, sizeof(Buffer)};
+	static constexpr uint32_t texture_pool_size = 512;
+	cloud::ResourcePool textures{texture_pool_size, sizeof(Texture)};
+	static constexpr uint32_t render_pass_pool_size = 256;
+	cloud::ResourcePool render_passes{render_pass_pool_size, sizeof(RenderPass)};
+	static constexpr uint32_t descriptor_layout_pool_size = 128;
+	cloud::ResourcePool descriptor_set_layout{descriptor_layout_pool_size,
+											  sizeof(DescriptorSetLayout)};
+	static constexpr uint32_t pipeline_pool_size = 128;
+	cloud::ResourcePool pipelines{pipeline_pool_size, sizeof(Pipeline)};
+	static constexpr uint32_t shader_pool_size = 128;
+	cloud::ResourcePool shaders{shader_pool_size, sizeof(ShaderState)};
+	static constexpr uint32_t descriptor_set_pool_size = 256;
+	cloud::ResourcePool descriptor_sets{descriptor_set_pool_size, sizeof(DescriptorSet)};
+	static constexpr uint32_t sampler_pool_size = 32;
+	cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
+
+	uint32_t dynamic_max_per_frame_size{0};
+	BufferHandle dynamic_buffer;
+	uint8_t *dynamic_mapped_memory{nullptr};
+	uint32_t dynamic_allocated_size{0};
+	uint32_t dynamic_per_frame_size{1024 * 1024 * 10};
 };
 
-
-struct CommandBuffer
+struct ResourceData
 {
-	std::array<CommandBuffer *, 128> queued_command_buffers;
-	uint32_t num_allocated_command_buffers{0}; // not used now
-	uint32_t num_queued_command_buffers{0};
+	VmaAllocator vma_allocator{nullptr};
+	DeviceResourcePoolData pool_data;
+	BufferHandle fullscreen_vertex_buffer;
+	SamplerHandle default_sampler;
 };
 
 // sync marker
@@ -76,7 +102,6 @@ struct SyncSignal
 	std::array<VkFence, MaxSwapchainImages> command_buffer_fence;
 };
 
-
 // ticker counter in renderer
 struct FrameAdanceCounter
 {
@@ -84,10 +109,25 @@ struct FrameAdanceCounter
 	uint32_t previous_frame{0};
 	uint64_t absolute_frame{0};
 	bool timestamps_enabled{false};
+	std::chrono::high_resolution_clock::time_point start_time;
 };
 
+struct RuntimeLoopData
+{
+	// sync mark
+	SyncSignal sync_signal;
+	CommandBufferRing command_buffer_ring;
+	FrameAdanceCounter frame_counter;
 
-bool InitializeContextInstance(InstanceData &context,  const GpuCreateParam &param);
+	std::vector<ResourceUpdate> resource_deletion_queue;
+	std::vector<DescriptorSetUpdate> descriptor_set_updates;
+
+	std::array<CommandBuffer *, 128> queued_command_buffers;
+	uint32_t num_allocated_command_buffers{0};
+	uint32_t num_queued_command_buffers{0};
+};
+
+bool InitializeContextInstance(InstanceData &context, const GpuCreateParam &param);
 bool DestroyContextInstance(InstanceData &context);
 
 } // namespace cloud::vulkan

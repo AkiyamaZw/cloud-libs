@@ -11,7 +11,6 @@
 #include "graphics/vulkan/vk_mem_alloc.h"
 #include "graphics/device.h"
 
-
 namespace cloud::vulkan
 {
 struct DeviceBase;
@@ -44,25 +43,8 @@ struct ComponentResource
 	uint32_t dynamic_per_frame_size{1024 * 1024 * 10};
 };
 
-struct CommandBufferRing
+struct DefaultResources
 {
-	static const uint16_t GMaxThreads = 1;
-	static const uint16_t GMaxPools = MaxSwapchainImages * GMaxThreads;
-	static const uint16_t GBuffersPerPool = 4;
-	static const uint16_t GMaxBuffers = GBuffersPerPool * GMaxPools;
-
-	VkCommandPool vk_command_pool[GMaxPools];
-	CommandBuffer command_buffer[GMaxBuffers];
-	uint8_t next_free_per_thread_frame[GMaxPools];
-	void Init(DeviceBase *gpu);
-	void Destroy(DeviceBase *gpu);
-	void Reset(DeviceBase *gpu, uint32_t frame_index);
-	static uint32_t IndexInPool(uint32_t index) { return (uint16_t)index / GBuffersPerPool; }
-	CommandBuffer *GetCommandBuffer(uint32_t frame_index, bool begin);
-	CommandBuffer *GetCommandBufferInstant(uint32_t frame_index, bool begin);
-};
-
-struct DefaultResources{
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
 };
@@ -124,7 +106,6 @@ struct DeviceBase
 	uint32_t num_allocated_command_buffers{0};
 	uint32_t num_queued_command_buffers{0};
 
-
 	uint32_t vulkan_image_index{0};
 	uint32_t current_frame{0};
 	uint32_t previous_frame{0};
@@ -135,7 +116,6 @@ struct DeviceBase
 	std::vector<DescriptorSetUpdate> descriptor_set_updates;
 
 	// resource
-	DefaultResources default_resource;
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
 

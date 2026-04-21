@@ -9,68 +9,6 @@ namespace cloud::vulkan
 {
 CommandBufferRing g_vulkan_cmd_buffer_ring;
 
-void CommandBufferRing::Init(DeviceBase *gpu)
-{
-	for (uint32_t i = 0; i < GMaxPools; i++)
-	{
-		VkCommandPoolCreateInfo cmd_pool_info{
-			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			nullptr,
-		};
-		cmd_pool_info.queueFamilyIndex = gpu->queue_family;
-		cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		check_vk(vkCreateCommandPool(gpu->device, &cmd_pool_info, nullptr, &vk_command_pool[i]));
-	}
-
-	for (uint32_t i = 0; i < GMaxBuffers; i++)
-	{
-		VkCommandBufferAllocateInfo cmd_alloc_cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-													 nullptr};
-		const uint32_t pool_index = IndexInPool(i);
-		cmd_alloc_cmd.commandPool = vk_command_pool[pool_index];
-		cmd_alloc_cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		cmd_alloc_cmd.commandBufferCount = 1;
-		check_vk(vkAllocateCommandBuffers(
-			gpu->device, &cmd_alloc_cmd, &command_buffer[i].vk_command_buffer));
-		command_buffer[i].handle = i;
-		command_buffer[i].Reset();
-	}
-}
-
-void CommandBufferRing::Destroy(DeviceBase *gpu)
-{
-	for (uint32_t i = 0; i < GMaxPools; ++i)
-	{
-		vkDestroyCommandPool(gpu->device, vk_command_pool[i], nullptr);
-	}
-}
-
-void CommandBufferRing::Reset(DeviceBase *gpu, uint32_t frame_index)
-{
-	for (uint32_t i = 0; i < GMaxThreads; ++i)
-	{
-		vkResetCommandPool(gpu->device, vk_command_pool[frame_index * GMaxThreads + i], 0);
-	}
-}
-
-CommandBuffer *CommandBufferRing::GetCommandBuffer(uint32_t frame_index, bool begin)
-{
-	CommandBuffer *cmd_buffer = &command_buffer[frame_index * GBuffersPerPool];
-	if (begin)
-	{
-		cmd_buffer->Reset();
-		VkCommandBufferBeginInfo begin_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		vkBeginCommandBuffer(cmd_buffer->vk_command_buffer, &begin_info);
-	}
-	return cmd_buffer;
-}
-
-CommandBuffer *CommandBufferRing::GetCommandBufferInstant(uint32_t frame_index, bool begin)
-{
-	CommandBuffer *cmd_buffer = &command_buffer[frame_index * GBuffersPerPool + 1];
-	return cmd_buffer;
-}
 DeviceBase::~DeviceBase() { INFO("vulkan device destroyed"); }
 
 static const char *s_instance_layer[] = {
@@ -735,7 +673,7 @@ void DeviceBase::Init(GpuCreateParam &param)
 	assert(render_complete_semaphore[0]);
 	assert(image_acquired_semaphore[0]);
 	assert(command_buffer_fence[0]);
-	g_vulkan_cmd_buffer_ring.Init(this);
+	g_vulkan_cmd_buffer_ring.Init(device, queue_family);
 
 	SamplerCreation sc{};
 	sc.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -745,7 +683,7 @@ void DeviceBase::Init(GpuCreateParam &param)
 	sc.mag_filter = VK_FILTER_LINEAR;
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sc.name = "Sampler Default";
-	default_resource.default_sampler = gpu_resource_manager->CreateSampler(sc);
+	default_sampler = gpu_resource_manager->CreateSampler(sc);
 }
 
 VkShaderModule DeviceBase::CreateShaderModule(const std::vector<char> &code)
@@ -785,15 +723,14 @@ std::vector<char> DeviceBase::LoadShader(const std::string &filename)
 	return {};
 }
 
-void DeviceBase::AdvanceFrame() {
+void DeviceBase::AdvanceFrame()
+{
 	previous_frame = current_frame;
 	current_frame = (current_frame + 1) % swapchain_image_count;
 	++absolute_frame;
 }
 
-void DeviceBase::ResizeSwapChain() {
-
-}
+void DeviceBase::ResizeSwapChain() {}
 
 void DeviceBase::CreateGraphicsPipeline()
 {
@@ -1031,15 +968,22 @@ void DeviceBase::Shutdown()
 	vkDestroyInstance(instance, nullptr);
 }
 
-void DeviceBase::StartFrame() {
-	VkFence* render_complete_fence = &command_buffer_fence[current_frame];
+void DeviceBase::StartFrame()
+{
+	VkFence *render_complete_fence = &command_buffer_fence[current_frame];
 	if (vkGetFenceStatus(device, *render_complete_fence) != VK_SUCCESS)
 	{
 		vkWaitForFences(device, 1, render_complete_fence, VK_TRUE, UINT64_MAX);
 	}
 	vkResetFences(device, 1, render_complete_fence);
-	VkResult succ = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_acquired_semaphore[current_frame], VK_NULL_HANDLE, &vulkan_image_index);
-	if (succ == VK_ERROR_OUT_OF_DATE_KHR){
+	VkResult succ = vkAcquireNextImageKHR(device,
+										  swapchain,
+										  UINT64_MAX,
+										  image_acquired_semaphore[current_frame],
+										  VK_NULL_HANDLE,
+										  &vulkan_image_index);
+	if (succ == VK_ERROR_OUT_OF_DATE_KHR)
+	{
 		ResizeSwapChain();
 	}
 }
