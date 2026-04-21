@@ -11,12 +11,6 @@
 #include "graphics/vulkan/vk_mem_alloc.h"
 #include "graphics/device.h"
 
-// Uniform Buffer Object for shader
-struct UniformBufferObject
-{
-	float time;
-	float resolution[2];
-};
 
 namespace cloud::vulkan
 {
@@ -66,51 +60,6 @@ struct CommandBufferRing
 	static uint32_t IndexInPool(uint32_t index) { return (uint16_t)index / GBuffersPerPool; }
 	CommandBuffer *GetCommandBuffer(uint32_t frame_index, bool begin);
 	CommandBuffer *GetCommandBufferInstant(uint32_t frame_index, bool begin);
-};
-
-struct FrameIndex
-{
-	uint32_t vulkan_image_index{0};
-	uint32_t current_frame{0};
-	uint32_t previous_frame{0};
-	uint64_t absolute_frame{0};
-};
-
-/* this class define:
- * 1. data used in  gpudevice
- * 2. manager class interest in operating part of data
- */
-struct VulaknDeviceContext
-{
-	struct InstanceData
-	{
-		VkInstance instance;
-		VkDebugReportCallbackEXT debug_callback{VK_NULL_HANDLE};
-		VkDebugUtilsMessengerEXT debug_utils_messenger{VK_NULL_HANDLE};
-		std::vector<const char *> enabled_extensions;
-		std::vector<const char *> enabled_layers;
-		bool debug_utils_extension_present{false};
-	} instance_data;
-
-
-	struct CommandBuffer{
-		std::array<CommandBuffer *, 128> queued_command_buffers;
-		uint32_t num_allocated_command_buffers{0}; // not used now
-		uint32_t num_queued_command_buffers{0};
-	} queued_command_buffers;
-
-	struct SyncSignal{
-		std::array<VkSemaphore, MaxSwapchainImages> render_complete_semaphore;
-		std::array<VkSemaphore, MaxSwapchainImages> image_acquired_semaphore;
-		std::array<VkFence, MaxSwapchainImages> command_buffer_fence;
-	} sync_signal;
-
-	struct FrameAdanceCounter{
-		uint32_t current_frame{0};
-		uint32_t previous_frame{0};
-		uint64_t absolute_frame{0};
-		bool timestamps_enabled{false};
-	} frame_counter;
 };
 
 struct DefaultResources{
@@ -196,8 +145,6 @@ struct DeviceBase
 	VkDescriptorSet descriptor_set;
 	std::chrono::high_resolution_clock::time_point start_time;
 
-	VulaknDeviceContext vulakn_device_context;
-
 	bool resize{false};
 
   public:
@@ -227,9 +174,5 @@ struct DeviceBase
 	void AdvanceFrame();
 	void ResizeSwapChain();
 };
-
-bool InitializeContextInstance(VulaknDeviceContext::InstanceData &context,
-							   const GpuCreateParam &param);
-bool DestroyContextInstance(VulaknDeviceContext::InstanceData &context);
 
 } // namespace cloud::vulkan
