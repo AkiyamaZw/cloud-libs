@@ -66,12 +66,15 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 /* sampler end*/
 
 /* buffer start */
-
-BufferHandle CreateBuffer(const BufferCreation &creation,
+BufferHandle CreateVkBuffer(const BufferCreation &creation,
 						  const DeviceData &device_data,
 						  ResourceData &resource_data);
 
-void DestroyBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data);
-void DestroyBufferInstance(const ResourceHandle &handle, ResourceData &resource_data);
+void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data);
+void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resource_data);
 /* buffer end */
+
+/* texture start */
+
+/* texture end */
 }; // namespace cloud::vulkan::infra

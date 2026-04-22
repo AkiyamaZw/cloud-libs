@@ -100,6 +100,20 @@ struct SamplerCreation
 	VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
 };
 
+
+struct TextureCreation
+{
+	void *initial_data{nullptr};
+	uint16_t width = 1;
+	uint16_t height = 1;
+	uint16_t depth = 1;
+	uint8_t mipmaps = 1;
+	uint8_t flags = 1; // bitmask
+	VkFormat format{VK_FORMAT_UNDEFINED};
+	TextureType type{TextureType::Texture2D};
+	const char *name{nullptr};
+};
+
 struct Texture
 {
 	TextureHandle handle;

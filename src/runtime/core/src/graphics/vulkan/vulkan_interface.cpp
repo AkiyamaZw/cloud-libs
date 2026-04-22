@@ -208,7 +208,9 @@ void DestroyVkInstance(InstanceData &instance_data)
 }
 
 bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
+{
+	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
+}
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -370,7 +372,9 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
+{
+	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
+}
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -569,7 +573,9 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{ vmaDestroyAllocator(resource_data.vma_allocator); }
+{
+	vmaDestroyAllocator(resource_data.vma_allocator);
+}
 
 bool CreateVkRenderPass(const WindowData &window_data,
 						const DeviceData &device_data,
@@ -609,7 +615,9 @@ bool CreateVkRenderPass(const WindowData &window_data,
 }
 
 void DestroyVkRenderPass(const DeviceData &device_data, RenderPipelineData &rp_data)
-{ vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr); }
+{
+	vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr);
+}
 
 void CreateVkFramebuffers(const DeviceData &device_data,
 						  const RenderPipelineData &rp_data,
@@ -733,9 +741,9 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 	resource_data.pool_data.samplers.ReleaseResource(handle);
 }
 
-BufferHandle CreateBuffer(const BufferCreation &creation,
-						  const DeviceData &device_data,
-						  ResourceData &resource_data)
+BufferHandle CreateVkBuffer(const BufferCreation &creation,
+							const DeviceData &device_data,
+							ResourceData &resource_data)
 {
 	BufferHandle handle = {resource_data.pool_data.buffers.FetchResource()};
 	if (handle.index == ResourcePool::INVALID_NUM)
@@ -787,13 +795,13 @@ BufferHandle CreateBuffer(const BufferCreation &creation,
 	return handle;
 }
 
-void DestroyBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data)
+void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
 		{ResourceUpdateType::Buffer, handle.index, rl_data.frame_counter.current_frame});
 }
 
-void DestroyBufferInstance(const ResourceHandle &handle, ResourceData &resource_data)
+void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resource_data)
 {
 	auto *buffer = static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle));
 	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
@@ -803,4 +811,24 @@ void DestroyBufferInstance(const ResourceHandle &handle, ResourceData &resource_
 	resource_data.pool_data.buffers.ReleaseResource(handle);
 }
 
+
+void CreateVkTextureInner(const DeviceData &device_data,
+						  const TextureCreation &creation,
+						  TextureHandle &handle,
+						  Texture *texture)
+{
+	texture->width = creation.width;
+	texture->name = creation.name;
+}
+
+TextureHandle CreateVkTexture(const TextureCreation &creation, ResourceData &resource_data)
+{
+	TextureHandle handle = {resource_data.pool_data.textures.FetchResource()};
+	if (handle.index == ResourcePool::INVALID_NUM)
+	{
+		return handle;
+	}
+	Texture *texture =
+		static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
+}
 } // namespace cloud::vulkan::infra

@@ -920,7 +920,7 @@ void DeviceBase::Shutdown()
 	// 等待所有队列操作完成
 	vkDeviceWaitIdle(device);
 
-	g_vulkan_cmd_buffer_ring.Destroy(this);
+	g_vulkan_cmd_buffer_ring.Destroy(device);
 	render::MapBufferParameter map_buffer_param{device_resource.dynamic_buffer, 0, 0};
 	gpu_resource_manager->UnMapBuffer(map_buffer_param);
 
@@ -929,7 +929,7 @@ void DeviceBase::Shutdown()
 
 	// 销毁dynamic buffer和sampler
 	gpu_resource_manager->DestroyBuffer(device_resource.dynamic_buffer, current_frame);
-	gpu_resource_manager->DestroySampler(default_resource.default_sampler, current_frame);
+	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
 
 	// 释放deletion queue中的资源
 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
