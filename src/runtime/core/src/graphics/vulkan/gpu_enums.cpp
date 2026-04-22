@@ -72,4 +72,17 @@ void ToVKEnum(const render::ReductionMode mode, VkSamplerReductionMode &out_redu
 	}
 }
 
+void ToVKEnum(const TextureType::Enum type, VkImageType &out_type)
+{
+	static VkImageType s_vk_target[render::TextureType::Count] = {VK_IMAGE_TYPE_1D,
+																  VK_IMAGE_TYPE_2D,
+																  VK_IMAGE_TYPE_3D,
+																  VK_IMAGE_TYPE_2D,
+																  VK_IMAGE_TYPE_1D,
+																  VK_IMAGE_TYPE_2D,
+																  VK_IMAGE_TYPE_3D};
+
+	out_type = s_vk_target[type];
+}
+
 } // namespace cloud::vulkan

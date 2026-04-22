@@ -88,18 +88,6 @@ typedef enum ResourceState
 	RESOURCE_STATE_SHADING_RATE_SOURCE = 0x8000,
 } ResourceState;
 
-enum class TextureType
-{
-	Texture1D,
-	Texture2D,
-	Texture3D,
-	TextureCube,
-	Texture_1D_Array,
-	Texture_2D_Array,
-	Texture_Cube_Array,
-	Count
-};
-
 enum class ColorWriteEnabled
 {
 	Red,
@@ -143,10 +131,12 @@ enum class ResourceUpdateType
 	Count
 };
 
+using TextureType = render::TextureType;
+
 ///---- convert function-----
 void ToVKEnum(const render::FilterMode mode, VkFilter &out_filter);
 void ToVKEnum(const render::FilterMode mode, VkSamplerMipmapMode &out_mipmap_mode);
 void ToVKEnum(const render::AddressMode mode, VkSamplerAddressMode &out_address_mode);
 void ToVKEnum(const render::ReductionMode mode, VkSamplerReductionMode &out_reduction_mode);
-
+void ToVKEnum(const TextureType::Enum type, VkImageType &out_type);
 } // namespace cloud::vulkan

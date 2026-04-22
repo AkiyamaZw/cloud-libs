@@ -1,5 +1,32 @@
 #include "graphics/vulkan/vulkan_interface.h"
 #include "core/runtime_log.h"
+#include "spdlog/fmt/bundled/chrono.h"
+
+#define _ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
+#define _GET_N_ARGS(...) _ARG_N(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+
+#define _COPY_1(d, s, p1) d.p1 = s.p1;
+#define _COPY_2(d, s, p1, p2) _COPY_1(d, s, p1) _COPY_1(d, s, p2)
+#define _COPY_3(d, s, p1, p2, p3) _COPY_2(d, s, p1, p2) _COPY_1(d, s, p3)
+#define _COPY_4(d, s, p1, p2, p3, p4) _COPY_3(d, s, p1, p2, p3) _COPY_1(d, s, p4)
+#define _COPY_5(d, s, p1, p2, p3, p4, p5) _COPY_4(d, s, p1, p2, p3, p4) _COPY_1(d, s, p5)
+#define _COPY_6(d, s, p1, p2, p3, p4, p5, p6) _COPY_5(d, s, p1, p2, p3, p4, p5) _COPY_1(d, s, p6)
+#define _COPY_7(d, s, p1, p2, p3, p4, p5, p6, p7)                                                  \
+	_COPY_6(d, s, p1, p2, p3, p4, p5, p6) _COPY_1(d, s, p7)
+#define _COPY_8(d, s, p1, p2, p3, p4, p5, p6, p7, p8)                                              \
+	_COPY_7(d, s, p1, p2, p3, p4, p5, p6, p7) _COPY_1(d, s, p8)
+#define _COPY_9(d, s, p1, p2, p3, p4, p5, p6, p7, p8, p9)                                          \
+	_COPY_8(d, s, p1, p2, p3, p4, p5, p6, p7, p8) _COPY_1(d, s, p9)
+#define _COPY_10(d, s, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)                                    \
+	_COPY_9(d, s, p1, p2, p3, p4, p5, p6, p7, p8, p9) _COPY_1(d, s, p10)
+
+#define _COPY_DISPATCH(n) _COPY_##n
+#define _COPY_MEMBERS(dest, src, n, ...) _COPY_DISPATCH(n)(dest, src, __VA_ARGS__)
+#define COPY_MEMBERS(dest, src, ...)                                                               \
+	do                                                                                             \
+	{                                                                                              \
+		_COPY_MEMBERS(dest, src, _GET_N_ARGS(__VA_ARGS__), __VA_ARGS__);                           \
+	} while (0)
 
 namespace cloud::vulkan::infra
 {
@@ -208,9 +235,7 @@ void DestroyVkInstance(InstanceData &instance_data)
 }
 
 bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{
-	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
-}
+{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -372,9 +397,7 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{
-	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
-}
+{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -573,9 +596,7 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{
-	vmaDestroyAllocator(resource_data.vma_allocator);
-}
+{ vmaDestroyAllocator(resource_data.vma_allocator); }
 
 bool CreateVkRenderPass(const WindowData &window_data,
 						const DeviceData &device_data,
@@ -615,9 +636,7 @@ bool CreateVkRenderPass(const WindowData &window_data,
 }
 
 void DestroyVkRenderPass(const DeviceData &device_data, RenderPipelineData &rp_data)
-{
-	vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr);
-}
+{ vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr); }
 
 void CreateVkFramebuffers(const DeviceData &device_data,
 						  const RenderPipelineData &rp_data,
@@ -811,14 +830,23 @@ void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resourc
 	resource_data.pool_data.buffers.ReleaseResource(handle);
 }
 
-
 void CreateVkTextureInner(const DeviceData &device_data,
 						  const TextureCreation &creation,
-						  TextureHandle &handle,
-						  Texture *texture)
+						  const TextureHandle &handle,
+						  Texture &texture)
 {
-	texture->width = creation.width;
-	texture->name = creation.name;
+	COPY_MEMBERS(texture, creation, width, height, depth, name, mipmaps, flags, type, format);
+	texture.sampler = nullptr;
+	texture.handle = handle;
+	VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+	image_create_info.format = texture.format;
+	image_create_info.flags = 0;
+	ToVKEnum(texture.type, image_create_info.imageType);
+	COPY_MEMBERS(image_create_info.extent, texture, width, height, depth);
+	image_create_info.mipLevels = texture.mipmaps;
+	image_create_info.arrayLayers = 1;
+	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 }
 
 TextureHandle CreateVkTexture(const TextureCreation &creation, ResourceData &resource_data)

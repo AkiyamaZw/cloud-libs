@@ -62,4 +62,30 @@ enum class ReductionMode : uint32_t
 	Minimum,
 	Maximum,
 };
+
+struct TextureType
+{
+	enum Enum
+	{
+		Texture1D,
+		Texture2D,
+		Texture3D,
+		TextureCube,
+		Texture_1D_Array,
+		Texture_2D_Array,
+		Texture_Cube_Array,
+		Count
+	};
+};
+
+struct TextureFlags
+{
+	enum Enum
+	{
+		Default,
+		RenderTarget,
+		Compute,
+		Count,
+	};
+};
 } // namespace cloud::render

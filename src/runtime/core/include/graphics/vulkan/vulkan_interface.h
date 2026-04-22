@@ -67,8 +67,8 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 
 /* buffer start */
 BufferHandle CreateVkBuffer(const BufferCreation &creation,
-						  const DeviceData &device_data,
-						  ResourceData &resource_data);
+							const DeviceData &device_data,
+							ResourceData &resource_data);
 
 void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data);
 void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resource_data);
