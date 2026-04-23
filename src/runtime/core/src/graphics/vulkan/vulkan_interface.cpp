@@ -235,7 +235,9 @@ void DestroyVkInstance(InstanceData &instance_data)
 }
 
 bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
+{
+	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
+}
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -397,7 +399,9 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
+{
+	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
+}
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -596,7 +600,9 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{ vmaDestroyAllocator(resource_data.vma_allocator); }
+{
+	vmaDestroyAllocator(resource_data.vma_allocator);
+}
 
 bool CreateVkRenderPass(const WindowData &window_data,
 						const DeviceData &device_data,
@@ -636,7 +642,9 @@ bool CreateVkRenderPass(const WindowData &window_data,
 }
 
 void DestroyVkRenderPass(const DeviceData &device_data, RenderPipelineData &rp_data)
-{ vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr); }
+{
+	vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr);
+}
 
 void CreateVkFramebuffers(const DeviceData &device_data,
 						  const RenderPipelineData &rp_data,
@@ -695,6 +703,64 @@ void DestroyVkSyncMarkers(const DeviceData &device_data, const RuntimeLoopData &
 			device_data.device, rl_data.sync_signal.image_acquired_semaphore[i], nullptr);
 		vkDestroyFence(device_data.device, rl_data.sync_signal.command_buffer_fence[i], nullptr);
 	}
+}
+
+CommandBuffer *GetInstantCommandBuffer(RuntimeLoopData &rl_data)
+{
+	return rl_data.command_buffer_ring.GetCommandBufferInstant(rl_data.frame_counter.current_frame,
+															   false);
+}
+
+void TransitionImageLayout(VkCommandBuffer command_buffer,
+						   VkImage &image,
+						   VkFormat format,
+						   VkImageLayout oldLayout,
+						   VkImageLayout newLayout,
+						   bool is_depth)
+{
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask =
+		is_depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else
+	{
+		// hy_assertm( false, "Unsupported layout transition!\n" );
+	}
+
+	vkCmdPipelineBarrier(
+		command_buffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void TranslateSamplerCreation(const SamplerCreation &creation,
@@ -832,6 +898,7 @@ void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resourc
 
 void CreateVkTextureInner(const DeviceData &device_data,
 						  const TextureCreation &creation,
+						  const ResourceData &resource_data,
 						  const TextureHandle &handle,
 						  Texture &texture)
 {
@@ -847,9 +914,61 @@ void CreateVkTextureInner(const DeviceData &device_data,
 	image_create_info.arrayLayers = 1;
 	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	const bool is_rt =
+		(creation.flags & TextureFlags::Mask::RenderTarget) == TextureFlags::Mask::RenderTarget;
+	const bool is_compute =
+		(creation.flags & TextureFlags::Mask::Compute) == TextureFlags::Mask::Compute;
+	image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+	image_create_info.usage |= is_compute ? VK_IMAGE_USAGE_STORAGE_BIT : 0;
+	if (utility::HasDepthOrStencil(creation.format))
+	{
+		image_create_info.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	}
+	else
+	{
+		image_create_info.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		image_create_info.usage |= is_rt ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : 0;
+	}
+	image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VmaAllocationCreateInfo mem_info{};
+	mem_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	auto succ = vmaCreateImage(resource_data.vma_allocator,
+							   &image_create_info,
+							   &mem_info,
+							   &texture.image,
+							   &texture.allocation,
+							   nullptr);
+	check_vk(succ);
+	SetResourceName(
+		device_data.device, VK_OBJECT_TYPE_IMAGE, (uint64_t)texture.image, creation.name);
+	VkImageViewCreateInfo info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+	info.image = texture.image;
+	ToVKEnum(creation.type, info.viewType);
+	info.format = creation.format;
+	if (utility::HasDepthOrStencil(creation.format))
+	{
+		info.subresourceRange.aspectMask =
+			utility::HasDepth(creation.format) ? VK_IMAGE_ASPECT_DEPTH_BIT : 0;
+	}
+	else
+	{
+		info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	}
+	info.subresourceRange.levelCount = 1;
+	info.subresourceRange.layerCount = 1;
+	succ = vkCreateImageView(
+		device_data.device, &info, resource_data.allocation_callback, &texture.view);
+	check_vk(succ);
+	SetResourceName(
+		device_data.device, VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)texture.view, creation.name);
+	texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-TextureHandle CreateVkTexture(const TextureCreation &creation, ResourceData &resource_data)
+TextureHandle CreateVkTexture(const DeviceData &device_data,
+							  RuntimeLoopData &rl_data,
+							  const TextureCreation &creation,
+							  ResourceData &resource_data)
 {
 	TextureHandle handle = {resource_data.pool_data.textures.FetchResource()};
 	if (handle.index == ResourcePool::INVALID_NUM)
@@ -858,5 +977,115 @@ TextureHandle CreateVkTexture(const TextureCreation &creation, ResourceData &res
 	}
 	Texture *texture =
 		static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
+	CreateVkTextureInner(device_data, creation, resource_data, handle, *texture);
+	if (creation.initial_data)
+	{
+		VkBufferCreateInfo buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+		buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+		uint32_t image_size = creation.width * creation.height * 4;
+		buffer_info.size = image_size;
+
+		VmaAllocationCreateInfo memory_info{};
+		memory_info.flags = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
+		memory_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+		VmaAllocationInfo allocation_info{};
+		VkBuffer staging_buffer;
+		VmaAllocation staging_allocation;
+		check_vk(vmaCreateBuffer(resource_data.vma_allocator,
+								 &buffer_info,
+								 &memory_info,
+								 &staging_buffer,
+								 &staging_allocation,
+								 &allocation_info));
+
+		// Copy buffer_data
+		void *destination_data;
+		vmaMapMemory(resource_data.vma_allocator, staging_allocation, &destination_data);
+		memcpy(destination_data, creation.initial_data, static_cast<size_t>(image_size));
+		vmaUnmapMemory(resource_data.vma_allocator, staging_allocation);
+
+		// Execute command buffer
+		VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		CommandBuffer *command_buffer = GetInstantCommandBuffer(rl_data);
+		vkBeginCommandBuffer(command_buffer->vk_command_buffer, &beginInfo);
+
+		VkBufferImageCopy region = {};
+		region.bufferOffset = 0;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+
+		region.imageOffset = {0, 0, 0};
+		region.imageExtent = {creation.width, creation.height, creation.depth};
+
+		// Transition
+		TransitionImageLayout(command_buffer->vk_command_buffer,
+							  texture->image,
+							  texture->format,
+							  VK_IMAGE_LAYOUT_UNDEFINED,
+							  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							  false);
+		// Copy
+		vkCmdCopyBufferToImage(command_buffer->vk_command_buffer,
+							   staging_buffer,
+							   texture->image,
+							   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							   1,
+							   &region);
+		// Transition
+		TransitionImageLayout(command_buffer->vk_command_buffer,
+							  texture->image,
+							  texture->format,
+							  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							  false);
+
+		vkEndCommandBuffer(command_buffer->vk_command_buffer);
+
+		// Submit command buffer
+		VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &command_buffer->vk_command_buffer;
+
+		vkQueueSubmit(device_data.queue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(device_data.queue);
+
+		vmaDestroyBuffer(resource_data.vma_allocator, staging_buffer, staging_allocation);
+
+		// TODO: free command buffer
+		vkResetCommandBuffer(command_buffer->vk_command_buffer,
+							 VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+		texture->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
+	return;
+}
+
+void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle)
+{
+	rl_data.resource_deletion_queue.push_back(
+		{ResourceUpdateType::Texture, handle.index, rl_data.frame_counter.current_frame});
+}
+
+
+void DestroyVkSamplerInstance(const ResourceHandle &handle,
+							  const DeviceData &device_data,
+							  ResourceData &resource_data)
+{
+	Texture *texture = static_cast<Texture *>(resource_data.pool_data.textures.Access(handle));
+	if (texture)
+	{
+		vkDestroyImageView(device_data.device, texture->view, resource_data.allocation_callback);
+		vmaDestroyImage(resource_data.vma_allocator, texture->image, texture->allocation);
+	}
+	resource_data.pool_data.textures.ReleaseResource(handle);
 }
 } // namespace cloud::vulkan::infra

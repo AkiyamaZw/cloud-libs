@@ -87,5 +87,10 @@ struct TextureFlags
 		Compute,
 		Count,
 	};
+	enum Mask {
+		Default = 1 << 0,
+		RenderTarget = 1 << 1,
+		Compute = 1 << 2, 
+	};
 };
 } // namespace cloud::render

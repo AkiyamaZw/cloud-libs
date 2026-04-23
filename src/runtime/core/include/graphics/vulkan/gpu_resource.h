@@ -120,6 +120,7 @@ struct Texture
 	VkImage image;
 	VkImageView view;
 	VkFormat format;
+	VkImageLayout layout;
 	VkImageUsageFlags usage_flags;
 	VmaAllocation allocation;
 	ResourceState state{ResourceState::RESOURCE_STATE_UNDEFINED};

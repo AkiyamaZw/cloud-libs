@@ -1,5 +1,6 @@
 #include "graphics/vulkan/gpu_enums.h"
 #include "core/runtime_log.h"
+#include <set>
 
 namespace cloud::vulkan
 {
@@ -85,4 +86,50 @@ void ToVKEnum(const TextureType::Enum type, VkImageType &out_type)
 	out_type = s_vk_target[type];
 }
 
+void ToVkEnum(const TextureType::Enum type, VkImageViewType &out_type) {
+
+	static VkImageViewType s_vk_data[] = {VK_IMAGE_VIEW_TYPE_1D,
+										  VK_IMAGE_VIEW_TYPE_2D,
+										  VK_IMAGE_VIEW_TYPE_3D,
+										  VK_IMAGE_VIEW_TYPE_1D_ARRAY,
+										  VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+										  VK_IMAGE_VIEW_TYPE_CUBE_ARRAY};
+	out_type = s_vk_data[type];
+}
+
 } // namespace cloud::vulkan
+
+namespace cloud::vulkan::utility
+{
+
+bool IsDepthStencil(VkFormat format)
+{
+	static std::set<VkFormat> s_vk_depth_stencil_map = {
+		VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D32_SFLOAT_S8_UINT};
+	return s_vk_depth_stencil_map.contains(format);
+}
+
+bool IsDepthOnly(VkFormat format)
+{
+	return format > VK_FORMAT_D16_UNORM && format < VK_FORMAT_D32_SFLOAT;
+}
+
+bool IsStencilOnly(VkFormat format) { return format == VK_FORMAT_S8_UINT; }
+
+bool HasDepth(VkFormat format)
+{
+	return (format >= VK_FORMAT_D16_UNORM && format < VK_FORMAT_S8_UINT) ||
+		   (format >= VK_FORMAT_D16_UNORM_S8_UINT && format <= VK_FORMAT_D32_SFLOAT_S8_UINT);
+}
+
+bool HasStencil(VkFormat format)
+{
+	return format >= VK_FORMAT_S8_UINT && format <= VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+}
+bool HasDepthOrStencil(VkFormat format)
+{
+	return format>= VK_FORMAT_D16_UNORM && format <= VK_FORMAT_D32_SFLOAT_S8_UINT;
+}
+
+} // namespace cloud::vulkan::utility

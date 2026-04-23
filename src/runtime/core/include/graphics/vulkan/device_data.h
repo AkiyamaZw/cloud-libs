@@ -88,6 +88,7 @@ struct DeviceResourcePoolData
 
 struct ResourceData
 {
+	VkAllocationCallbacks* allocation_callback{nullptr};
 	VmaAllocator vma_allocator{nullptr};
 	DeviceResourcePoolData pool_data;
 	BufferHandle fullscreen_vertex_buffer;

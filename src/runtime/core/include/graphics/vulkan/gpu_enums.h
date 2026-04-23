@@ -132,11 +132,23 @@ enum class ResourceUpdateType
 };
 
 using TextureType = render::TextureType;
-
+using TextureFlags = render::TextureFlags;
 ///---- convert function-----
 void ToVKEnum(const render::FilterMode mode, VkFilter &out_filter);
 void ToVKEnum(const render::FilterMode mode, VkSamplerMipmapMode &out_mipmap_mode);
 void ToVKEnum(const render::AddressMode mode, VkSamplerAddressMode &out_address_mode);
 void ToVKEnum(const render::ReductionMode mode, VkSamplerReductionMode &out_reduction_mode);
 void ToVKEnum(const TextureType::Enum type, VkImageType &out_type);
+void ToVKEnum(const TextureType::Enum type, VkImageViewType &out_type);
+
+///----helper function -----
+namespace utility
+{
+bool IsDepthStencil(VkFormat format);
+bool IsDepthOnly(VkFormat format);
+bool IsStencilOnly(VkFormat format);
+bool HasDepth(VkFormat format);
+bool HasStencil(VkFormat format);
+bool HasDepthOrStencil(VkFormat format);
+}
 } // namespace cloud::vulkan

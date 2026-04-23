@@ -51,6 +51,16 @@ void CreateVkFramebuffers(const DeviceData &device_data,
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data);
 void DestroyVkSyncMarkers(const DeviceData &device_data, const RuntimeLoopData &rl_data);
 
+CommandBuffer *GetInstantCommandBuffer(RuntimeLoopData &rl_data);
+
+void TransitionImageLayout(VkCommandBuffer command_buffer,
+						   VkImage &image,
+						   VkFormat format,
+						   VkImageLayout oldLayout,
+						   VkImageLayout newLayout,
+						   bool is_depth);
+
+
 /* sampler start */
 SamplerHandle CreateVkSampler(const DeviceData &device_data,
 							  ResourceData &resource_data,
@@ -75,6 +85,15 @@ void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resourc
 /* buffer end */
 
 /* texture start */
+TextureHandle CreateVkTexture(const DeviceData &device_data,
+							  RuntimeLoopData &rl_data,
+							  const TextureCreation &creation,
+							  ResourceData &resource_data);
+void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle);
+
+void DestroyVkSamplerInstance(const ResourceHandle &handle,
+							  const DeviceData &device_data,
+							  ResourceData &resource_data);
 
 /* texture end */
 }; // namespace cloud::vulkan::infra
