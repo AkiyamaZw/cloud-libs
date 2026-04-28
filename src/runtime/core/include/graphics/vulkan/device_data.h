@@ -54,7 +54,7 @@ struct WindowData
 
 struct RenderPipelineData
 {
-	VkRenderPass render_pass;
+	//VkRenderPass render_pass;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 };

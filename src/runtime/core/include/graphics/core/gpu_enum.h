@@ -39,6 +39,7 @@ HANDLE_DECLARE(ShaderState);
 HANDLE_DECLARE(Pipeline);
 HANDLE_DECLARE(Sampler);
 HANDLE_DECLARE(DescriptorSet);
+HANDLE_DECLARE(RenderPass);
 
 enum class FilterMode : uint32_t
 {

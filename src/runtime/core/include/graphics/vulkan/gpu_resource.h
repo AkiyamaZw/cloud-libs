@@ -34,6 +34,8 @@ using PipelineHandle = render::PipelineHandle;
 using SamplerHandle = render::SamplerHandle;
 using DescriptorSetHandle = render::DescriptorSetHandle;
 using ShaderStateHandle = render::ShaderStateHandle;
+using RenderPassHandle = render::RenderPassHandle;
+
 constexpr uint32_t InvalidFrameID = UINT32_MAX;
 
 struct ResourceUpdate
@@ -137,18 +139,42 @@ struct Texture
 	Sampler *sampler;
 };
 
+struct RenderPassCreation
+{
+	uint16_t num_render_targets{0};
+	RenderPassType type{RenderPassType::Geometry};
+	TextureHandle output_textures[MaxSwapchainImages];
+	TextureHandle depth_stencil_texture;
+	float scale_x{1.f};
+	float scale_y{1.f};
+	uint8_t resize = 1;
+	RenderPassOperation color_op{RenderPassOperation::DontCare};
+	RenderPassOperation depth_op{RenderPassOperation::DontCare};
+	RenderPassOperation stencil_op{RenderPassOperation::DontCare};
+	const char *name{nullptr};
+};
+
 struct RenderPass
 {
-	VkRenderPass render_pass;
+	VkRenderPass vk_render_pass;
+	VkFramebuffer vk_frame_buffer;
 	RenderPassOutput output;
+	TextureHandle out_textures[MaxSwapchainImages];
+	TextureHandle out_depth;
+	float scale_x{1.f};
+	float scale_y{1.f};
+	uint16_t width{0};
+	uint16_t height{0};
 	uint16_t dispatch_x{1};
 	uint16_t dispatch_y{1};
 	uint16_t dispatch_z{1};
+	uint8_t resize{1};
 	RenderPassType type;
 
 	uint8_t num_render_targets{0};
 	uint32_t multiview_mask{0};
 	const char *name{nullptr};
+
 };
 
 struct DescriptorBinding

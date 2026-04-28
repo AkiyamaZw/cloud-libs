@@ -38,15 +38,15 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 
 void DestroyVmaAllocator(ResourceData &resource_data);
 
-bool CreateVkRenderPass(const WindowData &window_data,
-						const DeviceData &device_data,
-						RenderPipelineData &rp_data);
-
-void DestroyVkRenderPass(const DeviceData &device_data, RenderPipelineData &rp_data);
-
-void CreateVkFramebuffers(const DeviceData &device_data,
-						  const RenderPipelineData &rp_data,
-						  WindowData &window_data);
+//bool CreateVkRenderPass(const WindowData &window_data,
+//						const DeviceData &device_data,
+//						RenderPipelineData &rp_data);
+//
+//void DestroyVkRenderPass(const DeviceData &device_data, RenderPipelineData &rp_data);
+//
+//void CreateVkFramebuffers(const DeviceData &device_data,
+//						  const RenderPipelineData &rp_data,
+//						  WindowData &window_data);
 
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data);
 void DestroyVkSyncMarkers(const DeviceData &device_data, const RuntimeLoopData &rl_data);
@@ -59,6 +59,14 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   VkImageLayout oldLayout,
 						   VkImageLayout newLayout,
 						   bool is_depth);
+
+
+Texture *Access(ResourceData& resource_data, const TextureHandle &hanle);
+Buffer *Access(ResourceData &resource_data, const BufferHandle &handle);
+Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle);
+RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle);
+
+/* pool resource access end */
 
 
 /* sampler start */
@@ -96,4 +104,8 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 							  ResourceData &resource_data);
 
 /* texture end */
+
+/* render pass start*/
+
+/* render pass end*/
 }; // namespace cloud::vulkan::infra
