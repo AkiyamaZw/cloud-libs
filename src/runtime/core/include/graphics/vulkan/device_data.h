@@ -50,11 +50,12 @@ struct WindowData
 	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_framebuffers;
 	uint32_t swapchain_image_count;
 	uint32_t vulkan_image_index{0};
+	TextureHandle texture_depth_handle;
 };
 
 struct RenderPipelineData
 {
-	//VkRenderPass render_pass;
+	// VkRenderPass render_pass;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 };
@@ -88,7 +89,7 @@ struct DeviceResourcePoolData
 
 struct ResourceData
 {
-	VkAllocationCallbacks* allocation_callback{nullptr};
+	VkAllocationCallbacks *allocation_callback{nullptr};
 	VmaAllocator vma_allocator{nullptr};
 	DeviceResourcePoolData pool_data;
 	BufferHandle fullscreen_vertex_buffer;

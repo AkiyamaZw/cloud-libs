@@ -235,9 +235,7 @@ void DestroyVkInstance(InstanceData &instance_data)
 }
 
 bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{
-	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
-}
+{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -399,9 +397,7 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{
-	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
-}
+{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -600,9 +596,7 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{
-	vmaDestroyAllocator(resource_data.vma_allocator);
-}
+{ vmaDestroyAllocator(resource_data.vma_allocator); }
 
 // bool CreateVkRenderPass(const WindowData &window_data,
 //						const DeviceData &device_data,
@@ -764,24 +758,16 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 }
 
 Texture *Access(ResourceData &resource_data, const TextureHandle &handle)
-{
-	return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
-}
+{ return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index)); }
 
 Buffer *Access(ResourceData &resource_data, const BufferHandle &handle)
-{
-	return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index));
-}
+{ return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index)); }
 
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
-{
-	return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index));
-}
+{ return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index)); }
 
 RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle)
-{ 
-	return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index));
-}
+{ return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index)); }
 
 void TranslateSamplerCreation(const SamplerCreation &creation,
 							  VkSamplerCreateInfo &sampler_create_info)
@@ -1086,7 +1072,7 @@ TextureHandle CreateVkTexture(const DeviceData &device_data,
 
 		texture->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
-	return;
+	return handle;
 }
 
 void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle)
@@ -1095,23 +1081,76 @@ void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle)
 		{ResourceUpdateType::Texture, handle.index, rl_data.frame_counter.current_frame});
 }
 
-void DestroyVkSamplerInstance(const ResourceHandle &handle,
-							  const DeviceData &device_data,
-							  ResourceData &resource_data)
+void CreateSwapchainRenderPass(const DeviceData &device_data,
+							   const WindowData &window_data,
+							   ResourceData &resource_data,
+							   RenderPass &render_pass)
 {
-	Texture *texture = static_cast<Texture *>(resource_data.pool_data.textures.Access(handle));
-	if (texture)
+	VkAttachmentDescription color_attach{};
+	color_attach.format = window_data.window_surface_format.format;
+	color_attach.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attach.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attach.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	color_attach.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attach.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attach.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attach.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attach_ref{};
+	color_attach_ref.attachment = 0;
+	color_attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	Texture *depth_tex = Access(resource_data, window_data.texture_depth_handle);
+	VkAttachmentDescription depth_attach{};
+	depth_attach.format = depth_tex->format;
+	depth_attach.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attach.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attach.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attach.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depth_attach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attach.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depth_attach.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depth_attach_ref{};
+	depth_attach_ref.attachment = 1;
+	depth_attach_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass{};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_attach_ref;
+	subpass.pDepthStencilAttachment = &depth_attach_ref;
+
+	VkAttachmentDescription attaches[] = {color_attach, depth_attach};
+	VkRenderPassCreateInfo rpinfo = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+	rpinfo.attachmentCount = 2;
+	rpinfo.pAttachments = attaches;
+	rpinfo.subpassCount = 1;
+	rpinfo.pSubpasses = &subpass;
+	check_vk(vkCreateRenderPass(device_data.device, &rpinfo, nullptr, &render_pass.vk_render_pass));
+	SetResourceName(device_data.device,
+					VK_OBJECT_TYPE_RENDER_PASS,
+					(uint64_t)render_pass.vk_render_pass,
+					render_pass.name);
+	VkFramebufferCreateInfo fb_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+	fb_info.renderPass = render_pass.vk_render_pass;
+	fb_info.attachmentCount = 2;
+	fb_info.width = window_data.swapchain_width;
+	fb_info.height = window_data.swapchain_height;
+	fb_info.layers = 1;
+
+	VkImageView fb_attaches[2];
+	fb_attaches[1] = depth_tex->view;
+	// todo 这个循环说不通
+	for (size_t i = 0; i < window_data.swapchain_image_count; i++)
 	{
-		vkDestroyImageView(device_data.device, texture->view, resource_data.allocation_callback);
-		vmaDestroyImage(resource_data.vma_allocator, texture->image, texture->allocation);
+		fb_attaches[0] = window_data.swapchain_image_views[i];
+		fb_info.pAttachments = fb_attaches;
+		vkCreateFramebuffer(
+			device_data.device, &fb_info, nullptr, &window_data.swapchain_framebuffers[i]);
 	}
-	resource_data.pool_data.textures.ReleaseResource(handle);
-}
-
-
-void CreateSwapchainRenderPass(RenderPass& render_pass)
-{ VkAttachmentDescription color_attach{};
-	// todo 
+	// todo
 }
 
 RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation, ResourceData &resource_data)
@@ -1145,12 +1184,12 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation, Resource
 	rp->out_depth = creation.depth_stencil_texture;
 	if (creation.type == RenderPassType::SwapChain)
 	{
-		// todo 
+		// todo
 		CreateSwapchainRenderPass();
 	}
 	else if (creation.type == RenderPassType::Compute)
 	{
-		//todo
+		// todo
 	}
 	else if (creation.type == RenderPassType::Geometry)
 	{
