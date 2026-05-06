@@ -1,6 +1,6 @@
 #include "graphics/vulkan/vulkan_interface.h"
 #include "core/runtime_log.h"
-#include "spdlog/fmt/bundled/chrono.h"
+#include "graphics/vulkan/device_data.h"
 
 #define _ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
 #define _GET_N_ARGS(...) _ARG_N(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
@@ -235,7 +235,9 @@ void DestroyVkInstance(InstanceData &instance_data)
 }
 
 bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
+{
+	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
+}
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -397,7 +399,9 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
+{
+	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
+}
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -596,73 +600,9 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{ vmaDestroyAllocator(resource_data.vma_allocator); }
-
-// bool CreateVkRenderPass(const WindowData &window_data,
-//						const DeviceData &device_data,
-//						RenderPipelineData &rp_data)
-//{
-//	VkAttachmentDescription color_attachment{};
-//	color_attachment.format = window_data.window_surface_format.format;
-//	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-//	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-//	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-//	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-//	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-//	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-//	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//
-//	VkAttachmentReference color_attachment_ref{};
-//	color_attachment_ref.attachment = 0;
-//	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-//
-//	VkSubpassDescription subpass{};
-//	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-//	subpass.colorAttachmentCount = 1;
-//	subpass.pColorAttachments = &color_attachment_ref;
-//
-//	VkRenderPassCreateInfo render_pass_info{};
-//	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-//	render_pass_info.attachmentCount = 1;
-//	render_pass_info.pAttachments = &color_attachment;
-//	render_pass_info.subpassCount = 1;
-//	render_pass_info.pSubpasses = &subpass;
-//
-//	VkResult result =
-//		vkCreateRenderPass(device_data.device, &render_pass_info, nullptr, &rp_data.render_pass);
-//	check_vk(result);
-//	INFO("[Vulkan Gpu Device] Render Pass Created..");
-//	return result == VK_SUCCESS;
-// }
-
-// void DestroyVkRenderPass(const DeviceData &device_data, RenderPipelineData &rp_data)
-//{
-//	vkDestroyRenderPass(device_data.device, rp_data.render_pass, nullptr);
-// }
-
-// void CreateVkFramebuffers(const DeviceData &device_data,
-//						  const RenderPipelineData &rp_data,
-//						  WindowData &window_data)
-//{
-//	for (size_t i = 0; i < window_data.swapchain_image_count; i++)
-//	{
-//		VkImageView attachments[] = {window_data.swapchain_image_views[i]};
-//
-//		VkFramebufferCreateInfo framebuffer_info{};
-//		framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-//		framebuffer_info.renderPass = rp_data.render_pass;
-//		framebuffer_info.attachmentCount = 1;
-//		framebuffer_info.pAttachments = attachments;
-//		framebuffer_info.width = window_data.swapchain_width;
-//		framebuffer_info.height = window_data.swapchain_height;
-//		framebuffer_info.layers = 1;
-//
-//		VkResult result = vkCreateFramebuffer(
-//			device_data.device, &framebuffer_info, nullptr, &window_data.swapchain_framebuffers[i]);
-//		check_vk(result);
-//	}
-//	INFO("[Vulkan Gpu Device] Framebuffers Created..");
-// }
+{
+	vmaDestroyAllocator(resource_data.vma_allocator);
+}
 
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data)
 {
@@ -758,16 +698,24 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 }
 
 Texture *Access(ResourceData &resource_data, const TextureHandle &handle)
-{ return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index)); }
+{
+	return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
+}
 
 Buffer *Access(ResourceData &resource_data, const BufferHandle &handle)
-{ return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index)); }
+{
+	return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index));
+}
 
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
-{ return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index)); }
+{
+	return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index));
+}
 
 RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle)
-{ return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index)); }
+{
+	return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index));
+}
 
 void TranslateSamplerCreation(const SamplerCreation &creation,
 							  VkSamplerCreateInfo &sampler_create_info)
@@ -1081,10 +1029,12 @@ void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle)
 		{ResourceUpdateType::Texture, handle.index, rl_data.frame_counter.current_frame});
 }
 
-void CreateSwapchainRenderPass(const DeviceData &device_data,
-							   const WindowData &window_data,
-							   ResourceData &resource_data,
-							   RenderPass &render_pass)
+
+void CreateVkSwapchainRenderPass(const DeviceData &device_data,
+								 RuntimeLoopData &rl_data,
+								 WindowData &window_data,
+								 ResourceData &resource_data,
+								 RenderPass &render_pass)
 {
 	VkAttachmentDescription color_attach{};
 	color_attach.format = window_data.window_surface_format.format;
@@ -1149,11 +1099,73 @@ void CreateSwapchainRenderPass(const DeviceData &device_data,
 		fb_info.pAttachments = fb_attaches;
 		vkCreateFramebuffer(
 			device_data.device, &fb_info, nullptr, &window_data.swapchain_framebuffers[i]);
+		SetResourceName(device_data.device,
+						VK_OBJECT_TYPE_FRAMEBUFFER,
+						(uint64_t)window_data.swapchain_framebuffers[i],
+						render_pass.name);
 	}
-	// todo
+
+	render_pass.width = window_data.swapchain_width;
+	render_pass.height = window_data.swapchain_height;
+
+	VkCommandBufferBeginInfo info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+	info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	CommandBuffer *cb = GetInstantCommandBuffer(rl_data);
+	vkBeginCommandBuffer(cb->vk_command_buffer, &info);
+	VkBufferImageCopy region = {};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = {0, 0, 0};
+	region.imageExtent = {render_pass.width, render_pass.height, 1};
+	for (size_t i = 0; i < window_data.swapchain_image_count; ++i)
+	{
+		TransitionImageLayout(cb->vk_command_buffer,
+							  window_data.swapchain_images[i],
+							  window_data.window_surface_format.format,
+							  VK_IMAGE_LAYOUT_UNDEFINED,
+							  VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+							  false);
+	}
+	vkEndCommandBuffer(cb->vk_command_buffer);
+	VkSubmitInfo sub_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+	sub_info.commandBufferCount = 1;
+	sub_info.pCommandBuffers = &cb->vk_command_buffer;
+	vkQueueSubmit(device_data.queue, 1, &sub_info, VK_NULL_HANDLE);
+	vkQueueWaitIdle(device_data.queue);
 }
 
-RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation, ResourceData &resource_data)
+RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
+									  ResourceData &resource_data)
+{
+	RenderPassOutput out;
+	out.Reset();
+	for (uint32_t i = 0; i < creation.num_render_targets; ++i)
+	{
+		Texture *tex = Access(resource_data, creation.output_textures[i]);
+		out.SetColorFormat(tex->format);
+	}
+	if (creation.depth_stencil_texture.index != ResourcePool::INVALID_NUM)
+	{
+		Texture *tex = Access(resource_data, creation.depth_stencil_texture);
+		out.SetDepthFormat(tex->format);
+	}
+	out.color_operation = creation.color_op;
+	out.depth_operation = creation.depth_op;
+	out.stencil_operation = creation.stencil_op;
+	return out;
+}
+
+RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
+									const DeviceData &device_data,
+									RuntimeLoopData &rl_data,
+									WindowData &window_data,
+									ResourceData &resource_data,
+									RenderPass &render_pass)
 {
 	RenderPassHandle handle = {resource_data.pool_data.render_passes.FetchResource()};
 	if (handle.index == ResourcePool::INVALID_NUM)
@@ -1184,15 +1196,15 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation, Resource
 	rp->out_depth = creation.depth_stencil_texture;
 	if (creation.type == RenderPassType::SwapChain)
 	{
-		// todo
-		CreateSwapchainRenderPass();
+		CreateVkSwapchainRenderPass(device_data, rl_data, window_data, resource_data, *rp);
 	}
 	else if (creation.type == RenderPassType::Compute)
 	{
-		// todo
+		// todo not implement now!
 	}
 	else if (creation.type == RenderPassType::Geometry)
 	{
+		rp->output = FillRenderPassOutput(creation, resource_data);
 		// todo
 	}
 
