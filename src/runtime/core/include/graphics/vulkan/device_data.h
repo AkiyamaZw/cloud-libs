@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <array>
+#include <map>
 #include "graphics/vulkan/command_buffer.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"
@@ -94,6 +95,7 @@ struct ResourceData
 	DeviceResourcePoolData pool_data;
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
+	std::map<size_t, VkRenderPass> render_pass_cache;
 };
 
 // sync marker

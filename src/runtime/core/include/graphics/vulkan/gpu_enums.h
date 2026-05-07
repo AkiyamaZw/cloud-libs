@@ -150,5 +150,5 @@ bool IsStencilOnly(VkFormat format);
 bool HasDepth(VkFormat format);
 bool HasStencil(VkFormat format);
 bool HasDepthOrStencil(VkFormat format);
-}
+} // namespace utility
 } // namespace cloud::vulkan

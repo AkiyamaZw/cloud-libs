@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <type_traits>
 
 namespace cloud
 {
@@ -23,6 +24,21 @@ struct GpuCreateParam
 
 namespace cloud::render
 {
+// 临时的hash函数
+template <class T>
+constexpr void hash_combine(std::size_t &seed, const T &v)
+{
+	std::hash<T> hasher;
+	seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+template <class T>
+constexpr std::size_t generate_hash(const std::size_t &seed, const T &v)
+{
+	std::hash<T> hasher;
+	return seed ^ (hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+}
+
 using ResourceHandle = uint32_t;
 
 #define HANDLE_DECLARE(name)                                                                       \
@@ -88,10 +104,11 @@ struct TextureFlags
 		Compute,
 		Count,
 	};
-	enum Mask {
+	enum Mask
+	{
 		Default = 1 << 0,
 		RenderTarget = 1 << 1,
-		Compute = 1 << 2, 
+		Compute = 1 << 2,
 	};
 };
 } // namespace cloud::render
