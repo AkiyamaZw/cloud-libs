@@ -7,6 +7,7 @@ namespace cloud::vulkan
 
 struct VulkanDeviceContext
 {
+	InstanceData instance_data;
 	DeviceData device_data;
 	WindowData window_data;
 	ResourceData resource_data;

@@ -11,8 +11,7 @@ namespace cloud::vulkan
 void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 {
 	INFO("[Vulkan Gpu Device] Start init...");
-	VkResult succ;
-
+	infra::CreateVkInstance(vdc.instance_data, param);
 	// // instance
 	// CreateInstance(param);
 	// assert(instance);
@@ -88,6 +87,7 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 
 void Shutdown(VulkanDeviceContext &vdc)
 {
+	infra::DestroyVkInstance(vdc.instance_data);
 	// 	// 等待所有命令缓冲区完成执行
 	// 	for (uint32_t i = 0; i < MaxSwapchainImages; ++i)
 	// 	{

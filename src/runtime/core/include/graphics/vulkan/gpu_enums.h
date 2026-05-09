@@ -138,8 +138,8 @@ void ToVKEnum(const render::FilterMode mode, VkFilter &out_filter);
 void ToVKEnum(const render::FilterMode mode, VkSamplerMipmapMode &out_mipmap_mode);
 void ToVKEnum(const render::AddressMode mode, VkSamplerAddressMode &out_address_mode);
 void ToVKEnum(const render::ReductionMode mode, VkSamplerReductionMode &out_reduction_mode);
-void ToVKEnum(const TextureType::Enum type, VkImageType &out_type);
-void ToVKEnum(const TextureType::Enum type, VkImageViewType &out_type);
+void ToVKEnum(const TextureType type, VkImageType &out_type);
+void ToVKEnum(const TextureType type, VkImageViewType &out_type);
 
 ///----helper function -----
 namespace utility

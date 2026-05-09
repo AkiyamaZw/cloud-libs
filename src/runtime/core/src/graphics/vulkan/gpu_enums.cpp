@@ -73,20 +73,22 @@ void ToVKEnum(const render::ReductionMode mode, VkSamplerReductionMode &out_redu
 	}
 }
 
-void ToVKEnum(const TextureType::Enum type, VkImageType &out_type)
+void ToVKEnum(const TextureType type, VkImageType &out_type)
 {
-	static VkImageType s_vk_target[render::TextureType::Count] = {VK_IMAGE_TYPE_1D,
-																  VK_IMAGE_TYPE_2D,
-																  VK_IMAGE_TYPE_3D,
-																  VK_IMAGE_TYPE_2D,
-																  VK_IMAGE_TYPE_1D,
-																  VK_IMAGE_TYPE_2D,
-																  VK_IMAGE_TYPE_3D};
+	static const uint32_t count = static_cast<uint32_t>(render::TextureType::Count);
+	static VkImageType s_vk_target[count] = {VK_IMAGE_TYPE_1D,
+											 VK_IMAGE_TYPE_2D,
+											 VK_IMAGE_TYPE_3D,
+											 VK_IMAGE_TYPE_2D,
+											 VK_IMAGE_TYPE_1D,
+											 VK_IMAGE_TYPE_2D,
+											 VK_IMAGE_TYPE_3D};
 
-	out_type = s_vk_target[type];
+	out_type = s_vk_target[static_cast<uint32_t>(type)];
 }
 
-void ToVkEnum(const TextureType::Enum type, VkImageViewType &out_type) {
+void ToVKEnum(const TextureType type, VkImageViewType &out_type)
+{
 
 	static VkImageViewType s_vk_data[] = {VK_IMAGE_VIEW_TYPE_1D,
 										  VK_IMAGE_VIEW_TYPE_2D,
@@ -94,7 +96,7 @@ void ToVkEnum(const TextureType::Enum type, VkImageViewType &out_type) {
 										  VK_IMAGE_VIEW_TYPE_1D_ARRAY,
 										  VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 										  VK_IMAGE_VIEW_TYPE_CUBE_ARRAY};
-	out_type = s_vk_data[type];
+	out_type = s_vk_data[static_cast<uint32_t>(type)];
 }
 
 } // namespace cloud::vulkan
@@ -110,9 +112,7 @@ bool IsDepthStencil(VkFormat format)
 }
 
 bool IsDepthOnly(VkFormat format)
-{
-	return format > VK_FORMAT_D16_UNORM && format < VK_FORMAT_D32_SFLOAT;
-}
+{ return format > VK_FORMAT_D16_UNORM && format < VK_FORMAT_D32_SFLOAT; }
 
 bool IsStencilOnly(VkFormat format) { return format == VK_FORMAT_S8_UINT; }
 
@@ -123,13 +123,8 @@ bool HasDepth(VkFormat format)
 }
 
 bool HasStencil(VkFormat format)
-{
-	return format >= VK_FORMAT_S8_UINT && format <= VK_FORMAT_D32_SFLOAT_S8_UINT;
-
-}
+{ return format >= VK_FORMAT_S8_UINT && format <= VK_FORMAT_D32_SFLOAT_S8_UINT; }
 bool HasDepthOrStencil(VkFormat format)
-{
-	return format>= VK_FORMAT_D16_UNORM && format <= VK_FORMAT_D32_SFLOAT_S8_UINT;
-}
+{ return format >= VK_FORMAT_D16_UNORM && format <= VK_FORMAT_D32_SFLOAT_S8_UINT; }
 
 } // namespace cloud::vulkan::utility

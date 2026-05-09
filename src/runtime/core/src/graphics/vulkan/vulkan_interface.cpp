@@ -154,6 +154,10 @@ bool CreateVkInstance(InstanceData &instance_data, const GpuCreateParam &param)
 #endif
 	VkResult succ;
 	instance_data.enabled_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+	for (int i = 0; i < ArraySize(s_requested_extensions); ++i)
+	{
+		instance_data.enabled_extensions.push_back(s_requested_extensions[i]);
+	}
 	uint32_t api_version = 0;
 	succ = UseLatestApiVersion(api_version);
 	check_vk(succ);

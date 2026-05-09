@@ -87,19 +87,16 @@ enum class ReductionMode : uint32_t
 	Maximum,
 };
 
-struct TextureType
+enum class TextureType
 {
-	enum Enum
-	{
-		Texture1D,
-		Texture2D,
-		Texture3D,
-		TextureCube,
-		Texture_1D_Array,
-		Texture_2D_Array,
-		Texture_Cube_Array,
-		Count
-	};
+	Texture1D,
+	Texture2D,
+	Texture3D,
+	TextureCube,
+	Texture_1D_Array,
+	Texture_2D_Array,
+	Texture_Cube_Array,
+	Count
 };
 
 struct TextureFlags

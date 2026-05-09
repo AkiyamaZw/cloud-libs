@@ -111,7 +111,7 @@ struct TextureCreation
 	uint8_t mipmaps = 1;
 	uint8_t flags = 1; // bitmask
 	VkFormat format{VK_FORMAT_UNDEFINED};
-	TextureType::Enum type{TextureType::Enum::Texture2D};
+	TextureType type{TextureType::Texture2D};
 	const char *name{nullptr};
 };
 
@@ -134,7 +134,7 @@ struct Texture
 	uint16_t mip_base_levels{0};
 	uint16_t array_base_layer{0};
 	bool sparse{false};
-	TextureType::Enum type{TextureType::Enum::Texture2D};
+	TextureType type{TextureType::Texture2D};
 	const char *name{nullptr};
 	Sampler *sampler;
 };
@@ -174,7 +174,6 @@ struct RenderPass
 	uint8_t num_render_targets{0};
 	uint32_t multiview_mask{0};
 	const char *name{nullptr};
-
 };
 
 struct DescriptorBinding
