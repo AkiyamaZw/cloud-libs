@@ -20,7 +20,7 @@ bool CreateVkPhysicalDevice(const InstanceData &in_instance_data,
 bool CreateVkWindowDataFromGlfw(const InstanceData &instance_data,
 								const GpuCreateParam &param,
 								WindowData &window_data);
-bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data);
+void DestroyWindowData(const InstanceData &instance_data, WindowData &window_data);
 
 bool CreateVkDeviceAndQueue(DeviceData &device_data);
 
@@ -38,7 +38,6 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 
 void DestroyVmaAllocator(ResourceData &resource_data);
 
-
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data);
 void DestroyVkSyncMarkers(const DeviceData &device_data, const RuntimeLoopData &rl_data);
 
@@ -52,9 +51,16 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   bool is_depth);
 
 Texture *Access(ResourceData &resource_data, const TextureHandle &hanle);
+Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle);
+
 Buffer *Access(ResourceData &resource_data, const BufferHandle &handle);
+Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle);
+
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle);
+Sampler *AccessSampler(ResourceData &resource_data, const ResourceHandle &handle);
+
 RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle);
+RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &handle);
 
 /* pool resource access end */
 
@@ -106,25 +112,27 @@ RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
 									  ResourceData &resource_data);
 
 void CreateVkSwapchainRenderPass(const DeviceData &device_data,
-							   RuntimeLoopData &rl_data,
-							   WindowData &window_data,
-							   ResourceData &resource_data,
-							   RenderPass &render_pass);
+								 RuntimeLoopData &rl_data,
+								 WindowData &window_data,
+								 ResourceData &resource_data,
+								 RenderPass &render_pass);
 
 VkRenderPass GetVkRenderPass(const DeviceData &device_data,
 							 ResourceData &resource_data,
 							 const RenderPassOutput &output,
 							 const char *name);
 
-RenderPassHandle
-	CreateVkRenderPass(const RenderPassCreation &creation,
+RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 									const DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									WindowData &window_data,
 									ResourceData &resource_data,
 									RenderPass &render_pass);
 
-void DestoryRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle);
+void DestroyRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle);
 
+void DestroyRenderPassInstance(const DeviceData &device_data,
+							   ResourceData &resource_data,
+							   ResourceHandle handle);
 /* render pass end*/
 }; // namespace cloud::vulkan::infra

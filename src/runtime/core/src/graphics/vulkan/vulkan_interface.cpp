@@ -234,10 +234,8 @@ void DestroyVkInstance(InstanceData &instance_data)
 	vkDestroyInstance(instance_data.instance, nullptr);
 }
 
-bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{
-	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
-}
+void DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
+{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -399,9 +397,7 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{
-	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
-}
+{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -600,9 +596,7 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{
-	vmaDestroyAllocator(resource_data.vma_allocator);
-}
+{ vmaDestroyAllocator(resource_data.vma_allocator); }
 
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data)
 {
@@ -698,24 +692,28 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 }
 
 Texture *Access(ResourceData &resource_data, const TextureHandle &handle)
-{
-	return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
-}
+{ return AccessTexture(resource_data, handle.index); }
 
 Buffer *Access(ResourceData &resource_data, const BufferHandle &handle)
-{
-	return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index));
-}
+{ return AccessBuffer(resource_data, handle.index); }
 
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
-{
-	return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index));
-}
+{ return AccessSampler(resource_data, handle.index); }
 
 RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle)
-{
-	return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index));
-}
+{ return AccessRenderPass(resource_data, handle.index); }
+
+Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle)
+{ return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle)); }
+
+Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle)
+{ return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle)); }
+
+Sampler *AccessSampler(ResourceData &resource_data, const ResourceHandle &handle)
+{ return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle)); }
+
+RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &handle)
+{ return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle)); }
 
 void TranslateSamplerCreation(const SamplerCreation &creation,
 							  VkSamplerCreateInfo &sampler_create_info)
@@ -868,10 +866,8 @@ void CreateVkTextureInner(const DeviceData &device_data,
 	image_create_info.arrayLayers = 1;
 	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-	const bool is_rt =
-		(creation.flags & TextureFlags::Mask::RenderTarget) == TextureFlags::Mask::RenderTarget;
-	const bool is_compute =
-		(creation.flags & TextureFlags::Mask::Compute) == TextureFlags::Mask::Compute;
+	const bool is_rt = HasAny(creation.flags, TextureFlags::Mask::RenderTarget);
+	const bool is_compute = HasAny(creation.flags, TextureFlags::Mask::Compute);
 	image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 	image_create_info.usage |= is_compute ? VK_IMAGE_USAGE_STORAGE_BIT : 0;
 	if (utility::HasDepthOrStencil(creation.format))
@@ -1376,10 +1372,25 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	return handle;
 }
 
-void DestoryRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle)
+void DestroyRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle)
 {
 	rl_data.resource_deletion_queue.push_back(
 		{ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame});
 }
 
+void DestroyRenderPassInstance(const DeviceData &device_data,
+							   ResourceData &resource_data,
+							   ResourceHandle handle)
+{
+	RenderPass *rp = AccessRenderPass(resource_data, handle);
+	if (rp)
+	{
+		if (rp->num_render_targets)
+		{
+			vkDestroyFramebuffer(
+				device_data.device, rp->vk_frame_buffer, resource_data.allocation_callback);
+		}
+		resource_data.pool_data.render_passes.ReleaseResource(handle);
+	}
+}
 } // namespace cloud::vulkan::infra

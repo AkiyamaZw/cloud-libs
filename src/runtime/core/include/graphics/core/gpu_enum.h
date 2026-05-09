@@ -57,6 +57,13 @@ HANDLE_DECLARE(Sampler);
 HANDLE_DECLARE(DescriptorSet);
 HANDLE_DECLARE(RenderPass);
 
+template <typename FLAG_T, typename T>
+bool HasAny(const FLAG_T flag, T code)
+{
+	FLAG_T enum_num = static_cast<FLAG_T>(code);
+	return (flag & enum_num) == enum_num;
+}
+
 enum class FilterMode : uint32_t
 {
 	Point,
@@ -97,14 +104,14 @@ struct TextureType
 
 struct TextureFlags
 {
-	enum Enum
+	enum class Enum
 	{
 		Default,
 		RenderTarget,
 		Compute,
 		Count,
 	};
-	enum Mask
+	enum class Mask
 	{
 		Default = 1 << 0,
 		RenderTarget = 1 << 1,
