@@ -235,7 +235,9 @@ void DestroyVkInstance(InstanceData &instance_data)
 }
 
 bool DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
-{ vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
+{
+	vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr);
+}
 
 bool get_family_queue(VkPhysicalDevice physical_device,
 					  VkSurfaceKHR window_surface,
@@ -397,7 +399,9 @@ bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)
 }
 
 void DestroyVkQueryPool(DeviceData &device_data)
-{ vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr); }
+{
+	vkDestroyQueryPool(device_data.device, device_data.timestamp_query_pool, nullptr);
+}
 
 VkPresentModeKHR ConvertToVkPresentMode(PresentMode mode)
 {
@@ -596,7 +600,9 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 }
 
 void DestroyVmaAllocator(ResourceData &resource_data)
-{ vmaDestroyAllocator(resource_data.vma_allocator); }
+{
+	vmaDestroyAllocator(resource_data.vma_allocator);
+}
 
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data)
 {
@@ -692,16 +698,24 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 }
 
 Texture *Access(ResourceData &resource_data, const TextureHandle &handle)
-{ return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index)); }
+{
+	return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
+}
 
 Buffer *Access(ResourceData &resource_data, const BufferHandle &handle)
-{ return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index)); }
+{
+	return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index));
+}
 
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
-{ return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index)); }
+{
+	return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle.index));
+}
 
 RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle)
-{ return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index)); }
+{
+	return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle.index));
+}
 
 void TranslateSamplerCreation(const SamplerCreation &creation,
 							  VkSamplerCreateInfo &sampler_create_info)
@@ -1124,6 +1138,38 @@ void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 	vkQueueWaitIdle(device_data.queue);
 }
 
+void CreateVkFrameBuffer(const DeviceData &device_data,
+						 ResourceData &resource_data,
+						 RenderPass &rp,
+						 const TextureHandle *out_textures,
+						 const uint32_t num_rt,
+						 const TextureHandle &depth_stencil_tex)
+{
+	VkFramebufferCreateInfo fb_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+	fb_info.renderPass = rp.vk_render_pass;
+	fb_info.width = rp.width;
+	fb_info.height = rp.height;
+	fb_info.layers = 1;
+
+	VkImageView fb_attchs[MaxSwapchainImages + 1]{};
+	uint32_t active_attachs = 0;
+	for (; active_attachs < num_rt; ++active_attachs)
+	{
+		Texture *tex = Access(resource_data, out_textures[active_attachs]);
+		fb_attchs[active_attachs] = tex->view;
+	}
+	if (depth_stencil_tex.index != ResourcePool::INVALID_NUM)
+	{
+		Texture *tex = Access(resource_data, depth_stencil_tex);
+		fb_attchs[active_attachs++] = tex->view;
+	}
+	fb_info.pAttachments = fb_attchs;
+	fb_info.attachmentCount = active_attachs;
+	check_vk(vkCreateFramebuffer(device_data.device, &fb_info, nullptr, &rp.vk_frame_buffer));
+	SetResourceName(
+		device_data.device, VK_OBJECT_TYPE_FRAMEBUFFER, (uint64_t)rp.vk_frame_buffer, rp.name);
+}
+
 RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
 									  ResourceData &resource_data)
 {
@@ -1150,6 +1196,109 @@ VkRenderPass CreateVkRenderPassInner(const DeviceData &device_data,
 									 const RenderPassOutput &output,
 									 const char *name)
 {
+	VkAttachmentDescription color_attachs[8] = {};
+	VkAttachmentReference color_attachs_ref[8] = {};
+	VkAttachmentLoadOp color_op, depth_op, stencil_op;
+	VkImageLayout color_initial, depth_initial;
+	switch (output.color_operation)
+	{
+	case RenderPassOperation::Load:
+		color_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+		color_initial = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		break;
+	case RenderPassOperation::Clear:
+		color_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		color_initial = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		break;
+	default:
+		color_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_initial = VK_IMAGE_LAYOUT_UNDEFINED;
+		break;
+	}
+	switch (output.depth_operation)
+	{
+	case RenderPassOperation::Load:
+		depth_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+		depth_initial = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		break;
+	case RenderPassOperation::Clear:
+		depth_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depth_initial = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		break;
+	default:
+		depth_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depth_initial = VK_IMAGE_LAYOUT_UNDEFINED;
+		break;
+	}
+	switch (output.stencil_operation)
+	{
+	case RenderPassOperation::Load:
+		stencil_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+		break;
+	case RenderPassOperation::Clear:
+		stencil_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		break;
+	default:
+		stencil_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		break;
+	}
+	uint32_t c_index = 0;
+	for (; c_index < output.num_color_formats; ++c_index)
+	{
+		VkAttachmentDescription &color_attach = color_attachs[c_index];
+		color_attach.format = output.color_formats[c_index];
+		color_attach.samples = VK_SAMPLE_COUNT_1_BIT;
+		color_attach.loadOp = color_op;
+		color_attach.stencilLoadOp = stencil_op;
+		color_attach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		color_attach.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attach.initialLayout = color_initial;
+		color_attach.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		auto &color_ref = color_attachs_ref[c_index];
+		color_ref.attachment = c_index;
+		color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	}
+	VkAttachmentDescription depth_attach{};
+	VkAttachmentReference depth_ref{};
+	if (output.depth_stencil_format != VK_FORMAT_UNDEFINED)
+	{
+		depth_attach.format = output.depth_stencil_format;
+		depth_attach.samples = VK_SAMPLE_COUNT_1_BIT;
+		depth_attach.loadOp = depth_op;
+		depth_attach.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		depth_attach.stencilLoadOp = stencil_op;
+		depth_attach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depth_attach.initialLayout = depth_initial;
+		depth_attach.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depth_ref.attachment = c_index;
+		depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	}
+
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	VkAttachmentDescription attachs[MaxSwapchainImages + 1]{};
+	uint32_t active_attach = 0;
+	for (; active_attach < output.num_color_formats; ++active_attach)
+	{
+		attachs[active_attach] = color_attachs[active_attach];
+		++active_attach;
+	}
+	subpass.pDepthStencilAttachment = nullptr;
+	uint32_t depth_stencil_count = 0;
+	if (output.depth_stencil_format != VK_FORMAT_UNDEFINED)
+	{
+		attachs[subpass.colorAttachmentCount] = depth_attach;
+		subpass.pDepthStencilAttachment = &depth_ref;
+		depth_stencil_count = 1;
+	}
+	VkRenderPassCreateInfo rp_info = {VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
+	rp_info.attachmentCount = (active_attach ? active_attach - 1 : 0) + depth_stencil_count;
+	rp_info.pAttachments = attachs;
+	rp_info.subpassCount = 1;
+	VkRenderPass vk_rp;
+	check_vk(vkCreateRenderPass(device_data.device, &rp_info, nullptr, &vk_rp));
+	SetResourceName(device_data.device, VK_OBJECT_TYPE_RENDER_PASS, (uint64_t)vk_rp, name);
+	return vk_rp;
 }
 
 VkRenderPass GetVkRenderPass(const DeviceData &device_data,
@@ -1215,10 +1364,22 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	{
 		rp->output = FillRenderPassOutput(creation, resource_data);
 		rp->vk_render_pass =
-		// todo
+			CreateVkRenderPassInner(device_data, resource_data, rp->output, rp->name);
+		CreateVkFrameBuffer(device_data,
+							resource_data,
+							*rp,
+							creation.output_textures,
+							creation.num_render_targets,
+							creation.depth_stencil_texture);
 	}
 
 	return handle;
+}
+
+void DestoryRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle)
+{
+	rl_data.resource_deletion_queue.push_back(
+		{ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame});
 }
 
 } // namespace cloud::vulkan::infra

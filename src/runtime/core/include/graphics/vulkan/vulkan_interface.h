@@ -95,10 +95,36 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 /* texture end */
 
 /* render pass start*/
+void CreateVkFrameBuffer(const DeviceData &device_data,
+						 ResourceData &resource_data,
+						 RenderPass &rp,
+						 const TextureHandle *out_textures,
+						 const uint32_t num_rt,
+						 const TextureHandle &depth_stencil_tex);
+
+RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
+									  ResourceData &resource_data);
+
 void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 							   RuntimeLoopData &rl_data,
 							   WindowData &window_data,
 							   ResourceData &resource_data,
 							   RenderPass &render_pass);
+
+VkRenderPass GetVkRenderPass(const DeviceData &device_data,
+							 ResourceData &resource_data,
+							 const RenderPassOutput &output,
+							 const char *name);
+
+RenderPassHandle
+	CreateVkRenderPass(const RenderPassCreation &creation,
+									const DeviceData &device_data,
+									RuntimeLoopData &rl_data,
+									WindowData &window_data,
+									ResourceData &resource_data,
+									RenderPass &render_pass);
+
+void DestoryRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle);
+
 /* render pass end*/
 }; // namespace cloud::vulkan::infra
