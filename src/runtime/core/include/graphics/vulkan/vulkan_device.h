@@ -1,7 +1,7 @@
 #pragma once
 #include "graphics/device.h"
 #include "graphics/vulkan/gpu_resource.h"
-#include "graphics/vulkan/device_base.h"
+#include "graphics/vulkan/vulkan_device_context.h"
 
 namespace cloud::vulkan
 {
@@ -18,5 +18,8 @@ class GpuDevice : public render::GpuDevice
 	SamplerHandle CreateSampler(const render::SamplerCreation &creation) override;
 	void DestroySampler(const SamplerHandle &handle) override;
 	void Present() override;
+
+  private:
+	VulkanDeviceContext device_context;
 };
 } // namespace cloud::vulkan

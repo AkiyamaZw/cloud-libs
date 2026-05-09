@@ -2,22 +2,16 @@
 #include "core/runtime_log.h"
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
-#include "graphics/vulkan/device_base.h"
+#include "graphics/vulkan/vulkan_device_context.h"
 
 namespace cloud::vulkan
 {
 
 GpuDevice::~GpuDevice() {}
 
-void GpuDevice::InitGpuDevice(GpuCreateParam &param)
-{
-	// DeviceBase::Init(param);
-}
+void GpuDevice::InitGpuDevice(GpuCreateParam &param) { Init(device_context, param); }
 
-void GpuDevice::ShutdownGpuDevice()
-{
-	// DeviceBase::Shutdown();
-}
+void GpuDevice::ShutdownGpuDevice() { Shutdown(device_context); }
 
 SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 {

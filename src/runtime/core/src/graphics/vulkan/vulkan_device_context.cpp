@@ -1,4 +1,4 @@
-#include "graphics/vulkan/device_base.h"
+#include "graphics/vulkan/vulkan_device_context.h"
 #include "graphics/vulkan/vulkan_interface.h"
 #include "core/runtime_log.h"
 #include <algorithm>
@@ -8,7 +8,7 @@
 namespace cloud::vulkan
 {
 
-void Init(GpuCreateParam &param)
+void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 {
 	INFO("[Vulkan Gpu Device] Start init...");
 	VkResult succ;
@@ -86,7 +86,7 @@ void Init(GpuCreateParam &param)
 	// default_sampler = gpu_resource_manager->CreateSampler(sc);
 }
 
-void Shutdown()
+void Shutdown(VulkanDeviceContext &vdc)
 {
 	// 	// 等待所有命令缓冲区完成执行
 	// 	for (uint32_t i = 0; i < MaxSwapchainImages; ++i)
