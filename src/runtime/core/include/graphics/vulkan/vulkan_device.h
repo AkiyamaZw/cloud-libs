@@ -5,12 +5,9 @@
 
 namespace cloud::vulkan
 {
-struct DeviceBase;
 
 /* this class implement GpuDevice interface */
-class GpuDevice
-	: public DeviceBase
-	, public render::GpuDevice
+class GpuDevice : public render::GpuDevice
 {
   public:
 	~GpuDevice() override;

@@ -8,9 +8,7 @@
 namespace cloud::vulkan
 {
 
-DeviceBase::~DeviceBase() { INFO("vulkan device destroyed"); }
-
-void DeviceBase::Init(GpuCreateParam &param)
+void Init(GpuCreateParam &param)
 {
 	INFO("[Vulkan Gpu Device] Start init...");
 	VkResult succ;
@@ -88,7 +86,7 @@ void DeviceBase::Init(GpuCreateParam &param)
 	// default_sampler = gpu_resource_manager->CreateSampler(sc);
 }
 
-void DeviceBase::Shutdown()
+void Shutdown()
 {
 	// 	// 等待所有命令缓冲区完成执行
 	// 	for (uint32_t i = 0; i < MaxSwapchainImages; ++i)

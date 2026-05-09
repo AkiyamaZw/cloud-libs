@@ -5,14 +5,12 @@
 namespace cloud::vulkan
 {
 
-struct DeviceBase
+struct VulkanDeviceContext
 {
-	virtual ~DeviceBase();
 	/* basic api object */
-
-  public:
-	void Init(GpuCreateParam &param);
-	void Shutdown();
 };
+
+void Init(GpuCreateParam &param);
+void Shutdown();
 
 } // namespace cloud::vulkan
