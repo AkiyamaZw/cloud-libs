@@ -383,6 +383,8 @@ bool CreateVkDeviceAndQueue(DeviceData &device_data)
 	assert(device_data.device != nullptr);
 
 	vkGetDeviceQueue(device_data.device, device_data.queue_family, 0, &device_data.queue);
+
+	InitVulkanInterface(device_data.device);
 	return device_data.device != nullptr;
 }
 
@@ -580,7 +582,7 @@ bool CreateVkSwapChain(const DeviceData &device_data, WindowData &window_data)
 	return true;
 }
 
-void DestroySwapchain(const DeviceData &device_data, WindowData &window_data)
+void DestroyVkSwapchain(const DeviceData &device_data, WindowData &window_data)
 {
 
 	for (size_t i = 0; i < window_data.swapchain_image_count; i++)

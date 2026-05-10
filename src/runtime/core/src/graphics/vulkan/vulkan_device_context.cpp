@@ -16,18 +16,8 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 	CreateVkWindowSurfaceFromGlfw(vdc.instance_data, param, vdc.window_data);
 	CreateVkPhysicalDevice(vdc.instance_data, vdc.window_data, vdc.device_data);
 	CreateVkDeviceAndQueue(vdc.device_data);
-
-	// CreateDeviceAndQueue();
-	// assert(device);
-	// assert(queue);
-
-	// infra::InitVulkanInterface(device);
-
-	// CreateSwapChain();
-	// assert(swapchain);
-
-	// CreateVmaAllocator();
-	// assert(vma_allocator);
+	CreateVkSwapChain(vdc.device_data, vdc.window_data);
+	CreateVmaAllocator(vdc.instance_data, vdc.device_data, vdc.resource_data);
 
 	// CreateQueryPool(param);
 	// assert(timestamp_query_pool);
@@ -76,6 +66,8 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 void Shutdown(VulkanDeviceContext &vdc)
 {
 	using namespace infra;
+	DestroyVmaAllocator(vdc.resource_data);
+	DestroyVkSwapchain(vdc.device_data, vdc.window_data);
 	DestroyVkDeviceAndQueue(vdc.device_data);
 	DestroyWindowSurface(vdc.instance_data, vdc.window_data);
 	DestroyVkInstance(vdc.instance_data);

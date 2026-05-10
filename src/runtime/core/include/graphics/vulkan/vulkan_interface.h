@@ -31,7 +31,7 @@ void DestroyVkQueryPool(DeviceData &device_data);
 
 bool CreateVkSwapChain(const DeviceData &device_data, WindowData &window_data);
 
-void DestroySwapchain(const DeviceData &device_data, WindowData &window_data);
+void DestroyVkSwapchain(const DeviceData &device_data, WindowData &window_data);
 
 bool CreateVmaAllocator(const InstanceData &instance_data,
 						const DeviceData &device_data,

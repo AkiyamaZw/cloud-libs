@@ -64,6 +64,7 @@ struct RenderPipelineData
 
 struct DeviceResourcePoolData
 {
+	// resource obejct pool
 	static constexpr uint32_t buffer_pool_size = 4096;
 	cloud::ResourcePool buffers{buffer_pool_size, sizeof(Buffer)};
 	static constexpr uint32_t texture_pool_size = 512;
@@ -81,6 +82,22 @@ struct DeviceResourcePoolData
 	cloud::ResourcePool descriptor_sets{descriptor_set_pool_size, sizeof(DescriptorSet)};
 	static constexpr uint32_t sampler_pool_size = 32;
 	cloud::ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
+
+	// descriptor pool
+	static constexpr uint32_t k_global_pool_elements = 128;
+	static constexpr VkDescriptorPoolSize pool_sizes[] = {
+		{VK_DESCRIPTOR_TYPE_SAMPLER, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, k_global_pool_elements},
+		{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, k_global_pool_elements}};
+	VkDescriptorPool vk_descriptor_pool;
 
 	uint32_t dynamic_max_per_frame_size{0};
 	BufferHandle dynamic_buffer;
