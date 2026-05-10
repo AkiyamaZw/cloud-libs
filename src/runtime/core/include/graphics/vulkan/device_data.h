@@ -32,6 +32,7 @@ struct DeviceData
 	VkQueue queue;
 	uint32_t queue_family;
 	VkQueryPool timestamp_query_pool;
+	VkAllocationCallbacks *allocation_callback{nullptr};
 };
 
 struct WindowData

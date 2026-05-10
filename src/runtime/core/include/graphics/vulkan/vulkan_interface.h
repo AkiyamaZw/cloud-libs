@@ -17,12 +17,13 @@ bool CreateVkPhysicalDevice(const InstanceData &in_instance_data,
 							const WindowData &in_window_data,
 							DeviceData &out_device_data);
 
-bool CreateVkWindowDataFromGlfw(const InstanceData &instance_data,
-								const GpuCreateParam &param,
-								WindowData &window_data);
-void DestroyWindowData(const InstanceData &instance_data, WindowData &window_data);
+bool CreateVkWindowSurfaceFromGlfw(const InstanceData &instance_data,
+								   const GpuCreateParam &param,
+								   WindowData &window_data);
+void DestroyWindowSurface(const InstanceData &instance_data, WindowData &window_data);
 
 bool CreateVkDeviceAndQueue(DeviceData &device_data);
+void DestroyVkDeviceAndQueue(DeviceData &device);
 
 bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data);
 

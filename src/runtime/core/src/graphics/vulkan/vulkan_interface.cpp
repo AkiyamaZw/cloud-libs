@@ -238,7 +238,7 @@ void DestroyVkInstance(InstanceData &instance_data)
 	vkDestroyInstance(instance_data.instance, nullptr);
 }
 
-void DestroyWindowData(const InstanceData &instance_data, WindowData &window_data)
+void DestroyWindowSurface(const InstanceData &instance_data, WindowData &window_data)
 { vkDestroySurfaceKHR(instance_data.instance, window_data.window_surface, nullptr); }
 
 bool get_family_queue(VkPhysicalDevice physical_device,
@@ -336,9 +336,9 @@ bool CreateVkPhysicalDevice(const InstanceData &in_instance_data,
 	return true;
 }
 
-bool CreateVkWindowDataFromGlfw(const InstanceData &instance_data,
-								const GpuCreateParam &param,
-								WindowData &window_data)
+bool CreateVkWindowSurfaceFromGlfw(const InstanceData &instance_data,
+								   const GpuCreateParam &param,
+								   WindowData &window_data)
 {
 	window_data.swapchain_width = param.width;
 	window_data.swapchain_height = param.height;
@@ -384,6 +384,12 @@ bool CreateVkDeviceAndQueue(DeviceData &device_data)
 
 	vkGetDeviceQueue(device_data.device, device_data.queue_family, 0, &device_data.queue);
 	return device_data.device != nullptr;
+}
+
+void DestroyVkDeviceAndQueue(DeviceData &device_data)
+{
+	vkDestroyDevice(device_data.device, device_data.allocation_callback);
+	device_data.queue = VK_NULL_HANDLE;
 }
 
 bool CreateVkQueryPool(const GpuCreateParam &param, DeviceData &device_data)

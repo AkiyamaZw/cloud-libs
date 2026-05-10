@@ -11,23 +11,11 @@ namespace cloud::vulkan
 void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 {
 	INFO("[Vulkan Gpu Device] Start init...");
-	infra::CreateVkInstance(vdc.instance_data, param);
-	// // instance
-	// CreateInstance(param);
-	// assert(instance);
-
-	// // messenger
-	// CreateDebugExt();
-
-	// // surface creation
-	// swapchain_width = param.width;
-	// swapchain_height = param.height;
-	// succ = glfwCreateWindowSurface(
-	// 	instance, static_cast<GLFWwindow *>(param.window), nullptr, &window_surface);
-	// check_vk(succ);
-
-	// CreatePhysicalDevice();
-	// assert(physical_device);
+	using namespace infra;
+	CreateVkInstance(vdc.instance_data, param);
+	CreateVkWindowSurfaceFromGlfw(vdc.instance_data, param, vdc.window_data);
+	CreateVkPhysicalDevice(vdc.instance_data, vdc.window_data, vdc.device_data);
+	CreateVkDeviceAndQueue(vdc.device_data);
 
 	// CreateDeviceAndQueue();
 	// assert(device);
@@ -87,7 +75,10 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 
 void Shutdown(VulkanDeviceContext &vdc)
 {
-	infra::DestroyVkInstance(vdc.instance_data);
+	using namespace infra;
+	DestroyVkDeviceAndQueue(vdc.device_data);
+	DestroyWindowSurface(vdc.instance_data, vdc.window_data);
+	DestroyVkInstance(vdc.instance_data);
 	// 	// 等待所有命令缓冲区完成执行
 	// 	for (uint32_t i = 0; i < MaxSwapchainImages; ++i)
 	// 	{
