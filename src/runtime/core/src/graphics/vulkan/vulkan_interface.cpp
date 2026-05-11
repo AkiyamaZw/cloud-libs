@@ -610,6 +610,28 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 void DestroyVmaAllocator(ResourceData &resource_data)
 { vmaDestroyAllocator(resource_data.vma_allocator); }
 
+bool CreateVkDescriptorPool(const DeviceData &device_data, ResourceData &resource_data)
+{
+	VkDescriptorPoolCreateInfo pool_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	auto &pool_sizes = resource_data.pool_data.pool_sizes;
+	pool_info.maxSets = resource_data.pool_data.k_global_pool_elements * ArraySize(pool_sizes);
+	pool_info.poolSizeCount = (uint32_t)ArraySize(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+	VkResult succ = vkCreateDescriptorPool(device_data.device,
+										   &pool_info,
+										   device_data.allocation_callback,
+										   &resource_data.pool_data.vk_descriptor_pool);
+	return succ == VK_SUCCESS;
+}
+
+void DestroyVkDescriptorPool(const DeviceData &device_data, ResourceData &resource_data)
+{
+	vkDestroyDescriptorPool(device_data.device,
+							resource_data.pool_data.vk_descriptor_pool,
+							device_data.allocation_callback);
+}
+
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data)
 {
 	VkSemaphoreCreateInfo semaphore_create_info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
@@ -644,6 +666,21 @@ void DestroyVkSyncMarkers(const DeviceData &device_data, const RuntimeLoopData &
 		vkDestroyFence(device_data.device, rl_data.sync_signal.command_buffer_fence[i], nullptr);
 	}
 }
+
+bool InitRuntimeLoopData(const DeviceData &device_data, RuntimeLoopData &rl_data)
+{
+	rl_data.command_buffer_ring.Init(device_data.device, device_data.queue_family);
+	rl_data.frame_counter.current_frame = 1;
+	rl_data.frame_counter.previous_frame = 0;
+	rl_data.frame_counter.absolute_frame = 0;
+	rl_data.frame_counter.timestamps_enabled = false;
+	rl_data.resource_deletion_queue.clear();
+	rl_data.descriptor_set_updates.clear();
+	return true;
+}
+
+void DestoryRuntimeLoopData(const DeviceData &device_data, RuntimeLoopData &rl_data)
+{ rl_data.command_buffer_ring.Destroy(device_data.device); }
 
 CommandBuffer *GetInstantCommandBuffer(RuntimeLoopData &rl_data)
 {

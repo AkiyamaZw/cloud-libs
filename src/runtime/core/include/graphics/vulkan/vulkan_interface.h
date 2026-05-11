@@ -39,10 +39,16 @@ bool CreateVmaAllocator(const InstanceData &instance_data,
 
 void DestroyVmaAllocator(ResourceData &resource_data);
 
+bool CreateVkDescriptorPool(const DeviceData &device_data, ResourceData &resource_data);
+void DestroyVkDescriptorPool(const DeviceData &device_data, ResourceData &resource_data);
+
 bool CreateVkSyncMarkers(const DeviceData &device_data, RuntimeLoopData &rl_data);
 void DestroyVkSyncMarkers(const DeviceData &device_data, const RuntimeLoopData &rl_data);
 
+bool InitRuntimeLoopData(const DeviceData &device_data, RuntimeLoopData &rl_data);
+
 CommandBuffer *GetInstantCommandBuffer(RuntimeLoopData &rl_data);
+void DestoryRuntimeLoopData(const DeviceData &device_data, RuntimeLoopData &rl_data);
 
 void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   VkImage &image,

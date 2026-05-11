@@ -18,9 +18,10 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 	CreateVkDeviceAndQueue(vdc.device_data);
 	CreateVkSwapChain(vdc.device_data, vdc.window_data);
 	CreateVmaAllocator(vdc.instance_data, vdc.device_data, vdc.resource_data);
-
-	// CreateQueryPool(param);
-	// assert(timestamp_query_pool);
+	CreateVkDescriptorPool(vdc.device_data, vdc.resource_data);
+	CreateVkQueryPool(param, vdc.device_data);
+	CreateVkSyncMarkers(vdc.device_data, vdc.runtime_data);
+	InitRuntimeLoopData(vdc.device_data, vdc.runtime_data);
 
 	// CreateRenderPass();
 	// assert(render_pass);
@@ -66,6 +67,10 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 void Shutdown(VulkanDeviceContext &vdc)
 {
 	using namespace infra;
+	DestoryRuntimeLoopData(vdc.device_data, vdc.runtime_data);
+	DestroyVkSyncMarkers(vdc.device_data, vdc.runtime_data);
+	DestroyVkQueryPool(vdc.device_data);
+	DestroyVkDescriptorPool(vdc.device_data, vdc.resource_data);
 	DestroyVmaAllocator(vdc.resource_data);
 	DestroyVkSwapchain(vdc.device_data, vdc.window_data);
 	DestroyVkDeviceAndQueue(vdc.device_data);
