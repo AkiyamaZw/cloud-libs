@@ -97,12 +97,22 @@ struct DeviceResourcePoolData
 		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, k_global_pool_elements},
 		{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, k_global_pool_elements}};
 	VkDescriptorPool vk_descriptor_pool;
+};
 
-	uint32_t dynamic_max_per_frame_size{0};
-	BufferHandle dynamic_buffer;
-	uint8_t *dynamic_mapped_memory{nullptr};
-	uint32_t dynamic_allocated_size{0};
-	uint32_t dynamic_per_frame_size{1024 * 1024 * 10};
+struct DynamicBuffer
+{
+	uint32_t max_per_frame_size{0};
+	BufferHandle buffer;
+	uint8_t *mapped_memory{nullptr};
+	uint32_t allocated_size{0};
+	uint32_t per_frame_size{1024 * 1024 * 10};
+
+	struct MapBufferParameters
+	{
+		BufferHandle handle;
+		uint32_t offset{0};
+		uint32_t size{0};
+	};
 };
 
 struct ResourceData
@@ -114,6 +124,7 @@ struct ResourceData
 	SamplerHandle default_sampler;
 	TextureHandle texture_depth_handle;
 	RenderPassHandle swapchain_pass;
+	DynamicBuffer dynamic_buffer;
 	std::map<size_t, VkRenderPass> render_pass_cache;
 };
 

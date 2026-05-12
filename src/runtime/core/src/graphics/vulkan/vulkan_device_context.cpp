@@ -1,9 +1,6 @@
 #include "graphics/vulkan/vulkan_device_context.h"
 #include "graphics/vulkan/vulkan_interface.h"
 #include "core/runtime_log.h"
-#include <algorithm>
-#include <fstream>
-#include <string>
 
 namespace cloud::vulkan
 {
@@ -28,18 +25,21 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 void Shutdown(VulkanDeviceContext &vdc)
 {
 	using namespace infra;
-	//. todo idle wait
+
+	vkDeviceWaitIdle(vdc.device_data.device);
 
 	DestoryDefaultResource(vdc);
-
-	//. todo delete resource instance
 
 	DestoryRuntimeLoopData(vdc.device_data, vdc.runtime_data);
 	DestroyVkSyncMarkers(vdc.device_data, vdc.runtime_data);
 	DestroyVkQueryPool(vdc.device_data);
 	DestroyVkDescriptorPool(vdc.device_data, vdc.resource_data);
-	DestroyVmaAllocator(vdc.resource_data);
 	DestroyVkSwapchain(vdc.device_data, vdc.window_data);
+
+	DestroyResourceInstance(vdc.runtime_data, vdc.device_data, vdc.resource_data);
+
+	/* resource should be clear upper */
+	DestroyVmaAllocator(vdc.resource_data);
 	DestroyVkDeviceAndQueue(vdc.device_data);
 	DestroyWindowSurface(vdc.instance_data, vdc.window_data);
 	DestroyVkInstance(vdc.instance_data);
@@ -88,11 +88,22 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	rpc.stencil_op = RenderPassOperation::Clear;
 	vdc.resource_data.swapchain_pass = infra::CreateVkRenderPass(
 		rpc, vdc.device_data, vdc.runtime_data, vdc.window_data, vdc.resource_data);
+
+	BufferCreation dynamic_bc = {};
+	dynamic_bc.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+							 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	dynamic_bc.usage_type = ResourceUsageType::Immutable;
+	dynamic_bc.size = 1024 * 1024 * 10 * MaxSwapchainImages;
+	DynamicBuffer &dynamic_buffer = vdc.resource_data.dynamic_buffer;
+	dynamic_buffer.buffer = infra::CreateVkBuffer(dynamic_bc, vdc.device_data, vdc.resource_data);
+	dynamic_buffer.mapped_memory = (uint8_t *)infra::MapBuffer(
+		{dynamic_buffer.buffer, 0, 0}, dynamic_buffer, vdc.resource_data);
 }
 
 void DestoryDefaultResource(VulkanDeviceContext &vdc)
 {
-
+	DynamicBuffer &db = vdc.resource_data.dynamic_buffer;
+	infra::UnMapBuffer({db.buffer, 0, 0}, db, vdc.resource_data);
 	infra::DestroyVkRenderPass(vdc.resource_data.swapchain_pass, vdc.runtime_data);
 	infra::DestroyVkTexture(vdc.resource_data.texture_depth_handle, vdc.runtime_data);
 	infra::DestroyVkBuffer(vdc.resource_data.fullscreen_vertex_buffer, vdc.runtime_data);

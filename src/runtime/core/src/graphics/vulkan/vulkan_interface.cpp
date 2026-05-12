@@ -1,6 +1,7 @@
 #include "graphics/vulkan/vulkan_interface.h"
 #include "core/runtime_log.h"
 #include "graphics/vulkan/device_data.h"
+#include "core/data_structure/memory.h"
 
 #define _ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
 #define _GET_N_ARGS(...) _ARG_N(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
@@ -850,7 +851,7 @@ BufferHandle CreateVkBuffer(const BufferCreation &creation,
 	const bool use_global_buffer = (creation.usage_flags & buffer_usage_mask) != 0;
 	if (creation.usage_type == ResourceUsageType::Dynamic && use_global_buffer)
 	{
-		buffer->parent_handle = resource_data.pool_data.dynamic_buffer;
+		buffer->parent_handle = resource_data.dynamic_buffer.buffer;
 		return handle;
 	};
 	VkBufferCreateInfo buffer_create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -887,9 +888,11 @@ void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data)
 		{ResourceUpdateType::Buffer, handle.index, rl_data.frame_counter.current_frame});
 }
 
-void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resource_data)
+void DestroyVkBufferInstance(const ResourceHandle &handle,
+							 const DeviceData &device_data,
+							 ResourceData &resource_data)
 {
-	auto *buffer = static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle));
+	Buffer *buffer = AccessBuffer(resource_data, handle);
 	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
 	{
 		vmaDestroyBuffer(resource_data.vma_allocator, buffer->buffer, buffer->allocation);
@@ -1072,6 +1075,19 @@ void DestroyVkTexture(TextureHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
 		{ResourceUpdateType::Texture, handle.index, rl_data.frame_counter.current_frame});
+}
+
+void DestroyVkTextureInstance(const ResourceHandle &handle,
+							  const DeviceData &device_data,
+							  ResourceData &resource_data)
+{
+	Texture *tex = AccessTexture(resource_data, handle);
+	if (tex)
+	{
+		vkDestroyImageView(device_data.device, tex->view, device_data.allocation_callback);
+		vmaDestroyImage(resource_data.vma_allocator, tex->image, tex->allocation);
+	}
+	resource_data.pool_data.textures.ReleaseResource(handle);
 }
 
 void CreateVkSwapchainRenderPass(const DeviceData &device_data,
@@ -1426,9 +1442,9 @@ void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data)
 		{ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame});
 }
 
-void DestroyRenderPassInstance(const DeviceData &device_data,
-							   ResourceData &resource_data,
-							   ResourceHandle handle)
+void DestroyVkRenderPassInstance(const ResourceHandle &handle,
+								 const DeviceData &device_data,
+								 ResourceData &resource_data)
 {
 	RenderPass *rp = AccessRenderPass(resource_data, handle);
 	if (rp)
@@ -1440,5 +1456,83 @@ void DestroyRenderPassInstance(const DeviceData &device_data,
 		}
 		resource_data.pool_data.render_passes.ReleaseResource(handle);
 	}
+}
+
+void *DynamicAllocate(DynamicBuffer &dynamic_buffer, uint32_t size)
+{
+	void *memory = dynamic_buffer.mapped_memory + dynamic_buffer.allocated_size;
+	dynamic_buffer.allocated_size += (uint32_t)cloud::MemoryAlign(size, GUboAlignment);
+	return memory;
+}
+
+void *MapBuffer(const DynamicBuffer::MapBufferParameters &param,
+				DynamicBuffer &dynamic_buffer,
+				ResourceData &resource_data)
+{
+	if (param.handle.index == ResourcePool::INVALID_NUM)
+		return nullptr;
+	Buffer *buffer = Access(resource_data, param.handle);
+	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
+	{
+		buffer->global_offset = dynamic_buffer.allocated_size;
+		return DynamicAllocate(dynamic_buffer, param.size == 0 ? buffer->size : param.size);
+	}
+	void *data;
+	vmaMapMemory(resource_data.vma_allocator, buffer->allocation, &data);
+	return data;
+}
+
+void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
+				 DynamicBuffer &dynamic_buffer,
+				 ResourceData &resource_data)
+{
+	if (param.handle.index == ResourcePool::INVALID_NUM)
+		return;
+	Buffer *buffer = Access(resource_data, param.handle);
+	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
+		return;
+	vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
+}
+
+using instance_delete_handler =
+	std::function<void(const ResourceHandle &, const DeviceData &device_data, ResourceData &)>;
+std::unordered_map<ResourceUpdateType, instance_delete_handler> s_delete_map = {
+	{ResourceUpdateType::Buffer, DestroyVkBufferInstance},
+	{ResourceUpdateType::Texture, DestroyVkTextureInstance},
+	{ResourceUpdateType::Sampler, DestroyVkSamplerInstance},
+	{ResourceUpdateType::RenderPass, DestroyVkRenderPassInstance},
+};
+
+void DestroyResourceInstance(RuntimeLoopData &rl_data,
+							 const DeviceData &device_data,
+							 ResourceData &resource_data)
+{
+	for (uint32_t i = 0; i < rl_data.resource_deletion_queue.size(); ++i)
+	{
+		ResourceUpdate &res_to_delete = rl_data.resource_deletion_queue[i];
+
+		if (res_to_delete.current_frame == -1)
+			continue;
+		auto iter = s_delete_map.find(res_to_delete.type);
+		if (iter != s_delete_map.end())
+		{
+			iter->second(res_to_delete.handle, device_data, resource_data);
+		}
+		else
+		{
+			FATAL("resource type %d has not delete instance handler!",
+				  (uint32_t)res_to_delete.type);
+		}
+	}
+
+	auto &rp_cache = resource_data.render_pass_cache;
+	auto rp_cache_iter = rp_cache.begin();
+	while (rp_cache_iter != rp_cache.end())
+	{
+		VkRenderPass vk_rp = rp_cache_iter->second;
+		vkDestroyRenderPass(device_data.device, vk_rp, device_data.allocation_callback);
+		rp_cache_iter++;
+	}
+	rp_cache.clear();
 }
 } // namespace cloud::vulkan::infra

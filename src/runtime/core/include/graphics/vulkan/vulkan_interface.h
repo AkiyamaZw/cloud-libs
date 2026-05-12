@@ -91,7 +91,9 @@ BufferHandle CreateVkBuffer(const BufferCreation &creation,
 							ResourceData &resource_data);
 
 void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data);
-void DestroyVkBufferInstance(const ResourceHandle &handle, ResourceData &resource_data);
+void DestroyVkBufferInstance(const ResourceHandle &handle,
+							 const DeviceData &device_data,
+							 ResourceData &resource_data);
 /* buffer end */
 
 /* texture start */
@@ -101,7 +103,7 @@ TextureHandle CreateVkTexture(const DeviceData &device_data,
 							  ResourceData &resource_data);
 void DestroyVkTexture(TextureHandle &handle, RuntimeLoopData &rl_data);
 
-void DestroyVkSamplerInstance(const ResourceHandle &handle,
+void DestroyVkTextureInstance(const ResourceHandle &handle,
 							  const DeviceData &device_data,
 							  ResourceData &resource_data);
 
@@ -137,8 +139,22 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 
 void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data);
 
-void DestroyRenderPassInstance(const DeviceData &device_data,
-							   ResourceData &resource_data,
-							   ResourceHandle handle);
+void DestroyVkRenderPassInstance(const ResourceHandle &handle,
+								 const DeviceData &device_data,
+								 ResourceData &resource_data);
 /* render pass end*/
+
+/*  dynamic mapping buffer start */
+void *MapBuffer(const DynamicBuffer::MapBufferParameters &param,
+				DynamicBuffer &dynamic_buffer,
+				ResourceData &resource_data);
+void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
+				 DynamicBuffer &dynamic_buffer,
+				 ResourceData &resource_data);
+/*  dynamic mapping buffer start end */
+
+void DestroyResourceInstance(RuntimeLoopData &rl_data,
+							 const DeviceData &device_data,
+							 ResourceData &resource_data);
+
 }; // namespace cloud::vulkan::infra
