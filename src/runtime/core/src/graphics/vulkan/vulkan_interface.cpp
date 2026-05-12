@@ -1068,7 +1068,7 @@ TextureHandle CreateVkTexture(const DeviceData &device_data,
 	return handle;
 }
 
-void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle)
+void DestroyVkTexture(TextureHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
 		{ResourceUpdateType::Texture, handle.index, rl_data.frame_counter.current_frame});
@@ -1095,7 +1095,7 @@ void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 	color_attach_ref.attachment = 0;
 	color_attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	Texture *depth_tex = Access(resource_data, window_data.texture_depth_handle);
+	Texture *depth_tex = Access(resource_data, resource_data.texture_depth_handle);
 	VkAttachmentDescription depth_attach{};
 	depth_attach.format = depth_tex->format;
 	depth_attach.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -1367,8 +1367,7 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 									const DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									WindowData &window_data,
-									ResourceData &resource_data,
-									RenderPass &render_pass)
+									ResourceData &resource_data)
 {
 	RenderPassHandle handle = {resource_data.pool_data.render_passes.FetchResource()};
 	if (handle.index == ResourcePool::INVALID_NUM)
@@ -1421,7 +1420,7 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	return handle;
 }
 
-void DestroyRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle)
+void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
 		{ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame});

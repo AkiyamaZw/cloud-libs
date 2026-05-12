@@ -22,51 +22,18 @@ void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
 	CreateVkQueryPool(param, vdc.device_data);
 	CreateVkSyncMarkers(vdc.device_data, vdc.runtime_data);
 	InitRuntimeLoopData(vdc.device_data, vdc.runtime_data);
-
-	// CreateRenderPass();
-	// assert(render_pass);
-
-	// CreateFramebuffers();
-	// assert(swapchain_framebuffers[0]);
-
-	// CreatePipelineLayout();
-	// assert(pipeline_layout);
-
-	// CreateGraphicsPipeline();
-	// assert(graphics_pipeline);
-
-	// gpu_resource_manager = std::make_unique<GPUResourceManager>(device,
-	// 															vma_allocator,
-	// 															descriptor_pool,
-	// 															current_frame,
-	// 															device_resource,
-	// 															default_resource,
-	// 															resource_deletion_queue,
-	// 															descriptor_set_updates,
-	// 															debug_utils_extension_present);
-
-	// // 初始化时间
-	// start_time = std::chrono::high_resolution_clock::now();
-	// CreateSyncMarkers();
-	// assert(render_complete_semaphore[0]);
-	// assert(image_acquired_semaphore[0]);
-	// assert(command_buffer_fence[0]);
-	// g_vulkan_cmd_buffer_ring.Init(device, queue_family);
-
-	// SamplerCreation sc{};
-	// sc.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	// sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	// sc.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	// sc.min_filter = VK_FILTER_LINEAR;
-	// sc.mag_filter = VK_FILTER_LINEAR;
-	// sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	// sc.name = "Sampler Default";
-	// default_sampler = gpu_resource_manager->CreateSampler(sc);
+	InitDefaultResource(vdc);
 }
 
 void Shutdown(VulkanDeviceContext &vdc)
 {
 	using namespace infra;
+	//. todo idle wait
+
+	DestoryDefaultResource(vdc);
+
+	//. todo delete resource instance
+
 	DestoryRuntimeLoopData(vdc.device_data, vdc.runtime_data);
 	DestroyVkSyncMarkers(vdc.device_data, vdc.runtime_data);
 	DestroyVkQueryPool(vdc.device_data);
@@ -76,61 +43,60 @@ void Shutdown(VulkanDeviceContext &vdc)
 	DestroyVkDeviceAndQueue(vdc.device_data);
 	DestroyWindowSurface(vdc.instance_data, vdc.window_data);
 	DestroyVkInstance(vdc.instance_data);
-	// 	// 等待所有命令缓冲区完成执行
-	// 	for (uint32_t i = 0; i < MaxSwapchainImages; ++i)
-	// 	{
-	// 		vkWaitForFences(device, 1, &command_buffer_fence[i], VK_TRUE, UINT64_MAX);
-	// 	}
+}
 
-	// 	// 等待所有队列操作完成
-	// 	vkDeviceWaitIdle(device);
+void InitDefaultResource(VulkanDeviceContext &vdc)
+{
+	SamplerCreation sc{};
+	sc.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sc.min_filter = VK_FILTER_LINEAR;
+	sc.mag_filter = VK_FILTER_LINEAR;
+	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sc.name = "default_sampler";
+	vdc.resource_data.default_sampler =
+		infra::CreateVkSampler(vdc.device_data, vdc.resource_data, sc);
 
-	// 	g_vulkan_cmd_buffer_ring.Destroy(device);
-	// 	render::MapBufferParameter map_buffer_param{device_resource.dynamic_buffer, 0, 0};
-	// 	gpu_resource_manager->UnMapBuffer(map_buffer_param);
+	BufferCreation bc{};
+	bc.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	bc.usage_type = ResourceUsageType::Immutable, bc.size = 0;
+	bc.initial_data = nullptr;
+	bc.name = "fullscreen_vb";
+	vdc.resource_data.fullscreen_vertex_buffer =
+		infra::CreateVkBuffer(bc, vdc.device_data, vdc.resource_data);
 
-	// 	// 销毁uniform buffer
-	// 	gpu_resource_manager->DestroyBuffer(uniform_buffer, current_frame);
+	TextureCreation tc{};
+	tc.initial_data = nullptr;
+	tc.height = vdc.window_data.swapchain_height;
+	tc.width = vdc.window_data.swapchain_width;
+	tc.depth = 1;
+	tc.mipmaps = 1;
+	tc.flags = 0;
+	tc.format = VK_FORMAT_D32_SFLOAT;
+	tc.type = TextureType::Texture2D;
+	tc.name = "depth_texture";
+	vdc.resource_data.texture_depth_handle =
+		infra::CreateVkTexture(vdc.device_data, vdc.runtime_data, tc, vdc.resource_data);
 
-	// 	// 销毁dynamic buffer和sampler
-	// 	gpu_resource_manager->DestroyBuffer(device_resource.dynamic_buffer, current_frame);
-	// 	gpu_resource_manager->DestroySampler(default_sampler, current_frame);
+	vdc.window_data.swapchain_output.SetDepthFormat(VK_FORMAT_D32_SFLOAT);
+	RenderPassCreation rpc = {};
+	rpc.type = RenderPassType::SwapChain;
+	rpc.name = "swapchain";
+	rpc.color_op = RenderPassOperation::Clear;
+	rpc.depth_op = RenderPassOperation::Clear;
+	rpc.stencil_op = RenderPassOperation::Clear;
+	vdc.resource_data.swapchain_pass = infra::CreateVkRenderPass(
+		rpc, vdc.device_data, vdc.runtime_data, vdc.window_data, vdc.resource_data);
+}
 
-	// 	// 释放deletion queue中的资源
-	// 	gpu_resource_manager->ReleaseResourcesInDeletionQueue();
+void DestoryDefaultResource(VulkanDeviceContext &vdc)
+{
 
-	// 	device_resource.samplers.Shutdown();
-	// 	device_resource.pipelines.Shutdown();
-	// 	device_resource.shaders.Shutdown();
-	// 	device_resource.descriptor_sets.Shutdown();
-
-	// 	// 销毁渲染相关资源
-	// 	vkDestroyPipeline(device, graphics_pipeline, nullptr);
-
-	// 	// 销毁descriptor set
-	// 	vkFreeDescriptorSets(device, descriptor_pool, 1, &descriptor_set);
-
-	// 	// 销毁descriptor set layout
-	// 	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, nullptr);
-
-	// 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
-	// 	vkDestroyRenderPass(device, render_pass, nullptr);
-
-	// 	DestroySyncMarkers();
-	// 	vkDestroyQueryPool(device, timestamp_query_pool, nullptr);
-	// 	vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
-	// 	vmaDestroyAllocator(vma_allocator);
-	// 	DestroySwapChain();
-	// 	vkDestroyDevice(device, nullptr);
-	// 	vkDestroySurfaceKHR(instance, window_surface, nullptr);
-
-	// #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
-	// 	auto vkDestroyDebugUtilsMessengerEXT =
-	// 		(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-	// 			instance, "vkDestroyDebugUtilsMessengerEXT");
-	// 	vkDestroyDebugUtilsMessengerEXT(instance, debug_utils_messenger, nullptr);
-	// #endif
-	// vkDestroyInstance(instance, nullptr);
+	infra::DestroyVkRenderPass(vdc.resource_data.swapchain_pass, vdc.runtime_data);
+	infra::DestroyVkTexture(vdc.resource_data.texture_depth_handle, vdc.runtime_data);
+	infra::DestroyVkBuffer(vdc.resource_data.fullscreen_vertex_buffer, vdc.runtime_data);
+	infra::DestroyVkSampler(vdc.resource_data.default_sampler, vdc.runtime_data);
 }
 
 } // namespace cloud::vulkan

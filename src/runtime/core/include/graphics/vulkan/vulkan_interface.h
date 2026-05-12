@@ -99,7 +99,7 @@ TextureHandle CreateVkTexture(const DeviceData &device_data,
 							  RuntimeLoopData &rl_data,
 							  const TextureCreation &creation,
 							  ResourceData &resource_data);
-void DestroyTexture(RuntimeLoopData &rl_data, TextureHandle &handle);
+void DestroyVkTexture(TextureHandle &handle, RuntimeLoopData &rl_data);
 
 void DestroyVkSamplerInstance(const ResourceHandle &handle,
 							  const DeviceData &device_data,
@@ -133,10 +133,9 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 									const DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									WindowData &window_data,
-									ResourceData &resource_data,
-									RenderPass &render_pass);
+									ResourceData &resource_data);
 
-void DestroyRenderPass(RuntimeLoopData &rl_data, RenderPassHandle &handle);
+void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data);
 
 void DestroyRenderPassInstance(const DeviceData &device_data,
 							   ResourceData &resource_data,

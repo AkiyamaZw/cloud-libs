@@ -52,7 +52,6 @@ struct WindowData
 	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_framebuffers;
 	uint32_t swapchain_image_count;
 	uint32_t vulkan_image_index{0};
-	TextureHandle texture_depth_handle;
 };
 
 struct RenderPipelineData
@@ -113,6 +112,8 @@ struct ResourceData
 	DeviceResourcePoolData pool_data;
 	BufferHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
+	TextureHandle texture_depth_handle;
+	RenderPassHandle swapchain_pass;
 	std::map<size_t, VkRenderPass> render_pass_cache;
 };
 

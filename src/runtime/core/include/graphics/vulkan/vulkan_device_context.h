@@ -16,5 +16,6 @@ struct VulkanDeviceContext
 
 void Init(VulkanDeviceContext &vdc, GpuCreateParam &param);
 void Shutdown(VulkanDeviceContext &vdc);
-
+void InitDefaultResource(VulkanDeviceContext &vdc);
+void DestoryDefaultResource(VulkanDeviceContext &vdc);
 } // namespace cloud::vulkan
