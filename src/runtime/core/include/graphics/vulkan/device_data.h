@@ -3,6 +3,7 @@
 #include <vector>
 #include <array>
 #include <map>
+#include <chrono>
 #include "graphics/vulkan/command_buffer.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"

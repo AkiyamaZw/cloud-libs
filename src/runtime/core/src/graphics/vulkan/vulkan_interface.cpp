@@ -1,33 +1,13 @@
+#include <algorithm>
+#include <functional>
 #include "graphics/vulkan/vulkan_interface.h"
 #include "core/runtime_log.h"
 #include "graphics/vulkan/device_data.h"
 #include "core/data_structure/memory.h"
 
-#define _ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define _GET_N_ARGS(...) _ARG_N(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
-#define _COPY_1(d, s, p1) d.p1 = s.p1;
-#define _COPY_2(d, s, p1, p2) _COPY_1(d, s, p1) _COPY_1(d, s, p2)
-#define _COPY_3(d, s, p1, p2, p3) _COPY_2(d, s, p1, p2) _COPY_1(d, s, p3)
-#define _COPY_4(d, s, p1, p2, p3, p4) _COPY_3(d, s, p1, p2, p3) _COPY_1(d, s, p4)
-#define _COPY_5(d, s, p1, p2, p3, p4, p5) _COPY_4(d, s, p1, p2, p3, p4) _COPY_1(d, s, p5)
-#define _COPY_6(d, s, p1, p2, p3, p4, p5, p6) _COPY_5(d, s, p1, p2, p3, p4, p5) _COPY_1(d, s, p6)
-#define _COPY_7(d, s, p1, p2, p3, p4, p5, p6, p7)                                                  \
-	_COPY_6(d, s, p1, p2, p3, p4, p5, p6) _COPY_1(d, s, p7)
-#define _COPY_8(d, s, p1, p2, p3, p4, p5, p6, p7, p8)                                              \
-	_COPY_7(d, s, p1, p2, p3, p4, p5, p6, p7) _COPY_1(d, s, p8)
-#define _COPY_9(d, s, p1, p2, p3, p4, p5, p6, p7, p8, p9)                                          \
-	_COPY_8(d, s, p1, p2, p3, p4, p5, p6, p7, p8) _COPY_1(d, s, p9)
-#define _COPY_10(d, s, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)                                    \
-	_COPY_9(d, s, p1, p2, p3, p4, p5, p6, p7, p8, p9) _COPY_1(d, s, p10)
 
-#define _COPY_DISPATCH(n) _COPY_##n
-#define _COPY_MEMBERS(dest, src, n, ...) _COPY_DISPATCH(n)(dest, src, __VA_ARGS__)
-#define COPY_MEMBERS(dest, src, ...)                                                               \
-	do                                                                                             \
-	{                                                                                              \
-		_COPY_MEMBERS(dest, src, _GET_N_ARGS(__VA_ARGS__), __VA_ARGS__);                           \
-	} while (0)
+#define COPY_MEMBER(obj_left, obj_right, member) obj_left.member = obj_right.member
 
 namespace cloud::vulkan::infra
 {
@@ -906,14 +886,24 @@ void CreateVkTextureInner(const DeviceData &device_data,
 						  const TextureHandle &handle,
 						  Texture &texture)
 {
-	COPY_MEMBERS(texture, creation, width, height, depth, name, mipmaps, flags, type, format);
+	COPY_MEMBER(texture, creation, width);
+	COPY_MEMBER(texture, creation, height);
+	COPY_MEMBER(texture, creation, depth);
+	COPY_MEMBER(texture, creation, name);
+	COPY_MEMBER(texture, creation, mipmaps);
+	COPY_MEMBER(texture, creation, flags);
+	COPY_MEMBER(texture, creation, type);
+	COPY_MEMBER(texture, creation, format);
+
 	texture.sampler = nullptr;
 	texture.handle = handle;
 	VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
 	image_create_info.format = texture.format;
 	image_create_info.flags = 0;
 	ToVKEnum(texture.type, image_create_info.imageType);
-	COPY_MEMBERS(image_create_info.extent, texture, width, height, depth);
+	COPY_MEMBER(image_create_info.extent, texture, width);
+	COPY_MEMBER(image_create_info.extent, texture, height);
+	COPY_MEMBER(image_create_info.extent, texture, depth);
 	image_create_info.mipLevels = texture.mipmaps;
 	image_create_info.arrayLayers = 1;
 	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
