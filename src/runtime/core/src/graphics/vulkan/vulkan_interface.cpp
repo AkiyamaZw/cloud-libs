@@ -153,12 +153,12 @@ bool CreateVkInstance(InstanceData &instance_data, const GpuCreateParam &param)
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 		.pApplicationInfo = &app_info,
-#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+//#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
 		.enabledLayerCount = std::size(s_instance_layer),
 		.ppEnabledLayerNames = s_instance_layer,
 		.enabledExtensionCount = static_cast<uint32_t>(instance_data.enabled_extensions.size()),
 		.ppEnabledExtensionNames = instance_data.enabled_extensions.data()
-#endif
+//#endif
 	};
 
 	const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
@@ -780,7 +780,7 @@ SamplerHandle CreateVkSampler(const DeviceData &device_data,
 	}
 	Sampler *sampler =
 		static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle.index));
-	VkSamplerCreateInfo create_info;
+	VkSamplerCreateInfo create_info{};
 	TranslateSamplerCreation(creation, create_info);
 	auto succ = vkCreateSampler(device_data.device, &create_info, nullptr, &sampler->sampler);
 	check_vk(succ);
@@ -859,6 +859,9 @@ BufferHandle CreateVkBuffer(const BufferCreation &creation,
 		memcpy(data, creation.initial_data, (size_t)creation.size);
 		vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
 	}
+	#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+		INFO("%s crearted", buffer->name);
+	#endif
 	return handle;
 }
 
@@ -934,7 +937,7 @@ void CreateVkTextureInner(const DeviceData &device_data,
 	check_vk(succ);
 	SetResourceName(
 		device_data.device, VK_OBJECT_TYPE_IMAGE, (uint64_t)texture.image, creation.name);
-	VkImageViewCreateInfo info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+	VkImageViewCreateInfo info = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
 	info.image = texture.image;
 	ToVKEnum(creation.type, info.viewType);
 	info.format = creation.format;

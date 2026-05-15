@@ -50,7 +50,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	SamplerCreation sc{};
 	sc.address_mode_u = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	sc.address_mode_v = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sc.address_mode_w = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sc.min_filter = VK_FILTER_LINEAR;
 	sc.mag_filter = VK_FILTER_LINEAR;
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
