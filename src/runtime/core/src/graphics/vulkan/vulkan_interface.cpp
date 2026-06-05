@@ -28,13 +28,14 @@ void InitVulkanInterface(VkDevice device, bool debug_message)
 	}
 }
 
-void SetResourceName(VkDevice device, VkObjectType type, uint64_t handle, const char *name)
+void SetResourceName(VkDevice device, VkObjectType type, uint64_t ptr, const char *name)
 {
 	VkDebugUtilsObjectNameInfoEXT name_info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
 	name_info.objectType = type;
-	name_info.objectHandle = handle;
+	name_info.objectHandle = ptr;
 	name_info.pObjectName = name;
 	pfnSetDebugUtilsObjectNameEXT(device, &name_info);
+	INFO("Resource \"%s\" created with handle %d", name, ptr);
 }
 
 static const char *s_instance_layer[] = {
@@ -801,8 +802,10 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 							  const DeviceData &device_data,
 							  ResourceData &resource_data)
 {
+	
 	if (auto sampler = static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle)))
 	{
+		INFO("resource %s delete, handle %d", sampler->name, handle);
 		vkDestroySampler(device_data.device, sampler->sampler, nullptr);
 	}
 	resource_data.pool_data.samplers.ReleaseResource(handle);
@@ -876,6 +879,7 @@ void DestroyVkBufferInstance(const ResourceHandle &handle,
 							 ResourceData &resource_data)
 {
 	Buffer *buffer = AccessBuffer(resource_data, handle);
+	INFO("resource %s delete, handle %d", buffer->name, handle);
 	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
 	{
 		vmaDestroyBuffer(resource_data.vma_allocator, buffer->buffer, buffer->allocation);
@@ -1075,6 +1079,7 @@ void DestroyVkTextureInstance(const ResourceHandle &handle,
 							  ResourceData &resource_data)
 {
 	Texture *tex = AccessTexture(resource_data, handle);
+	INFO("resource %s delete, handle %d", tex->name, handle);
 	if (tex)
 	{
 		vkDestroyImageView(device_data.device, tex->view, device_data.allocation_callback);
@@ -1390,8 +1395,8 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	rp->dispatch_x = 0;
 	rp->dispatch_y = 0;
 	rp->dispatch_z = 0;
-	rp->vk_frame_buffer = nullptr;
-	rp->vk_frame_buffer = nullptr;
+	rp->vk_frame_buffer = VK_NULL_HANDLE;
+	rp->vk_frame_buffer = VK_NULL_HANDLE;
 	rp->scale_x = creation.scale_x;
 	rp->scale_y = creation.scale_y;
 	rp->resize = creation.resize;
@@ -1431,8 +1436,9 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 
 void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data)
 {
-	rl_data.resource_deletion_queue.push_back(
-		{ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame});
+
+	rl_data.resource_deletion_queue.emplace_back(
+		ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame);
 }
 
 void DestroyVkRenderPassInstance(const ResourceHandle &handle,
@@ -1440,6 +1446,7 @@ void DestroyVkRenderPassInstance(const ResourceHandle &handle,
 								 ResourceData &resource_data)
 {
 	RenderPass *rp = AccessRenderPass(resource_data, handle);
+	INFO("resource %s delete, handle %d", rp->name, handle);
 	if (rp)
 	{
 		if (rp->num_render_targets)
@@ -1509,6 +1516,7 @@ void DestroyResourceInstance(RuntimeLoopData &rl_data,
 		auto iter = s_delete_map.find(res_to_delete.type);
 		if (iter != s_delete_map.end())
 		{
+			const auto &handle = res_to_delete.handle;
 			iter->second(res_to_delete.handle, device_data, resource_data);
 		}
 		else

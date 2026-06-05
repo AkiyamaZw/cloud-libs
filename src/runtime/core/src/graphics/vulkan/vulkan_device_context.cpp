@@ -94,6 +94,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 							 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	dynamic_bc.usage_type = ResourceUsageType::Immutable;
 	dynamic_bc.size = 1024 * 1024 * 10 * MaxSwapchainImages;
+	dynamic_bc.name = "dynamic_buffer";
 	DynamicBuffer &dynamic_buffer = vdc.resource_data.dynamic_buffer;
 	dynamic_buffer.buffer = infra::CreateVkBuffer(dynamic_bc, vdc.device_data, vdc.resource_data);
 	dynamic_buffer.mapped_memory = (uint8_t *)infra::MapBuffer(
