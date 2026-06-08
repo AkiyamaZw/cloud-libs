@@ -9,7 +9,7 @@ namespace cloud::render
 
 struct MapBufferParameter
 {
-	BufferHandle handle;
+	ResourceHandle handle;
 	uint32_t offset{0};
 	uint32_t size{0};
 };

@@ -48,7 +48,6 @@ using ResourceHandle = uint32_t;
 	};                                                                                             \
 	static constexpr name##Handle name##InvalidHandle {}
 
-HANDLE_DECLARE(Buffer);
 HANDLE_DECLARE(Texture);
 HANDLE_DECLARE(DescriptorSetLayout);
 HANDLE_DECLARE(ShaderState);

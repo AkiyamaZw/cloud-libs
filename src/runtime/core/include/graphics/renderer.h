@@ -11,28 +11,28 @@
 namespace cloud::render
 {
 
-struct BufferResource : public Resource
-{
-	BufferHandle buffer_;
-	uint32_t pool_index_;
-	static constexpr std::string_view resource_type{"buffer_resource"};
-	BufferHandle handle;
-	uint32_t pool_index;
-};
-
-struct TextureResource : public Resource
-{
-	static constexpr std::string_view resource_type{"texture_resource"};
-	TextureHandle handle;
-	uint32_t pool_index;
-};
-
-struct SamplerResource : public Resource
-{
-	static constexpr std::string_view resource_type{"sampler_resource"};
-	SamplerHandle handle;
-	uint32_t pool_index;
-};
+//struct BufferResource : public Resource
+//{
+//	BufferHandle buffer_;
+//	uint32_t pool_index_;
+//	static constexpr std::string_view resource_type{"buffer_resource"};
+//	BufferHandle handle;
+//	uint32_t pool_index;
+//};
+//
+//struct TextureResource : public Resource
+//{
+//	static constexpr std::string_view resource_type{"texture_resource"};
+//	TextureHandle handle;
+//	uint32_t pool_index;
+//};
+//
+//struct SamplerResource : public Resource
+//{
+//	static constexpr std::string_view resource_type{"sampler_resource"};
+//	SamplerHandle handle;
+//	uint32_t pool_index;
+//};
 
 void CreateRenderer(GpuCreateParam &param);
 void DestroyRenderer();
@@ -66,9 +66,9 @@ class Renderer : public SingletonSystem
 
 	void ResizeSwapChain(uint32_t width, uint32_t height);
 
-	SamplerResource *CreateSampler(const SamplerCreation &creation);
+	//SamplerResource *CreateSampler(const SamplerCreation &creation);
 
-	TypedResourcePool<SamplerResource> samplers_;
+	//TypedResourcePool<SamplerResource> samplers_;
 
 	GpuDevice *gpu_device_;
 };

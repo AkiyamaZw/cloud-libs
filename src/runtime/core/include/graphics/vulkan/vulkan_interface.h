@@ -60,7 +60,6 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 Texture *Access(ResourceData &resource_data, const TextureHandle &hanle);
 Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle);
 
-Buffer *Access(ResourceData &resource_data, const BufferHandle &handle);
 Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle);
 
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle);
@@ -86,11 +85,11 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 /* sampler end*/
 
 /* buffer start */
-BufferHandle CreateVkBuffer(const BufferCreation &creation,
+ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 							const DeviceData &device_data,
 							ResourceData &resource_data);
 
-void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data);
+void DestroyVkBuffer(const ResourceHandle &handle, RuntimeLoopData &rl_data);
 void DestroyVkBufferInstance(const ResourceHandle &handle,
 							 const DeviceData &device_data,
 							 ResourceData &resource_data);

@@ -725,9 +725,6 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 Texture *Access(ResourceData &resource_data, const TextureHandle &handle)
 { return AccessTexture(resource_data, handle.index); }
 
-Buffer *Access(ResourceData &resource_data, const BufferHandle &handle)
-{ return AccessBuffer(resource_data, handle.index); }
-
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
 { return AccessSampler(resource_data, handle.index); }
 
@@ -811,23 +808,23 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 	resource_data.pool_data.samplers.ReleaseResource(handle);
 }
 
-BufferHandle CreateVkBuffer(const BufferCreation &creation,
+ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 							const DeviceData &device_data,
 							ResourceData &resource_data)
 {
-	BufferHandle handle = {resource_data.pool_data.buffers.FetchResource()};
-	if (handle.index == ResourcePool::INVALID_NUM)
+	ResourceHandle handle = resource_data.pool_data.buffers.FetchResource();
+	if (handle == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
-	Buffer *buffer = static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle.index));
+	Buffer *buffer = static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle));
 	buffer->name = creation.name;
 	buffer->size = creation.size;
 	buffer->usage_type = creation.usage_type;
 	buffer->usage_flags = creation.usage_flags;
 	buffer->handle = handle;
 	buffer->global_offset = 0;
-	buffer->parent_handle = BufferHandle{ResourcePool::INVALID_NUM};
+	buffer->parent_handle = ResourcePool::INVALID_NUM;
 	static const VkBufferUsageFlags buffer_usage_mask = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
 														VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
 														VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -868,10 +865,10 @@ BufferHandle CreateVkBuffer(const BufferCreation &creation,
 	return handle;
 }
 
-void DestroyVkBuffer(const BufferHandle &handle, RuntimeLoopData &rl_data)
+void DestroyVkBuffer(const ResourceHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
-		{ResourceUpdateType::Buffer, handle.index, rl_data.frame_counter.current_frame});
+		{ResourceUpdateType::Buffer, handle, rl_data.frame_counter.current_frame});
 }
 
 void DestroyVkBufferInstance(const ResourceHandle &handle,
@@ -880,7 +877,7 @@ void DestroyVkBufferInstance(const ResourceHandle &handle,
 {
 	Buffer *buffer = AccessBuffer(resource_data, handle);
 	INFO("resource %s delete, handle %d", buffer->name, handle);
-	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
+	if (buffer && buffer->parent_handle == ResourcePool::INVALID_NUM)
 	{
 		vmaDestroyBuffer(resource_data.vma_allocator, buffer->buffer, buffer->allocation);
 	}
@@ -1469,10 +1466,10 @@ void *MapBuffer(const DynamicBuffer::MapBufferParameters &param,
 				DynamicBuffer &dynamic_buffer,
 				ResourceData &resource_data)
 {
-	if (param.handle.index == ResourcePool::INVALID_NUM)
+	if (param.handle == ResourcePool::INVALID_NUM)
 		return nullptr;
-	Buffer *buffer = Access(resource_data, param.handle);
-	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
+	Buffer *buffer = AccessBuffer(resource_data, param.handle);
+	if (buffer->parent_handle == dynamic_buffer.buffer)
 	{
 		buffer->global_offset = dynamic_buffer.allocated_size;
 		return DynamicAllocate(dynamic_buffer, param.size == 0 ? buffer->size : param.size);
@@ -1486,10 +1483,10 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 				 DynamicBuffer &dynamic_buffer,
 				 ResourceData &resource_data)
 {
-	if (param.handle.index == ResourcePool::INVALID_NUM)
+	if (param.handle == ResourcePool::INVALID_NUM)
 		return;
-	Buffer *buffer = Access(resource_data, param.handle);
-	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
+	Buffer *buffer = AccessBuffer(resource_data, param.handle);
+	if (buffer->parent_handle == dynamic_buffer.buffer)
 		return;
 	vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
 }

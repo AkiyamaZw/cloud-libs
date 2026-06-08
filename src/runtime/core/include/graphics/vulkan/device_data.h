@@ -103,14 +103,14 @@ struct DeviceResourcePoolData
 struct DynamicBuffer
 {
 	uint32_t max_per_frame_size{0};
-	BufferHandle buffer;
+	ResourceHandle buffer;
 	uint8_t *mapped_memory{nullptr};
 	uint32_t allocated_size{0};
 	uint32_t per_frame_size{1024 * 1024 * 10};
 
 	struct MapBufferParameters
 	{
-		BufferHandle handle;
+		ResourceHandle handle;
 		uint32_t offset{0};
 		uint32_t size{0};
 	};
@@ -121,7 +121,7 @@ struct ResourceData
 	VkAllocationCallbacks *allocation_callback{nullptr};
 	VmaAllocator vma_allocator{nullptr};
 	DeviceResourcePoolData pool_data;
-	BufferHandle fullscreen_vertex_buffer;
+	ResourceHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
 	TextureHandle texture_depth_handle;
 	RenderPassHandle swapchain_pass;

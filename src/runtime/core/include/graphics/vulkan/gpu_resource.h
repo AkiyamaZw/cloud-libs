@@ -27,7 +27,6 @@ struct RenderPassOutput
 };
 
 using ResourceHandle = render::ResourceHandle;
-using BufferHandle = render::BufferHandle;
 using TextureHandle = render::TextureHandle;
 using DescriptorSetLayoutHandle = render::DescriptorSetLayoutHandle;
 using PipelineHandle = render::PipelineHandle;
@@ -62,8 +61,8 @@ struct BufferCreation
 
 struct Buffer
 {
-	render::BufferHandle handle;
-	BufferHandle parent_handle;
+	ResourceHandle handle;
+	ResourceHandle parent_handle;
 	VkBuffer buffer;
 	VmaAllocation allocation;
 	VkDeviceMemory memory;

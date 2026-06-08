@@ -36,9 +36,6 @@ class GPUResourceManager
 	void DestroySampler(const SamplerHandle &handle, const uint32_t &frame_index);
 	void DestroySamplerInstance(ResourceHandle handle) const;
 
-	BufferHandle CreateBuffer(const BufferCreation &creation);
-	void DestroyBuffer(const BufferHandle &handle, const uint32_t &frame_index);
-	void DestroyBufferInstance(ResourceHandle handle) const;
 
 	void DestroyDescriptorSet(const DescriptorSetHandle &handle, const uint32_t &frame_index);
 
