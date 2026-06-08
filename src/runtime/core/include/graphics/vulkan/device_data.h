@@ -123,7 +123,7 @@ struct ResourceData
 	DeviceResourcePoolData pool_data;
 	ResourceHandle fullscreen_vertex_buffer;
 	SamplerHandle default_sampler;
-	TextureHandle texture_depth_handle;
+	ResourceHandle texture_depth_handle;
 	RenderPassHandle swapchain_pass;
 	DynamicBuffer dynamic_buffer;
 	std::map<size_t, VkRenderPass> render_pass_cache;

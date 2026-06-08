@@ -57,7 +57,6 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   VkImageLayout newLayout,
 						   bool is_depth);
 
-Texture *Access(ResourceData &resource_data, const TextureHandle &hanle);
 Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle);
 
 Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle);
@@ -96,11 +95,11 @@ void DestroyVkBufferInstance(const ResourceHandle &handle,
 /* buffer end */
 
 /* texture start */
-TextureHandle CreateVkTexture(const DeviceData &device_data,
+ResourceHandle CreateVkTexture(const DeviceData &device_data,
 							  RuntimeLoopData &rl_data,
 							  const TextureCreation &creation,
 							  ResourceData &resource_data);
-void DestroyVkTexture(TextureHandle &handle, RuntimeLoopData &rl_data);
+void DestroyVkTexture(ResourceHandle &handle, RuntimeLoopData &rl_data);
 
 void DestroyVkTextureInstance(const ResourceHandle &handle,
 							  const DeviceData &device_data,
@@ -112,9 +111,9 @@ void DestroyVkTextureInstance(const ResourceHandle &handle,
 void CreateVkFrameBuffer(const DeviceData &device_data,
 						 ResourceData &resource_data,
 						 RenderPass &rp,
-						 const TextureHandle *out_textures,
+						 const ResourceHandle *out_textures,
 						 const uint32_t num_rt,
-						 const TextureHandle &depth_stencil_tex);
+						 const ResourceHandle &depth_stencil_tex);
 
 RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
 									  ResourceData &resource_data);

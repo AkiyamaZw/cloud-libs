@@ -722,9 +722,6 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 		command_buffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-Texture *Access(ResourceData &resource_data, const TextureHandle &handle)
-{ return AccessTexture(resource_data, handle.index); }
-
 Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
 { return AccessSampler(resource_data, handle.index); }
 
@@ -887,7 +884,7 @@ void DestroyVkBufferInstance(const ResourceHandle &handle,
 void CreateVkTextureInner(const DeviceData &device_data,
 						  const TextureCreation &creation,
 						  const ResourceData &resource_data,
-						  const TextureHandle &handle,
+						  const ResourceHandle &handle,
 						  Texture &texture)
 {
 	COPY_MEMBER(texture, creation, width);
@@ -961,18 +958,18 @@ void CreateVkTextureInner(const DeviceData &device_data,
 	texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-TextureHandle CreateVkTexture(const DeviceData &device_data,
+ResourceHandle CreateVkTexture(const DeviceData &device_data,
 							  RuntimeLoopData &rl_data,
 							  const TextureCreation &creation,
 							  ResourceData &resource_data)
 {
-	TextureHandle handle = {resource_data.pool_data.textures.FetchResource()};
-	if (handle.index == ResourcePool::INVALID_NUM)
+	ResourceHandle handle = resource_data.pool_data.textures.FetchResource();
+	if (handle == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
 	Texture *texture =
-		static_cast<Texture *>(resource_data.pool_data.textures.Access(handle.index));
+		static_cast<Texture *>(resource_data.pool_data.textures.Access(handle));
 	CreateVkTextureInner(device_data, creation, resource_data, handle, *texture);
 	if (creation.initial_data)
 	{
@@ -1065,10 +1062,10 @@ TextureHandle CreateVkTexture(const DeviceData &device_data,
 	return handle;
 }
 
-void DestroyVkTexture(TextureHandle &handle, RuntimeLoopData &rl_data)
+void DestroyVkTexture(ResourceHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
-		{ResourceUpdateType::Texture, handle.index, rl_data.frame_counter.current_frame});
+		{ResourceUpdateType::Texture, handle, rl_data.frame_counter.current_frame});
 }
 
 void DestroyVkTextureInstance(const ResourceHandle &handle,
@@ -1106,7 +1103,7 @@ void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 	color_attach_ref.attachment = 0;
 	color_attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	Texture *depth_tex = Access(resource_data, resource_data.texture_depth_handle);
+	Texture *depth_tex = AccessTexture(resource_data, resource_data.texture_depth_handle);
 	VkAttachmentDescription depth_attach{};
 	depth_attach.format = depth_tex->format;
 	depth_attach.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -1197,9 +1194,9 @@ void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 void CreateVkFrameBuffer(const DeviceData &device_data,
 						 ResourceData &resource_data,
 						 RenderPass &rp,
-						 const TextureHandle *out_textures,
+						 const ResourceHandle *out_textures,
 						 const uint32_t num_rt,
-						 const TextureHandle &depth_stencil_tex)
+						 const ResourceHandle &depth_stencil_tex)
 {
 	VkFramebufferCreateInfo fb_info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
 	fb_info.renderPass = rp.vk_render_pass;
@@ -1211,12 +1208,12 @@ void CreateVkFrameBuffer(const DeviceData &device_data,
 	uint32_t active_attachs = 0;
 	for (; active_attachs < num_rt; ++active_attachs)
 	{
-		Texture *tex = Access(resource_data, out_textures[active_attachs]);
+		Texture *tex = AccessTexture(resource_data, out_textures[active_attachs]);
 		fb_attchs[active_attachs] = tex->view;
 	}
-	if (depth_stencil_tex.index != ResourcePool::INVALID_NUM)
+	if (depth_stencil_tex != ResourcePool::INVALID_NUM)
 	{
-		Texture *tex = Access(resource_data, depth_stencil_tex);
+		Texture *tex = AccessTexture(resource_data, depth_stencil_tex);
 		fb_attchs[active_attachs++] = tex->view;
 	}
 	fb_info.pAttachments = fb_attchs;
@@ -1233,12 +1230,12 @@ RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
 	out.Reset();
 	for (uint32_t i = 0; i < creation.num_render_targets; ++i)
 	{
-		Texture *tex = Access(resource_data, creation.output_textures[i]);
+		Texture *tex = AccessTexture(resource_data, creation.output_textures[i]);
 		out.SetColorFormat(tex->format);
 	}
-	if (creation.depth_stencil_texture.index != ResourcePool::INVALID_NUM)
+	if (creation.depth_stencil_texture != ResourcePool::INVALID_NUM)
 	{
-		Texture *tex = Access(resource_data, creation.depth_stencil_texture);
+		Texture *tex = AccessTexture(resource_data, creation.depth_stencil_texture);
 		out.SetDepthFormat(tex->format);
 	}
 	out.color_operation = creation.color_op;
@@ -1401,7 +1398,7 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	uint32_t index = 0;
 	for (; index < creation.num_render_targets; index++)
 	{
-		Texture *tex = Access(resource_data, creation.output_textures[index]);
+		Texture *tex = AccessTexture(resource_data, creation.output_textures[index]);
 		rp->width = tex->width;
 		rp->height = tex->height;
 		rp->out_textures[index] = creation.output_textures[index];

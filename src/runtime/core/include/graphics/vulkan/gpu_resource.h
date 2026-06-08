@@ -27,7 +27,6 @@ struct RenderPassOutput
 };
 
 using ResourceHandle = render::ResourceHandle;
-using TextureHandle = render::TextureHandle;
 using DescriptorSetLayoutHandle = render::DescriptorSetLayoutHandle;
 using PipelineHandle = render::PipelineHandle;
 using SamplerHandle = render::SamplerHandle;
@@ -116,8 +115,8 @@ struct TextureCreation
 
 struct Texture
 {
-	TextureHandle handle;
-	TextureHandle parent_handle;
+	ResourceHandle handle;
+	ResourceHandle parent_handle;
 	VkImage image;
 	VkImageView view;
 	VkFormat format;
@@ -142,8 +141,8 @@ struct RenderPassCreation
 {
 	uint16_t num_render_targets{0};
 	RenderPassType type{RenderPassType::Geometry};
-	TextureHandle output_textures[MaxSwapchainImages];
-	TextureHandle depth_stencil_texture;
+	ResourceHandle output_textures[MaxSwapchainImages];
+	ResourceHandle depth_stencil_texture;
 	float scale_x{1.f};
 	float scale_y{1.f};
 	uint8_t resize = 1;
@@ -158,8 +157,8 @@ struct RenderPass
 	VkRenderPass vk_render_pass;
 	VkFramebuffer vk_frame_buffer;
 	RenderPassOutput output;
-	TextureHandle out_textures[MaxSwapchainImages];
-	TextureHandle out_depth;
+	ResourceHandle out_textures[MaxSwapchainImages];
+	ResourceHandle out_depth;
 	float scale_x{1.f};
 	float scale_y{1.f};
 	uint16_t width{0};
