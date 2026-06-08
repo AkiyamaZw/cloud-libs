@@ -13,7 +13,7 @@ void GpuDevice::InitGpuDevice(GpuCreateParam &param) { Init(device_context, para
 
 void GpuDevice::ShutdownGpuDevice() { Shutdown(device_context); }
 
-SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
+ResourceHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 {
 	// SamplerCreation sampler_creation{};
 	// sampler_creation.name = creation.name.data();
@@ -25,10 +25,10 @@ SamplerHandle GpuDevice::CreateSampler(const render::SamplerCreation &creation)
 	// ToVKEnum(creation.address_mode_w, sampler_creation.address_mode_w);
 	// ToVKEnum(creation.reduction_mode, sampler_creation.reduction_mode);
 	// return gpu_resource_manager->CreateSampler(sampler_creation);
-	return SamplerHandle{};
+	return ResourceHandle{};
 }
 
-void GpuDevice::DestroySampler(const SamplerHandle &handle)
+void GpuDevice::DestroySampler(const ResourceHandle &handle)
 { // gpu_resource_manager->DestroySampler(handle, current_frame);
 }
 

@@ -15,8 +15,8 @@ class GpuDevice : public render::GpuDevice
 	void InitGpuDevice(GpuCreateParam &param) override;
 	void ShutdownGpuDevice() override;
 
-	SamplerHandle CreateSampler(const render::SamplerCreation &creation) override;
-	void DestroySampler(const SamplerHandle &handle) override;
+	ResourceHandle CreateSampler(const render::SamplerCreation &creation) override;
+	void DestroySampler(const ResourceHandle &handle) override;
 	void Present() override;
 
   private:

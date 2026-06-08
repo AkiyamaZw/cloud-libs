@@ -32,12 +32,12 @@ class GPUResourceManager
 	void UpdateDynamicBuffer();
 	void UpdateDescriptorSet();
 
-	SamplerHandle CreateSampler(const SamplerCreation &creation);
-	void DestroySampler(const SamplerHandle &handle, const uint32_t &frame_index);
+	ResourceHandle CreateSampler(const SamplerCreation &creation);
+	void DestroySampler(const ResourceHandle &handle, const uint32_t &frame_index);
 	void DestroySamplerInstance(ResourceHandle handle) const;
 
 
-	void DestroyDescriptorSet(const DescriptorSetHandle &handle, const uint32_t &frame_index);
+	void DestroyDescriptorSet(const ResourceHandle &handle, const uint32_t &frame_index);
 
 	template <typename T>
 	T *Access(const ResourceHandle &handle, ResourcePool &pool);

@@ -722,12 +722,6 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 		command_buffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle)
-{ return AccessSampler(resource_data, handle.index); }
-
-RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle)
-{ return AccessRenderPass(resource_data, handle.index); }
-
 Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle)
 { return static_cast<Texture *>(resource_data.pool_data.textures.Access(handle)); }
 
@@ -764,17 +758,17 @@ void CreateSampler(VkDevice device, const SamplerCreation &creation, VkSampler &
 	check_vk(succ);
 }
 
-SamplerHandle CreateVkSampler(const DeviceData &device_data,
-							  ResourceData &resource_data,
-							  const SamplerCreation &creation)
+ResourceHandle CreateVkSampler(const DeviceData &device_data,
+							   ResourceData &resource_data,
+							   const SamplerCreation &creation)
 {
-	SamplerHandle handle = {resource_data.pool_data.samplers.FetchResource()};
-	if (handle.index == ResourcePool::INVALID_NUM)
+	ResourceHandle handle = resource_data.pool_data.samplers.FetchResource();
+	if (handle == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
 	Sampler *sampler =
-		static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle.index));
+		static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle));
 	VkSamplerCreateInfo create_info{};
 	TranslateSamplerCreation(creation, create_info);
 	auto succ = vkCreateSampler(device_data.device, &create_info, nullptr, &sampler->sampler);
@@ -786,10 +780,10 @@ SamplerHandle CreateVkSampler(const DeviceData &device_data,
 	return handle;
 }
 
-void DestroyVkSampler(const SamplerHandle &handle, RuntimeLoopData &rl_data)
+void DestroyVkSampler(const ResourceHandle &handle, RuntimeLoopData &rl_data)
 {
 	rl_data.resource_deletion_queue.push_back(
-		{ResourceUpdateType::Sampler, handle.index, rl_data.frame_counter.current_frame});
+		{ResourceUpdateType::Sampler, handle, rl_data.frame_counter.current_frame});
 }
 
 void DestroyVkSamplerInstance(const ResourceHandle &handle,
@@ -1371,18 +1365,18 @@ VkRenderPass GetVkRenderPass(const DeviceData &device_data,
 	return vk_rp;
 }
 
-RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
+ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 									const DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									WindowData &window_data,
 									ResourceData &resource_data)
 {
-	RenderPassHandle handle = {resource_data.pool_data.render_passes.FetchResource()};
-	if (handle.index == ResourcePool::INVALID_NUM)
+	ResourceHandle handle = resource_data.pool_data.render_passes.FetchResource();
+	if (handle == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
-	RenderPass *rp = Access(resource_data, handle);
+	RenderPass *rp = AccessRenderPass(resource_data, handle);
 	rp->name = creation.name;
 	rp->type = creation.type;
 	rp->num_render_targets = creation.num_render_targets;
@@ -1428,11 +1422,11 @@ RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	return handle;
 }
 
-void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data)
+void DestroyVkRenderPass(ResourceHandle &handle, RuntimeLoopData &rl_data)
 {
 
 	rl_data.resource_deletion_queue.emplace_back(
-		ResourceUpdateType::RenderPass, handle.index, rl_data.frame_counter.current_frame);
+		ResourceUpdateType::RenderPass, handle, rl_data.frame_counter.current_frame);
 }
 
 void DestroyVkRenderPassInstance(const ResourceHandle &handle,

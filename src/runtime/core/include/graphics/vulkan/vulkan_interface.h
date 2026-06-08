@@ -61,22 +61,21 @@ Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle
 
 Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle);
 
-Sampler *Access(ResourceData &resource_data, const SamplerHandle &handle);
+Sampler *Access(ResourceData &resource_data, const ResourceHandle &handle);
 Sampler *AccessSampler(ResourceData &resource_data, const ResourceHandle &handle);
 
-RenderPass *Access(ResourceData &resource_data, const RenderPassHandle &handle);
 RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &handle);
 
 /* pool resource access end */
 
 /* sampler start */
-SamplerHandle CreateVkSampler(const DeviceData &device_data,
+ResourceHandle CreateVkSampler(const DeviceData &device_data,
 							  ResourceData &resource_data,
 							  const SamplerCreation &creation);
 // 即将被弃用
 void CreateSampler(VkDevice device, const SamplerCreation &creation, VkSampler &sampler);
 
-void DestroyVkSampler(const SamplerHandle &handle, RuntimeLoopData &rl_data);
+void DestroyVkSampler(const ResourceHandle &handle, RuntimeLoopData &rl_data);
 
 void DestroyVkSamplerInstance(const ResourceHandle &handle,
 							  const DeviceData &device_data,
@@ -129,13 +128,13 @@ VkRenderPass GetVkRenderPass(const DeviceData &device_data,
 							 const RenderPassOutput &output,
 							 const char *name);
 
-RenderPassHandle CreateVkRenderPass(const RenderPassCreation &creation,
+ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 									const DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									WindowData &window_data,
 									ResourceData &resource_data);
 
-void DestroyVkRenderPass(RenderPassHandle &handle, RuntimeLoopData &rl_data);
+void DestroyVkRenderPass(ResourceHandle &handle, RuntimeLoopData &rl_data);
 
 void DestroyVkRenderPassInstance(const ResourceHandle &handle,
 								 const DeviceData &device_data,

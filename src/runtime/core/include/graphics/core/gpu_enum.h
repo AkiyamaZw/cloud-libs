@@ -41,20 +41,6 @@ constexpr std::size_t generate_hash(const std::size_t &seed, const T &v)
 
 using ResourceHandle = uint32_t;
 
-#define HANDLE_DECLARE(name)                                                                       \
-	struct name##Handle                                                                            \
-	{                                                                                              \
-		ResourceHandle index;                                                                      \
-	};                                                                                             \
-	static constexpr name##Handle name##InvalidHandle {}
-
-HANDLE_DECLARE(DescriptorSetLayout);
-HANDLE_DECLARE(ShaderState);
-HANDLE_DECLARE(Pipeline);
-HANDLE_DECLARE(Sampler);
-HANDLE_DECLARE(DescriptorSet);
-HANDLE_DECLARE(RenderPass);
-
 template <typename FLAG_T, typename T>
 bool HasAny(const FLAG_T flag, T code)
 {

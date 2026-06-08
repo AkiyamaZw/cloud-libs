@@ -27,12 +27,6 @@ struct RenderPassOutput
 };
 
 using ResourceHandle = render::ResourceHandle;
-using DescriptorSetLayoutHandle = render::DescriptorSetLayoutHandle;
-using PipelineHandle = render::PipelineHandle;
-using SamplerHandle = render::SamplerHandle;
-using DescriptorSetHandle = render::DescriptorSetHandle;
-using ShaderStateHandle = render::ShaderStateHandle;
-using RenderPassHandle = render::RenderPassHandle;
 
 constexpr uint32_t InvalidFrameID = UINT32_MAX;
 
@@ -45,7 +39,7 @@ struct ResourceUpdate
 
 struct DescriptorSetUpdate
 {
-	DescriptorSetHandle descriptor_set;
+	ResourceHandle descriptor_set;
 	uint32_t current_frame;
 };
 
@@ -185,7 +179,7 @@ struct DescriptorBinding
 
 struct DescriptorSetLayout
 {
-	DescriptorSetLayoutHandle handle;
+	ResourceHandle handle;
 	VkDescriptorSetLayout descriptor_set_layout;
 	VkDescriptorSetLayoutBinding *binding{nullptr};
 	DescriptorBinding *descriptor_bindings{nullptr};
@@ -197,7 +191,7 @@ struct DescriptorSet
 {
 	VkDescriptorSet descriptor_set;
 	ResourceHandle *resources{nullptr};
-	SamplerHandle *samplers{nullptr};
+	ResourceHandle *samplers{nullptr};
 	uint16_t *bindings{nullptr};
 	const DescriptorSetLayout *layout{nullptr};
 	uint32_t num_resources{0};
@@ -277,13 +271,13 @@ struct RasterizationCreation
 
 struct Pipeline
 {
-	PipelineHandle handle;
+	ResourceHandle handle;
 	VkPipeline pipeline;
 	VkPipelineLayout pipeline_layout;
 	VkPipelineBindPoint pipeline_bind_point;
-	ShaderStateHandle shader_state_handle;
+	ResourceHandle shader_state_handle;
 	const DescriptorSetLayout *descriptor_set_layout[GMAXDescriptorSetLayouts];
-	DescriptorSetLayoutHandle descriptor_set_layout_handle[GMAXDescriptorSetLayouts];
+	ResourceHandle descriptor_set_layout_handle[GMAXDescriptorSetLayouts];
 
 	uint32_t num_active_layouts{0};
 	DepthStencilCreation depth_stencil;

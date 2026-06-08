@@ -122,9 +122,9 @@ struct ResourceData
 	VmaAllocator vma_allocator{nullptr};
 	DeviceResourcePoolData pool_data;
 	ResourceHandle fullscreen_vertex_buffer;
-	SamplerHandle default_sampler;
+	ResourceHandle default_sampler;
 	ResourceHandle texture_depth_handle;
-	RenderPassHandle swapchain_pass;
+	ResourceHandle swapchain_pass;
 	DynamicBuffer dynamic_buffer;
 	std::map<size_t, VkRenderPass> render_pass_cache;
 };
