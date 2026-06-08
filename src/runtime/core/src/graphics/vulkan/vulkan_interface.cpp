@@ -5,8 +5,6 @@
 #include "graphics/vulkan/device_data.h"
 #include "core/data_structure/memory.h"
 
-
-
 #define COPY_MEMBER(obj_left, obj_right, member) obj_left.member = obj_right.member
 
 namespace cloud::vulkan::infra
@@ -154,12 +152,12 @@ bool CreateVkInstance(InstanceData &instance_data, const GpuCreateParam &param)
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 		.pApplicationInfo = &app_info,
-//#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+		// #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
 		.enabledLayerCount = std::size(s_instance_layer),
 		.ppEnabledLayerNames = s_instance_layer,
 		.enabledExtensionCount = static_cast<uint32_t>(instance_data.enabled_extensions.size()),
 		.ppEnabledExtensionNames = instance_data.enabled_extensions.data()
-//#endif
+		// #endif
 	};
 
 	const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
@@ -767,12 +765,12 @@ ResourceHandle CreateVkSampler(const DeviceData &device_data,
 	{
 		return handle;
 	}
-	Sampler *sampler =
-		static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle));
+	Sampler *sampler = static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle));
 	VkSamplerCreateInfo create_info{};
 	TranslateSamplerCreation(creation, create_info);
 	auto succ = vkCreateSampler(device_data.device, &create_info, nullptr, &sampler->sampler);
 	check_vk(succ);
+	sampler->name = creation.name;
 	SetResourceName(device_data.device,
 					VK_OBJECT_TYPE_SAMPLER,
 					reinterpret_cast<uint64_t>(sampler->sampler),
@@ -790,8 +788,8 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 							  const DeviceData &device_data,
 							  ResourceData &resource_data)
 {
-	
-	if (auto sampler = static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle)))
+	auto sampler = AccessSampler(resource_data, handle);
+	if (sampler)
 	{
 		INFO("resource %s delete, handle %d", sampler->name, handle);
 		vkDestroySampler(device_data.device, sampler->sampler, nullptr);
@@ -800,8 +798,8 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 }
 
 ResourceHandle CreateVkBuffer(const BufferCreation &creation,
-							const DeviceData &device_data,
-							ResourceData &resource_data)
+							  const DeviceData &device_data,
+							  ResourceData &resource_data)
 {
 	ResourceHandle handle = resource_data.pool_data.buffers.FetchResource();
 	if (handle == ResourcePool::INVALID_NUM)
@@ -850,9 +848,9 @@ ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 		memcpy(data, creation.initial_data, (size_t)creation.size);
 		vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
 	}
-	#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
-		INFO("%s crearted", buffer->name);
-	#endif
+#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
+	INFO("%s crearted", buffer->name);
+#endif
 	return handle;
 }
 
@@ -953,17 +951,16 @@ void CreateVkTextureInner(const DeviceData &device_data,
 }
 
 ResourceHandle CreateVkTexture(const DeviceData &device_data,
-							  RuntimeLoopData &rl_data,
-							  const TextureCreation &creation,
-							  ResourceData &resource_data)
+							   RuntimeLoopData &rl_data,
+							   const TextureCreation &creation,
+							   ResourceData &resource_data)
 {
 	ResourceHandle handle = resource_data.pool_data.textures.FetchResource();
 	if (handle == ResourcePool::INVALID_NUM)
 	{
 		return handle;
 	}
-	Texture *texture =
-		static_cast<Texture *>(resource_data.pool_data.textures.Access(handle));
+	Texture *texture = static_cast<Texture *>(resource_data.pool_data.textures.Access(handle));
 	CreateVkTextureInner(device_data, creation, resource_data, handle, *texture);
 	if (creation.initial_data)
 	{
@@ -1067,10 +1064,11 @@ void DestroyVkTextureInstance(const ResourceHandle &handle,
 							  ResourceData &resource_data)
 {
 	Texture *tex = AccessTexture(resource_data, handle);
-	INFO("resource %s delete, handle %d", tex->name, handle);
 	if (tex)
 	{
+		INFO("resource %s delete, handle %d", tex->name, handle);
 		vkDestroyImageView(device_data.device, tex->view, device_data.allocation_callback);
+		INFO("resource %s delete, handle %d", tex->name, handle);
 		vmaDestroyImage(resource_data.vma_allocator, tex->image, tex->allocation);
 	}
 	resource_data.pool_data.textures.ReleaseResource(handle);
@@ -1366,10 +1364,10 @@ VkRenderPass GetVkRenderPass(const DeviceData &device_data,
 }
 
 ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
-									const DeviceData &device_data,
-									RuntimeLoopData &rl_data,
-									WindowData &window_data,
-									ResourceData &resource_data)
+								  const DeviceData &device_data,
+								  RuntimeLoopData &rl_data,
+								  WindowData &window_data,
+								  ResourceData &resource_data)
 {
 	ResourceHandle handle = resource_data.pool_data.render_passes.FetchResource();
 	if (handle == ResourcePool::INVALID_NUM)

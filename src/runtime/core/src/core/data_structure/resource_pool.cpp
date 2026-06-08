@@ -3,7 +3,7 @@
 
 namespace cloud
 {
-ResourcePool::ResourcePool(uint32_t pool_size, uint32_t resource_size)
+ResourcePool::ResourcePool(const uint32_t &pool_size, uint32_t resource_size)
 	: pool_size_(pool_size)
 	, resource_size_(resource_size)
 {

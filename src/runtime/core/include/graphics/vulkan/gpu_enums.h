@@ -115,7 +115,7 @@ enum class FillMode
 	Count
 };
 
-enum class ResourceUpdateType
+enum class ResourceUpdateType : uint8_t
 {
 	Buffer,
 	Texture,
@@ -127,7 +127,6 @@ enum class ResourceUpdateType
 	Framebuffer,
 	ShaderState,
 	TextureView,
-	PagePool,
 	Count
 };
 

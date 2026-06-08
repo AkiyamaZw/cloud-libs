@@ -8,7 +8,7 @@ class ResourcePool
 {
   public:
 	static constexpr uint32_t INVALID_NUM = 0xffffffff;
-	ResourcePool(uint32_t pool_size, uint32_t resource_size);
+	ResourcePool(const uint32_t &pool_size, uint32_t resource_size);
 	virtual ~ResourcePool();
 	void Shutdown();
 	uint32_t FetchResource();

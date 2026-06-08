@@ -37,6 +37,11 @@ struct ResourceUpdate
 	uint32_t current_frame;
 };
 
+struct ResourceBase
+{
+	const char *name{nullptr};
+};
+
 struct DescriptorSetUpdate
 {
 	ResourceHandle descriptor_set;

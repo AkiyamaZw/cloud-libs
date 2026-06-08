@@ -57,21 +57,20 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   VkImageLayout newLayout,
 						   bool is_depth);
 
+/* pool resource access start */
 Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle);
 
 Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle);
 
-Sampler *Access(ResourceData &resource_data, const ResourceHandle &handle);
 Sampler *AccessSampler(ResourceData &resource_data, const ResourceHandle &handle);
 
 RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &handle);
-
 /* pool resource access end */
 
 /* sampler start */
 ResourceHandle CreateVkSampler(const DeviceData &device_data,
-							  ResourceData &resource_data,
-							  const SamplerCreation &creation);
+							   ResourceData &resource_data,
+							   const SamplerCreation &creation);
 // 即将被弃用
 void CreateSampler(VkDevice device, const SamplerCreation &creation, VkSampler &sampler);
 
@@ -84,8 +83,8 @@ void DestroyVkSamplerInstance(const ResourceHandle &handle,
 
 /* buffer start */
 ResourceHandle CreateVkBuffer(const BufferCreation &creation,
-							const DeviceData &device_data,
-							ResourceData &resource_data);
+							  const DeviceData &device_data,
+							  ResourceData &resource_data);
 
 void DestroyVkBuffer(const ResourceHandle &handle, RuntimeLoopData &rl_data);
 void DestroyVkBufferInstance(const ResourceHandle &handle,
@@ -95,9 +94,9 @@ void DestroyVkBufferInstance(const ResourceHandle &handle,
 
 /* texture start */
 ResourceHandle CreateVkTexture(const DeviceData &device_data,
-							  RuntimeLoopData &rl_data,
-							  const TextureCreation &creation,
-							  ResourceData &resource_data);
+							   RuntimeLoopData &rl_data,
+							   const TextureCreation &creation,
+							   ResourceData &resource_data);
 void DestroyVkTexture(ResourceHandle &handle, RuntimeLoopData &rl_data);
 
 void DestroyVkTextureInstance(const ResourceHandle &handle,
@@ -129,10 +128,10 @@ VkRenderPass GetVkRenderPass(const DeviceData &device_data,
 							 const char *name);
 
 ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
-									const DeviceData &device_data,
-									RuntimeLoopData &rl_data,
-									WindowData &window_data,
-									ResourceData &resource_data);
+								  const DeviceData &device_data,
+								  RuntimeLoopData &rl_data,
+								  WindowData &window_data,
+								  ResourceData &resource_data);
 
 void DestroyVkRenderPass(ResourceHandle &handle, RuntimeLoopData &rl_data);
 
@@ -153,5 +152,7 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 void DestroyResourceInstance(RuntimeLoopData &rl_data,
 							 const DeviceData &device_data,
 							 ResourceData &resource_data);
+
+/* abstract impl */
 
 }; // namespace cloud::vulkan::infra

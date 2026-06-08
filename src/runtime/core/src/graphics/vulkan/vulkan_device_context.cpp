@@ -82,7 +82,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	vdc.window_data.swapchain_output.SetDepthFormat(VK_FORMAT_D32_SFLOAT);
 	RenderPassCreation rpc = {};
 	rpc.type = RenderPassType::SwapChain;
-	rpc.name = "swapchain";
+	rpc.name = "swapchain_pass";
 	rpc.color_op = RenderPassOperation::Clear;
 	rpc.depth_op = RenderPassOperation::Clear;
 	rpc.stencil_op = RenderPassOperation::Clear;
@@ -105,6 +105,7 @@ void DestoryDefaultResource(VulkanDeviceContext &vdc)
 {
 	DynamicBuffer &db = vdc.resource_data.dynamic_buffer;
 	infra::UnMapBuffer({db.buffer, 0, 0}, db, vdc.resource_data);
+	infra::DestroyVkBuffer(vdc.resource_data.dynamic_buffer.buffer, vdc.runtime_data);
 	infra::DestroyVkRenderPass(vdc.resource_data.swapchain_pass, vdc.runtime_data);
 	infra::DestroyVkTexture(vdc.resource_data.texture_depth_handle, vdc.runtime_data);
 	infra::DestroyVkBuffer(vdc.resource_data.fullscreen_vertex_buffer, vdc.runtime_data);
