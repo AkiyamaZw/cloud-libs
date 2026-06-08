@@ -727,7 +727,7 @@ Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle)
 { return static_cast<Buffer *>(resource_data.pool_data.buffers.Access(handle)); }
 
 Sampler *AccessSampler(ResourceData &resource_data, const ResourceHandle &handle)
-{ return static_cast<Sampler *>(resource_data.pool_data.textures.Access(handle)); }
+{ return static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle)); }
 
 RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &handle)
 { return static_cast<RenderPass *>(resource_data.pool_data.render_passes.Access(handle)); }
@@ -765,7 +765,7 @@ ResourceHandle CreateVkSampler(const DeviceData &device_data,
 	{
 		return handle;
 	}
-	Sampler *sampler = static_cast<Sampler *>(resource_data.pool_data.samplers.Access(handle));
+	Sampler *sampler = AccessSampler(resource_data, handle);
 	VkSamplerCreateInfo create_info{};
 	TranslateSamplerCreation(creation, create_info);
 	auto succ = vkCreateSampler(device_data.device, &create_info, nullptr, &sampler->sampler);
@@ -1146,7 +1146,7 @@ void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 		SetResourceName(device_data.device,
 						VK_OBJECT_TYPE_FRAMEBUFFER,
 						(uint64_t)window_data.swapchain_framebuffers[i],
-						render_pass.name);
+						std::format("[frame buffer]_{}_index_{}", render_pass.name, i).c_str());
 	}
 
 	render_pass.width = window_data.swapchain_width;
@@ -1439,6 +1439,11 @@ void DestroyVkRenderPassInstance(const ResourceHandle &handle,
 		{
 			vkDestroyFramebuffer(
 				device_data.device, rp->vk_frame_buffer, resource_data.allocation_callback);
+		}
+		if (rp->vk_render_pass)
+		{
+			vkDestroyRenderPass(
+				device_data.device, rp->vk_render_pass, resource_data.allocation_callback);
 		}
 		resource_data.pool_data.render_passes.ReleaseResource(handle);
 	}

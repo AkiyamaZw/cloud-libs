@@ -71,8 +71,6 @@ RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &
 ResourceHandle CreateVkSampler(const DeviceData &device_data,
 							   ResourceData &resource_data,
 							   const SamplerCreation &creation);
-// 即将被弃用
-void CreateSampler(VkDevice device, const SamplerCreation &creation, VkSampler &sampler);
 
 void DestroyVkSampler(const ResourceHandle &handle, RuntimeLoopData &rl_data);
 
@@ -153,6 +151,18 @@ void DestroyResourceInstance(RuntimeLoopData &rl_data,
 							 const DeviceData &device_data,
 							 ResourceData &resource_data);
 
-/* abstract impl */
+// /* abstract impl */
+// template <typename TCreation>
+// ResourceHandle
+// 	Create(const DeviceData &device_data, ResourceData &resource_data, const TCreation &creation);
+
+// template <typename T>
+// T *Access(ResourceData &resource_data, ResourceHandle &handle);
+
+// template <typename T>
+// void PendingToDestroy(ResourceData &resource_data, ResourceHandle &handle);
+
+// template <typename T>
+// void DestoryInstance(ResourceData &resource_data, ResourceHandle &handle);
 
 }; // namespace cloud::vulkan::infra
