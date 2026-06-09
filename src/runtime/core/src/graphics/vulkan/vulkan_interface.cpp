@@ -1458,9 +1458,9 @@ std::unordered_map<ResourceType, instance_delete_handler> s_delete_map = {
 	{ResourceType::RenderPass, DestroyVkRenderPass},
 };
 
-void DestroyResourceInstance(RuntimeLoopData &rl_data,
-							 const DeviceData &device_data,
-							 ResourceData &resource_data)
+void DestroyResource(RuntimeLoopData &rl_data,
+					 const DeviceData &device_data,
+					 ResourceData &resource_data)
 {
 	for (uint32_t i = 0; i < rl_data.resource_deletion_queue.size(); ++i)
 	{

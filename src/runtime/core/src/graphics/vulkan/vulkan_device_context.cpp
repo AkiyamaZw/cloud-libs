@@ -36,7 +36,7 @@ void Shutdown(VulkanDeviceContext &vdc)
 	DestroyVkDescriptorPool(vdc.device_data, vdc.resource_data);
 	DestroyVkSwapchain(vdc.device_data, vdc.window_data);
 
-	DestroyResourceInstance(vdc.runtime_data, vdc.device_data, vdc.resource_data);
+	DestroyResource(vdc.runtime_data, vdc.device_data, vdc.resource_data);
 
 	/* resource should be clear upper */
 	DestroyVmaAllocator(vdc.resource_data);

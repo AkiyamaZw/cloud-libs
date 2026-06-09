@@ -131,10 +131,6 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 				 ResourceData &resource_data);
 /*  dynamic mapping buffer start end */
 
-void DestroyResourceInstance(RuntimeLoopData &rl_data,
-							 const DeviceData &device_data,
-							 ResourceData &resource_data);
-
 /* resource traits function */
 ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type);
 
@@ -150,6 +146,9 @@ void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
 
 void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle);
 
+void DestroyResource(RuntimeLoopData &rl_data,
+					 const DeviceData &device_data,
+					 ResourceData &resource_data);
 /* resource traits function */
 
 }; // namespace cloud::vulkan::infra
