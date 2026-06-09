@@ -105,11 +105,11 @@ void DestoryDefaultResource(VulkanDeviceContext &vdc)
 {
 	DynamicBuffer &db = vdc.resource_data.dynamic_buffer;
 	infra::UnMapBuffer({db.buffer, 0, 0}, db, vdc.resource_data);
-	infra::DestroyVkBuffer(vdc.resource_data.dynamic_buffer.buffer, vdc.runtime_data);
-	infra::DestroyVkRenderPass(vdc.resource_data.swapchain_pass, vdc.runtime_data);
-	infra::DestroyVkTexture(vdc.resource_data.texture_depth_handle, vdc.runtime_data);
-	infra::DestroyVkBuffer(vdc.resource_data.fullscreen_vertex_buffer, vdc.runtime_data);
-	infra::DestroyVkSampler(vdc.resource_data.default_sampler, vdc.runtime_data);
+	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.dynamic_buffer.buffer);
+	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.swapchain_pass);
+	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.texture_depth_handle);
+	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.fullscreen_vertex_buffer);
+	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.default_sampler);
 }
 
 } // namespace cloud::vulkan

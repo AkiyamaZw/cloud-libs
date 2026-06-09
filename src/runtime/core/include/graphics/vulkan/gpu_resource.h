@@ -7,6 +7,7 @@
 
 namespace cloud::vulkan
 {
+using ResourceType = render::ResourceType;
 
 struct RenderPassOutput
 {
@@ -32,7 +33,6 @@ constexpr uint32_t InvalidFrameID = UINT32_MAX;
 
 struct ResourceUpdate
 {
-	ResourceUpdateType type;
 	ResourceHandle handle;
 	uint32_t current_frame;
 };

@@ -5,6 +5,7 @@
 #include <map>
 #include <chrono>
 #include <utility>
+#include <unordered_map>
 #include "graphics/vulkan/command_buffer.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"
@@ -66,24 +67,26 @@ struct RenderPipelineData
 struct DeviceResourcePoolData
 {
 	using ResourcePool = cloud::ResourcePool;
-	static constexpr uint32_t ResourceCount = std::to_underlying(ResourceUpdateType::Count);
+	static constexpr uint32_t ResourceTypeCount = std::to_underlying(ResourceType::Count);
 	// resource obejct pool
 	static constexpr uint32_t buffer_pool_size = 4096;
-	ResourcePool buffers{buffer_pool_size, sizeof(Buffer)};
 	static constexpr uint32_t texture_pool_size = 512;
-	ResourcePool textures{texture_pool_size, sizeof(Texture)};
 	static constexpr uint32_t render_pass_pool_size = 256;
-	ResourcePool render_passes{render_pass_pool_size, sizeof(RenderPass)};
 	static constexpr uint32_t descriptor_layout_pool_size = 128;
-	ResourcePool descriptor_set_layout{descriptor_layout_pool_size, sizeof(DescriptorSetLayout)};
 	static constexpr uint32_t pipeline_pool_size = 128;
-	ResourcePool pipelines{pipeline_pool_size, sizeof(Pipeline)};
 	static constexpr uint32_t shader_pool_size = 128;
-	ResourcePool shaders{shader_pool_size, sizeof(ShaderState)};
 	static constexpr uint32_t descriptor_set_pool_size = 256;
-	ResourcePool descriptor_sets{descriptor_set_pool_size, sizeof(DescriptorSet)};
 	static constexpr uint32_t sampler_pool_size = 32;
-	ResourcePool samplers{sampler_pool_size, sizeof(Sampler)};
+
+	std::array<ResourcePool, ResourceTypeCount> resource_pool_array{
+		ResourcePool{buffer_pool_size, sizeof(Buffer)},
+		ResourcePool{texture_pool_size, sizeof(Texture)},
+		ResourcePool{pipeline_pool_size, sizeof(Pipeline)},
+		ResourcePool{sampler_pool_size, sizeof(Sampler)},
+		ResourcePool{descriptor_layout_pool_size, sizeof(DescriptorSetLayout)},
+		ResourcePool{descriptor_set_pool_size, sizeof(DescriptorSet)},
+		ResourcePool{render_pass_pool_size, sizeof(RenderPass)},
+		ResourcePool{shader_pool_size, sizeof(ShaderState)}};
 
 	// descriptor pool
 	static constexpr uint32_t k_global_pool_elements = 128;

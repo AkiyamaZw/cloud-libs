@@ -115,21 +115,6 @@ enum class FillMode
 	Count
 };
 
-enum class ResourceUpdateType : uint8_t
-{
-	Buffer,
-	Texture,
-	Pipeline,
-	Sampler,
-	DescriptorSetLayout,
-	DescriptorSet,
-	RenderPass,
-	Framebuffer,
-	ShaderState,
-	TextureView,
-	Count
-};
-
 using TextureType = render::TextureType;
 using TextureFlags = render::TextureFlags;
 ///---- convert function-----

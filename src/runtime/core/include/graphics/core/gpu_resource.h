@@ -7,6 +7,59 @@
 namespace cloud::render
 {
 
+using ResourceHandleIndex = uint32_t;
+static constexpr uint32_t INVALIDResourceHandleIndex = 0xffffffff;
+
+enum class ResourceType : uint8_t
+{
+	Buffer,
+	Texture,
+	Pipeline,
+	Sampler,
+	DescriptorSetLayout,
+	DescriptorSet,
+	RenderPass,
+	ShaderState,
+	Count
+};
+
+struct ResourceHandle
+{
+	ResourceHandleIndex index{INVALIDResourceHandleIndex};
+	ResourceType type{ResourceType::Count};
+
+	ResourceHandle() = default;
+
+	ResourceHandle(ResourceHandleIndex InIndex, ResourceType InType)
+		: index(InIndex)
+		, type(InType) {};
+
+	ResourceHandle(const ResourceHandle &rhs)
+	{
+		index = rhs.index;
+		type = rhs.type;
+	}
+
+	ResourceHandle(ResourceHandle &&rhs)
+	{
+		index = rhs.index;
+		type = rhs.type;
+		rhs.index = -1;
+		type = ResourceType::Count;
+	}
+
+	ResourceHandle &operator=(const ResourceHandle &rhs)
+	{
+		if (this == &rhs)
+			return *this;
+		this->index = rhs.index;
+		this->type = rhs.type;
+		return *this;
+	}
+
+	// ResourceHandle &operator=(ResourceHandle &&rhs) = delete;
+};
+
 struct MapBufferParameter
 {
 	ResourceHandle handle;

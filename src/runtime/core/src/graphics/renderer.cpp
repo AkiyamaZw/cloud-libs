@@ -30,18 +30,6 @@ void Renderer::EndFrame() { gpu_device_->Present(); }
 
 void Renderer::ResizeSwapChain(uint32_t width, uint32_t height) {}
 
-// SamplerResource *Renderer::CreateSampler(const SamplerCreation &creation)
-//{
-//	SamplerResource *sampler = samplers_.Fetch();
-//	if (sampler)
-//	{
-//		SamplerHandle handle = gpu_device_->CreateSampler(creation);
-//		sampler->handle = handle;
-//		sampler->name = creation.name;
-//	}
-//	return sampler;
-// }
-
 void CreateRenderer(GpuCreateParam &param)
 {
 	Renderer *renderer = Renderer::Inst();

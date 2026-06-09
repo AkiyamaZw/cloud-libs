@@ -39,8 +39,6 @@ constexpr std::size_t generate_hash(const std::size_t &seed, const T &v)
 	return seed ^ (hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
 }
 
-using ResourceHandle = uint32_t;
-
 template <typename FLAG_T, typename T>
 bool HasAny(const FLAG_T flag, T code)
 {

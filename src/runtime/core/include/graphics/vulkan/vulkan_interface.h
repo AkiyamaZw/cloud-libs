@@ -57,26 +57,14 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   VkImageLayout newLayout,
 						   bool is_depth);
 
-/* pool resource access start */
-Texture *AccessTexture(ResourceData &resource_data, const ResourceHandle &handle);
-
-Buffer *AccessBuffer(ResourceData &resource_data, const ResourceHandle &handle);
-
-Sampler *AccessSampler(ResourceData &resource_data, const ResourceHandle &handle);
-
-RenderPass *AccessRenderPass(ResourceData &resource_data, const ResourceHandle &handle);
-/* pool resource access end */
-
 /* sampler start */
 ResourceHandle CreateVkSampler(const DeviceData &device_data,
 							   ResourceData &resource_data,
 							   const SamplerCreation &creation);
 
-void DestroyVkSampler(const ResourceHandle &handle, RuntimeLoopData &rl_data);
-
-void DestroyVkSamplerInstance(const ResourceHandle &handle,
-							  const DeviceData &device_data,
-							  ResourceData &resource_data);
+void DestroyVkSampler(const ResourceHandle &handle,
+					  const DeviceData &device_data,
+					  ResourceData &resource_data);
 /* sampler end*/
 
 /* buffer start */
@@ -84,10 +72,9 @@ ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 							  const DeviceData &device_data,
 							  ResourceData &resource_data);
 
-void DestroyVkBuffer(const ResourceHandle &handle, RuntimeLoopData &rl_data);
-void DestroyVkBufferInstance(const ResourceHandle &handle,
-							 const DeviceData &device_data,
-							 ResourceData &resource_data);
+void DestroyVkBuffer(const ResourceHandle &handle,
+					 const DeviceData &device_data,
+					 ResourceData &resource_data);
 /* buffer end */
 
 /* texture start */
@@ -95,11 +82,10 @@ ResourceHandle CreateVkTexture(const DeviceData &device_data,
 							   RuntimeLoopData &rl_data,
 							   const TextureCreation &creation,
 							   ResourceData &resource_data);
-void DestroyVkTexture(ResourceHandle &handle, RuntimeLoopData &rl_data);
 
-void DestroyVkTextureInstance(const ResourceHandle &handle,
-							  const DeviceData &device_data,
-							  ResourceData &resource_data);
+void DestroyVkTexture(const ResourceHandle &handle,
+					  const DeviceData &device_data,
+					  ResourceData &resource_data);
 
 /* texture end */
 
@@ -131,11 +117,9 @@ ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 								  WindowData &window_data,
 								  ResourceData &resource_data);
 
-void DestroyVkRenderPass(ResourceHandle &handle, RuntimeLoopData &rl_data);
-
-void DestroyVkRenderPassInstance(const ResourceHandle &handle,
-								 const DeviceData &device_data,
-								 ResourceData &resource_data);
+void DestroyVkRenderPass(const ResourceHandle &handle,
+						 const DeviceData &device_data,
+						 ResourceData &resource_data);
 /* render pass end*/
 
 /*  dynamic mapping buffer start */
@@ -151,18 +135,21 @@ void DestroyResourceInstance(RuntimeLoopData &rl_data,
 							 const DeviceData &device_data,
 							 ResourceData &resource_data);
 
-// /* abstract impl */
-// template <typename TCreation>
-// ResourceHandle
-// 	Create(const DeviceData &device_data, ResourceData &resource_data, const TCreation &creation);
+/* resource traits function */
+ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type);
 
-// template <typename T>
-// T *Access(ResourceData &resource_data, ResourceHandle &handle);
+template <typename T>
+T *Access(ResourceData &resource_data, const ResourceHandle &handle)
+{
+	return static_cast<T *>(
+		resource_data.pool_data.resource_pool_array[std::to_underlying(handle.type)].Access(
+			handle.index));
+}
 
-// template <typename T>
-// void PendingToDestroy(ResourceData &resource_data, ResourceHandle &handle);
+void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
 
-// template <typename T>
-// void DestoryInstance(ResourceData &resource_data, ResourceHandle &handle);
+void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle);
+
+/* resource traits function */
 
 }; // namespace cloud::vulkan::infra
