@@ -17,7 +17,7 @@ class GpuDevice : public render::GpuDevice
 
 	ResourceHandle CreateSampler(const render::SamplerCreation &creation) override;
 	void DestroySampler(const ResourceHandle &handle) override;
-	void Present() override;
+	void present() override;
 
   private:
 	VulkanDeviceContext device_context;

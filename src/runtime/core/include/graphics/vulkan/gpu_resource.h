@@ -44,7 +44,7 @@ struct ResourceBase
 
 struct DescriptorSetUpdate
 {
-	ResourceHandle descriptor_set;
+	ResourceHandle handle;
 	uint32_t current_frame;
 };
 
@@ -194,7 +194,7 @@ struct DescriptorSetLayout
 
 struct DescriptorSet
 {
-	VkDescriptorSet descriptor_set;
+	VkDescriptorSet vk_descriptor_set;
 	ResourceHandle *resources{nullptr};
 	ResourceHandle *samplers{nullptr};
 	uint16_t *bindings{nullptr};

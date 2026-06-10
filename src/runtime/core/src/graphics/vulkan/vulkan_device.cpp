@@ -32,5 +32,5 @@ void GpuDevice::DestroySampler(const ResourceHandle &handle)
 { // gpu_resource_manager->DestroySampler(handle, current_frame);
 }
 
-void GpuDevice::Present() {}
+void GpuDevice::present() {}
 } // namespace cloud::vulkan

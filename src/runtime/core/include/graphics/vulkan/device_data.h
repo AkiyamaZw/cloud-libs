@@ -14,6 +14,8 @@
 
 namespace cloud::vulkan
 {
+static constexpr uint32_t s_swapchain_image_count = 3;
+
 struct InstanceData
 {
 	VkInstance instance;
@@ -49,12 +51,14 @@ struct WindowData
 	VkPresentModeKHR vk_present_mode;
 
 	RenderPassOutput swapchain_output;
-	VkSwapchainKHR swapchain;
+	VkSwapchainKHR vk_swapchain;
 	std::array<VkImage, MaxSwapchainImages> swapchain_images;
 	std::array<VkImageView, MaxSwapchainImages> swapchain_image_views;
 	std::array<VkFramebuffer, MaxSwapchainImages> swapchain_framebuffers;
-	uint32_t swapchain_image_count;
+	uint32_t swapchain_image_count{s_swapchain_image_count};
 	uint32_t vulkan_image_index{0};
+
+	bool resized{false};
 };
 
 struct RenderPipelineData
@@ -151,6 +155,8 @@ struct FrameAdanceCounter
 	bool timestamps_enabled{false};
 	std::chrono::high_resolution_clock::time_point start_time;
 };
+
+void AdvanceFrameCounter(FrameAdanceCounter& counter);
 
 struct RuntimeLoopData
 {

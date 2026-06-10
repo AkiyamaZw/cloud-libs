@@ -532,15 +532,15 @@ bool CreateVkSwapChain(const DeviceData &device_data, WindowData &window_data)
 	swapchain_create_info.presentMode = window_data.vk_present_mode;
 
 	VkResult succ = vkCreateSwapchainKHR(
-		device_data.device, &swapchain_create_info, nullptr, &window_data.swapchain);
+		device_data.device, &swapchain_create_info, nullptr, &window_data.vk_swapchain);
 	check_vk(succ);
 
 	succ = vkGetSwapchainImagesKHR(
-		device_data.device, window_data.swapchain, &window_data.swapchain_image_count, nullptr);
+		device_data.device, window_data.vk_swapchain, &window_data.swapchain_image_count, nullptr);
 	check_vk(succ);
 
 	vkGetSwapchainImagesKHR(device_data.device,
-							window_data.swapchain,
+							window_data.vk_swapchain,
 							&window_data.swapchain_image_count,
 							window_data.swapchain_images.data());
 
@@ -571,7 +571,7 @@ void DestroyVkSwapchain(const DeviceData &device_data, WindowData &window_data)
 		vkDestroyImageView(device_data.device, window_data.swapchain_image_views[i], nullptr);
 		vkDestroyFramebuffer(device_data.device, window_data.swapchain_framebuffers[i], nullptr);
 	}
-	vkDestroySwapchainKHR(device_data.device, window_data.swapchain, nullptr);
+	vkDestroySwapchainKHR(device_data.device, window_data.vk_swapchain, nullptr);
 }
 
 bool CreateVmaAllocator(const InstanceData &instance_data,
@@ -1449,6 +1449,19 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 	vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
 }
 
+
+
+void DestroyVkDescriptorSet(const ResourceHandle &handle,
+	const DeviceData& device_data,
+	ResourceData& resource_data)
+{
+	DescriptorSet *res = Access<DescriptorSet>(resource_data, handle);
+	if (res && res->resources) {
+		assert(false);
+	}
+	ReleaseResource(resource_data, handle);
+}
+
 using instance_delete_handler =
 	std::function<void(const ResourceHandle &, const DeviceData &device_data, ResourceData &)>;
 std::unordered_map<ResourceType, instance_delete_handler> s_delete_map = {
@@ -1456,28 +1469,32 @@ std::unordered_map<ResourceType, instance_delete_handler> s_delete_map = {
 	{ResourceType::Texture, DestroyVkTexture},
 	{ResourceType::Sampler, DestroyVkSampler},
 	{ResourceType::RenderPass, DestroyVkRenderPass},
+	{ResourceType::DescriptorSet, DestroyVkDescriptorSet}
 };
 
 void DestroyResource(RuntimeLoopData &rl_data,
 					 const DeviceData &device_data,
 					 ResourceData &resource_data)
 {
-	for (uint32_t i = 0; i < rl_data.resource_deletion_queue.size(); ++i)
+	auto &container = rl_data.resource_deletion_queue;
+	for (auto update_iter = container.begin(); update_iter != container.end();)
 	{
-		ResourceUpdate &res_to_delete = rl_data.resource_deletion_queue[i];
+		ResourceUpdate &res_to_delete = *update_iter;
 
-		if (res_to_delete.current_frame == -1)
+		if (res_to_delete.current_frame == InvalidFrameID)
 			continue;
 		auto iter = s_delete_map.find(res_to_delete.handle.type);
 		if (iter != s_delete_map.end())
 		{
 			const auto &handle = res_to_delete.handle;
 			iter->second(res_to_delete.handle, device_data, resource_data);
+			container.pop_back();
 		}
 		else
 		{
 			FATAL("resource type %d has not delete instance handler!",
 				  (uint32_t)res_to_delete.handle.type);
+			++update_iter;
 		}
 	}
 
@@ -1506,4 +1523,41 @@ ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type)
 
 void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle)
 { GetResourcePool(resource_data, handle.type).ReleaseResource(handle.index); }
+
+
+void update_descriptor_set_instance(DeviceData& device_data, RuntimeLoopData& rl_data, ResourceData &resource_data, const DescriptorSetUpdate &update)
+{
+	ResourceHandle handle = FetchResource(resource_data, ResourceType::DescriptorSet);
+	DescriptorSet *dummy_res = Access<DescriptorSet>(resource_data, handle);
+	DescriptorSet *descriptor_set = Access<DescriptorSet>(resource_data, update.handle);
+	const DescriptorSetLayout *descriptor_set_layout = descriptor_set->layout;
+
+	dummy_res->vk_descriptor_set = descriptor_set->vk_descriptor_set;
+	dummy_res->bindings = nullptr;
+	dummy_res->resources = nullptr;
+	dummy_res->samplers = nullptr;
+	dummy_res->num_resources = 0;
+	
+	PendingToDestroy(rl_data, handle);
+
+	VkWriteDescriptorSet descriptor_write[8];
+	VkDescriptorBufferInfo buffer_info[8];
+	VkDescriptorImageInfo image_info[8];
+
+	Sampler *sampler = Access<Sampler>(resource_data, resource_data.default_sampler);
+
+	VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+	alloc_info.descriptorPool = resource_data.pool_data.vk_descriptor_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &descriptor_set->layout->descriptor_set_layout;
+	vkAllocateDescriptorSets(device_data.device, &alloc_info, &descriptor_set->vk_descriptor_set);
+
+	uint32_t num_resources = descriptor_set_layout->num_bindings;
+	assert(num_resources == 0);
+	// todo fill write descriptor sets
+
+	vkUpdateDescriptorSets(device_data.device, num_resources, descriptor_write, 0, nullptr);
+	
+
+}
 } // namespace cloud::vulkan::infra

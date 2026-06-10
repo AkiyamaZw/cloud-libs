@@ -13,7 +13,7 @@ struct GpuDevice
 	virtual void ShutdownGpuDevice() = 0;
 	virtual ResourceHandle CreateSampler(const SamplerCreation &creation) = 0;
 	virtual void DestroySampler(const ResourceHandle &handle) = 0;
-	virtual void Present() = 0;
+	virtual void present() = 0;
 };
 
 GpuDevice *CreateGpuDevice(const TypeDevice &type);

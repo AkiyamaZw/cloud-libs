@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(MSVC)
     add_compile_options("/utf-8")
+	add_definitions(-DNOMINMAX)
 endif()
 
 # set output folders

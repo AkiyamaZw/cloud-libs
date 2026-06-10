@@ -33,6 +33,8 @@ bool CreateVkSwapChain(const DeviceData &device_data, WindowData &window_data);
 
 void DestroyVkSwapchain(const DeviceData &device_data, WindowData &window_data);
 
+//void ResizeVkSwapchain(const DeviceData& device_data, WindowData& window_data);
+
 bool CreateVmaAllocator(const InstanceData &instance_data,
 						const DeviceData &device_data,
 						ResourceData &resource_data);
@@ -150,5 +152,12 @@ void DestroyResource(RuntimeLoopData &rl_data,
 					 const DeviceData &device_data,
 					 ResourceData &resource_data);
 /* resource traits function */
+
+/* descriptor set update */
+void update_descriptor_set_instance(DeviceData &device_data,
+									RuntimeLoopData &rl_data,
+									ResourceData &resource_data,
+									const DescriptorSetUpdate &update);
+/* descriptor set update */
 
 }; // namespace cloud::vulkan::infra

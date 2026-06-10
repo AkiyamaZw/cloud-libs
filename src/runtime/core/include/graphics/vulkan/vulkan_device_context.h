@@ -1,5 +1,4 @@
 #pragma once
-// #include "gpu_resource_manager.h"
 #include "graphics/vulkan/device_data.h"
 
 namespace cloud::vulkan
@@ -16,6 +15,8 @@ struct VulkanDeviceContext
 
 void Init(VulkanDeviceContext &vdc, GpuCreateParam &param);
 void Shutdown(VulkanDeviceContext &vdc);
-void InitDefaultResource(VulkanDeviceContext &vdc);
-void DestoryDefaultResource(VulkanDeviceContext &vdc);
+
+
+void StartFrame(VulkanDeviceContext& vdc);
+void present(VulkanDeviceContext& vdc);
 } // namespace cloud::vulkan
