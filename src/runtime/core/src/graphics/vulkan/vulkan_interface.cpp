@@ -1449,14 +1449,13 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 	vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
 }
 
-
-
 void DestroyVkDescriptorSet(const ResourceHandle &handle,
-	const DeviceData& device_data,
-	ResourceData& resource_data)
+							const DeviceData &device_data,
+							ResourceData &resource_data)
 {
 	DescriptorSet *res = Access<DescriptorSet>(resource_data, handle);
-	if (res && res->resources) {
+	if (res && res->resources)
+	{
 		assert(false);
 	}
 	ReleaseResource(resource_data, handle);
@@ -1469,34 +1468,41 @@ std::unordered_map<ResourceType, instance_delete_handler> s_delete_map = {
 	{ResourceType::Texture, DestroyVkTexture},
 	{ResourceType::Sampler, DestroyVkSampler},
 	{ResourceType::RenderPass, DestroyVkRenderPass},
-	{ResourceType::DescriptorSet, DestroyVkDescriptorSet}
-};
+	{ResourceType::DescriptorSet, DestroyVkDescriptorSet}};
 
 void DestroyResource(RuntimeLoopData &rl_data,
 					 const DeviceData &device_data,
 					 ResourceData &resource_data)
 {
 	auto &container = rl_data.resource_deletion_queue;
-	for (auto update_iter = container.begin(); update_iter != container.end();)
-	{
-		ResourceUpdate &res_to_delete = *update_iter;
 
-		if (res_to_delete.current_frame == InvalidFrameID)
-			continue;
-		auto iter = s_delete_map.find(res_to_delete.handle.type);
-		if (iter != s_delete_map.end())
+	for (auto &update_iter : container)
+	{
+		ResourceUpdate &res_to_delete = update_iter;
+
+		if (res_to_delete.current_frame != InvalidFrameID)
 		{
-			const auto &handle = res_to_delete.handle;
-			iter->second(res_to_delete.handle, device_data, resource_data);
-			container.pop_back();
+			auto iter = s_delete_map.find(res_to_delete.handle.type);
+			if (iter != s_delete_map.end())
+			{
+				const auto &handle = res_to_delete.handle;
+				iter->second(res_to_delete.handle, device_data, resource_data);
+				container.pop_back();
+				continue;
+			}
+			else
+			{
+				FATAL("resource type %d has not delete instance handler!",
+					  (uint32_t)res_to_delete.handle.type);
+			}
 		}
 		else
 		{
-			FATAL("resource type %d has not delete instance handler!",
-				  (uint32_t)res_to_delete.handle.type);
-			++update_iter;
+			assert(false);
 		}
 	}
+	container.clear();
+	assert(container.empty());
 
 	auto &rp_cache = resource_data.render_pass_cache;
 	auto rp_cache_iter = rp_cache.begin();
@@ -1524,8 +1530,10 @@ ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type)
 void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle)
 { GetResourcePool(resource_data, handle.type).ReleaseResource(handle.index); }
 
-
-void update_descriptor_set_instance(DeviceData& device_data, RuntimeLoopData& rl_data, ResourceData &resource_data, const DescriptorSetUpdate &update)
+void update_descriptor_set_instance(DeviceData &device_data,
+									RuntimeLoopData &rl_data,
+									ResourceData &resource_data,
+									const DescriptorSetUpdate &update)
 {
 	ResourceHandle handle = FetchResource(resource_data, ResourceType::DescriptorSet);
 	DescriptorSet *dummy_res = Access<DescriptorSet>(resource_data, handle);
@@ -1537,7 +1545,7 @@ void update_descriptor_set_instance(DeviceData& device_data, RuntimeLoopData& rl
 	dummy_res->resources = nullptr;
 	dummy_res->samplers = nullptr;
 	dummy_res->num_resources = 0;
-	
+
 	PendingToDestroy(rl_data, handle);
 
 	VkWriteDescriptorSet descriptor_write[8];
@@ -1557,7 +1565,5 @@ void update_descriptor_set_instance(DeviceData& device_data, RuntimeLoopData& rl
 	// todo fill write descriptor sets
 
 	vkUpdateDescriptorSets(device_data.device, num_resources, descriptor_write, 0, nullptr);
-	
-
 }
 } // namespace cloud::vulkan::infra
