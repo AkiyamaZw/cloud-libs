@@ -37,15 +37,16 @@ struct ResourceUpdate
 	uint32_t current_frame;
 };
 
-struct ResourceBase
-{
-	const char *name{nullptr};
-};
-
 struct DescriptorSetUpdate
 {
 	ResourceHandle handle;
 	uint32_t current_frame;
+};
+
+struct ResourceBase
+{
+	ResourceHandle handle;
+	const char *name{nullptr};
 };
 
 struct BufferCreation
@@ -57,9 +58,8 @@ struct BufferCreation
 	const char *name;
 };
 
-struct Buffer
+struct Buffer : public ResourceBase
 {
-	ResourceHandle handle;
 	ResourceHandle parent_handle;
 	VkBuffer buffer;
 	VmaAllocation allocation;
@@ -71,10 +71,9 @@ struct Buffer
 	uint32_t global_offset{0};
 	bool ready{false};
 	uint8_t *mapped_data{nullptr};
-	const char *name{nullptr};
 };
 
-struct Sampler
+struct Sampler : public ResourceBase
 {
 	VkSampler sampler;
 	VkFilter min_filter{VK_FILTER_NEAREST};
@@ -84,7 +83,6 @@ struct Sampler
 	VkSamplerAddressMode address_mode_v{VK_SAMPLER_ADDRESS_MODE_REPEAT};
 	VkSamplerAddressMode address_mode_w{VK_SAMPLER_ADDRESS_MODE_REPEAT};
 	VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
-	const char *name{nullptr};
 };
 
 struct SamplerCreation
@@ -112,9 +110,8 @@ struct TextureCreation
 	const char *name{nullptr};
 };
 
-struct Texture
+struct Texture : public ResourceBase
 {
-	ResourceHandle handle;
 	ResourceHandle parent_handle;
 	VkImage image;
 	VkImageView view;
@@ -132,7 +129,6 @@ struct Texture
 	uint16_t array_base_layer{0};
 	bool sparse{false};
 	TextureType type{TextureType::Texture2D};
-	const char *name{nullptr};
 	Sampler *sampler;
 };
 
@@ -151,7 +147,7 @@ struct RenderPassCreation
 	const char *name{nullptr};
 };
 
-struct RenderPass
+struct RenderPass : public ResourceBase
 {
 	VkRenderPass vk_render_pass;
 	VkFramebuffer vk_frame_buffer;
@@ -170,7 +166,6 @@ struct RenderPass
 
 	uint8_t num_render_targets{0};
 	uint32_t multiview_mask{0};
-	const char *name{nullptr};
 };
 
 struct DescriptorBinding
@@ -182,9 +177,8 @@ struct DescriptorBinding
 	const char *name{nullptr};
 };
 
-struct DescriptorSetLayout
+struct DescriptorSetLayout : public ResourceBase
 {
-	ResourceHandle handle;
 	VkDescriptorSetLayout descriptor_set_layout;
 	VkDescriptorSetLayoutBinding *binding{nullptr};
 	DescriptorBinding *descriptor_bindings{nullptr};
@@ -274,9 +268,8 @@ struct RasterizationCreation
 	FillMode fill_mode{FillMode::Solid};
 };
 
-struct Pipeline
+struct Pipeline : public ResourceBase
 {
-	ResourceHandle handle;
 	VkPipeline pipeline;
 	VkPipelineLayout pipeline_layout;
 	VkPipelineBindPoint pipeline_bind_point;

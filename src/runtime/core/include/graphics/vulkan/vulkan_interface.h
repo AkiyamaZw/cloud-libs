@@ -2,6 +2,7 @@
 #include "graphics/vulkan/gpu_resource.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/device_data.h"
+#include "core/runtime_log.h"
 
 namespace cloud::vulkan::infra
 {
@@ -33,7 +34,7 @@ bool CreateVkSwapChain(const DeviceData &device_data, WindowData &window_data);
 
 void DestroyVkSwapchain(const DeviceData &device_data, WindowData &window_data);
 
-//void ResizeVkSwapchain(const DeviceData& device_data, WindowData& window_data);
+// void ResizeVkSwapchain(const DeviceData& device_data, WindowData& window_data);
 
 bool CreateVmaAllocator(const InstanceData &instance_data,
 						const DeviceData &device_data,
@@ -144,9 +145,24 @@ T *Access(ResourceData &resource_data, const ResourceHandle &handle)
 			handle.index));
 }
 
+template <typename T>
+T *AllocResource(ResourceData &rd, ResourceType type, const char *name)
+{
+	ResourceHandle handle = FetchResource(rd, type);
+	if (handle.index == ResourcePool::INVALID_NUM)
+		return nullptr;
+	T *res = Access<T>(rd, handle);
+	res->handle = handle;
+	res->name = name;
+	INFO("Resource \"%s\" created with handle %d", name, handle.index);
+	return res;
+}
+
 void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
 
 void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle);
+
+void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res);
 
 void DestroyResource(RuntimeLoopData &rl_data,
 					 const DeviceData &device_data,

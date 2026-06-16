@@ -187,7 +187,7 @@ void present(VulkanDeviceContext &vdc) {
 	submit_info.waitSemaphoreCount = 1;
 	submit_info.pWaitSemaphores = wait_semaphore;
 	submit_info.pWaitDstStageMask = wait_stages;
-	submit_info.commandBufferCount = vdc.runtime_data.num_allocated_command_buffers;
+	submit_info.commandBufferCount = vdc.runtime_data.num_queued_command_buffers;
 	submit_info.pCommandBuffers = enqueued_command_buffers;
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.pSignalSemaphores = render_complete_semaphore;

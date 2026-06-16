@@ -4,13 +4,11 @@
 #include <array>
 #include <map>
 #include <chrono>
-#include <utility>
 #include <unordered_map>
 #include "graphics/vulkan/command_buffer.h"
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"
-#include "graphics/vulkan/gpu_resource.h"
-#include "core/data_structure/resource_pool.h"
+#include "graphics/vulkan/resource.h"
 
 namespace cloud::vulkan
 {
@@ -68,47 +66,6 @@ struct RenderPipelineData
 	VkPipeline graphics_pipeline;
 };
 
-struct DeviceResourcePoolData
-{
-	using ResourcePool = cloud::ResourcePool;
-	static constexpr uint32_t ResourceTypeCount = std::to_underlying(ResourceType::Count);
-	// resource obejct pool
-	static constexpr uint32_t buffer_pool_size = 4096;
-	static constexpr uint32_t texture_pool_size = 512;
-	static constexpr uint32_t render_pass_pool_size = 256;
-	static constexpr uint32_t descriptor_layout_pool_size = 128;
-	static constexpr uint32_t pipeline_pool_size = 128;
-	static constexpr uint32_t shader_pool_size = 128;
-	static constexpr uint32_t descriptor_set_pool_size = 256;
-	static constexpr uint32_t sampler_pool_size = 32;
-
-	std::array<ResourcePool, ResourceTypeCount> resource_pool_array{
-		ResourcePool{buffer_pool_size, sizeof(Buffer)},
-		ResourcePool{texture_pool_size, sizeof(Texture)},
-		ResourcePool{pipeline_pool_size, sizeof(Pipeline)},
-		ResourcePool{sampler_pool_size, sizeof(Sampler)},
-		ResourcePool{descriptor_layout_pool_size, sizeof(DescriptorSetLayout)},
-		ResourcePool{descriptor_set_pool_size, sizeof(DescriptorSet)},
-		ResourcePool{render_pass_pool_size, sizeof(RenderPass)},
-		ResourcePool{shader_pool_size, sizeof(ShaderState)}};
-
-	// descriptor pool
-	static constexpr uint32_t k_global_pool_elements = 128;
-	static constexpr VkDescriptorPoolSize pool_sizes[] = {
-		{VK_DESCRIPTOR_TYPE_SAMPLER, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, k_global_pool_elements},
-		{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, k_global_pool_elements}};
-	VkDescriptorPool vk_descriptor_pool;
-};
-
 struct DynamicBuffer
 {
 	uint32_t max_per_frame_size{0};
@@ -156,7 +113,7 @@ struct FrameAdanceCounter
 	std::chrono::high_resolution_clock::time_point start_time;
 };
 
-void AdvanceFrameCounter(FrameAdanceCounter& counter);
+void AdvanceFrameCounter(FrameAdanceCounter &counter);
 
 struct RuntimeLoopData
 {

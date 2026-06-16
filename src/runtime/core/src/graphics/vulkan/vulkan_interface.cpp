@@ -34,7 +34,6 @@ void SetResourceName(VkDevice device, VkObjectType type, uint64_t ptr, const cha
 	name_info.objectHandle = ptr;
 	name_info.pObjectName = name;
 	pfnSetDebugUtilsObjectNameEXT(device, &name_info);
-	INFO("Resource \"%s\" created with handle %d", name, ptr);
 }
 
 static const char *s_instance_layer[] = {
@@ -749,22 +748,16 @@ ResourceHandle CreateVkSampler(const DeviceData &device_data,
 							   ResourceData &resource_data,
 							   const SamplerCreation &creation)
 {
-	ResourceHandle handle = FetchResource(resource_data, ResourceType::Sampler);
-	if (handle.index == ResourcePool::INVALID_NUM)
-	{
-		return handle;
-	}
-	Sampler *sampler = Access<Sampler>(resource_data, handle);
+	Sampler *sampler = AllocResource<Sampler>(resource_data, ResourceType::Sampler, creation.name);
 	VkSamplerCreateInfo create_info{};
 	TranslateSamplerCreation(creation, create_info);
 	auto succ = vkCreateSampler(device_data.device, &create_info, nullptr, &sampler->sampler);
 	check_vk(succ);
-	sampler->name = creation.name;
 	SetResourceName(device_data.device,
 					VK_OBJECT_TYPE_SAMPLER,
 					reinterpret_cast<uint64_t>(sampler->sampler),
 					creation.name);
-	return handle;
+	return sampler->handle;
 }
 
 void DestroyVkSampler(const ResourceHandle &handle,
@@ -774,27 +767,19 @@ void DestroyVkSampler(const ResourceHandle &handle,
 	auto sampler = Access<Sampler>(resource_data, handle);
 	if (sampler)
 	{
-		INFO("resource %s delete, handle %d", sampler->name, handle.index);
 		vkDestroySampler(device_data.device, sampler->sampler, nullptr);
 	}
-	ReleaseResource(resource_data, handle);
+	ReleaseResourceBase(resource_data, sampler);
 }
 
 ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 							  const DeviceData &device_data,
 							  ResourceData &resource_data)
 {
-	ResourceHandle handle = FetchResource(resource_data, ResourceType::Buffer);
-	if (handle.index == ResourcePool::INVALID_NUM)
-	{
-		return handle;
-	}
-	Buffer *buffer = Access<Buffer>(resource_data, handle);
-	buffer->name = creation.name;
+	Buffer *buffer = AllocResource<Buffer>(resource_data, ResourceType::Buffer, creation.name);
 	buffer->size = creation.size;
 	buffer->usage_type = creation.usage_type;
 	buffer->usage_flags = creation.usage_flags;
-	buffer->handle = handle;
 	buffer->global_offset = 0;
 	buffer->parent_handle = {ResourcePool::INVALID_NUM, ResourceType::Buffer};
 	static const VkBufferUsageFlags buffer_usage_mask = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
@@ -804,7 +789,7 @@ ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 	if (creation.usage_type == ResourceUsageType::Dynamic && use_global_buffer)
 	{
 		buffer->parent_handle = resource_data.dynamic_buffer.buffer;
-		return handle;
+		return buffer->handle;
 	};
 	VkBufferCreateInfo buffer_create_info = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 	buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | creation.usage_flags;
@@ -831,10 +816,7 @@ ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 		memcpy(data, creation.initial_data, (size_t)creation.size);
 		vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
 	}
-#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
-	INFO("%s crearted", buffer->name);
-#endif
-	return handle;
+	return buffer->handle;
 }
 
 void DestroyVkBuffer(const ResourceHandle &handle,
@@ -842,12 +824,11 @@ void DestroyVkBuffer(const ResourceHandle &handle,
 					 ResourceData &resource_data)
 {
 	Buffer *buffer = Access<Buffer>(resource_data, handle);
-	INFO("resource %s delete, handle %d", buffer->name, handle.index);
 	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
 	{
 		vmaDestroyBuffer(resource_data.vma_allocator, buffer->buffer, buffer->allocation);
 	}
-	ReleaseResource(resource_data, handle);
+	ReleaseResourceBase(resource_data, buffer);
 }
 
 void CreateVkTextureInner(const DeviceData &device_data,
@@ -859,14 +840,12 @@ void CreateVkTextureInner(const DeviceData &device_data,
 	COPY_MEMBER(texture, creation, width);
 	COPY_MEMBER(texture, creation, height);
 	COPY_MEMBER(texture, creation, depth);
-	COPY_MEMBER(texture, creation, name);
 	COPY_MEMBER(texture, creation, mipmaps);
 	COPY_MEMBER(texture, creation, flags);
 	COPY_MEMBER(texture, creation, type);
 	COPY_MEMBER(texture, creation, format);
 
 	texture.sampler = nullptr;
-	texture.handle = handle;
 	VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
 	image_create_info.format = texture.format;
 	image_create_info.flags = 0;
@@ -932,13 +911,8 @@ ResourceHandle CreateVkTexture(const DeviceData &device_data,
 							   const TextureCreation &creation,
 							   ResourceData &resource_data)
 {
-	ResourceHandle handle = FetchResource(resource_data, ResourceType::Texture);
-	if (handle.index == ResourcePool::INVALID_NUM)
-	{
-		return handle;
-	}
-	Texture *texture = Access<Texture>(resource_data, handle);
-	CreateVkTextureInner(device_data, creation, resource_data, handle, *texture);
+	Texture *texture = AllocResource<Texture>(resource_data, ResourceType::Texture, creation.name);
+	CreateVkTextureInner(device_data, creation, resource_data, texture->handle, *texture);
 	if (creation.initial_data)
 	{
 		VkBufferCreateInfo buffer_info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
@@ -1027,7 +1001,7 @@ ResourceHandle CreateVkTexture(const DeviceData &device_data,
 
 		texture->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
-	return handle;
+	return texture->handle;
 }
 
 void DestroyVkTexture(const ResourceHandle &handle,
@@ -1037,12 +1011,10 @@ void DestroyVkTexture(const ResourceHandle &handle,
 	Texture *tex = Access<Texture>(resource_data, handle);
 	if (tex)
 	{
-		INFO("resource %s delete, handle %d", tex->name, handle.index);
 		vkDestroyImageView(device_data.device, tex->view, device_data.allocation_callback);
-		INFO("resource %s delete, handle %d", tex->name, handle.index);
 		vmaDestroyImage(resource_data.vma_allocator, tex->image, tex->allocation);
 	}
-	ReleaseResource(resource_data, handle);
+	ReleaseResourceBase(resource_data, tex);
 }
 
 void CreateVkSwapchainRenderPass(const DeviceData &device_data,
@@ -1340,13 +1312,9 @@ ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 								  WindowData &window_data,
 								  ResourceData &resource_data)
 {
-	ResourceHandle handle = FetchResource(resource_data, ResourceType::RenderPass);
-	if (handle.index == ResourcePool::INVALID_NUM)
-	{
-		return handle;
-	}
-	RenderPass *rp = Access<RenderPass>(resource_data, handle);
-	rp->name = creation.name;
+
+	RenderPass *rp =
+		AllocResource<RenderPass>(resource_data, ResourceType::RenderPass, creation.name);
 	rp->type = creation.type;
 	rp->num_render_targets = creation.num_render_targets;
 	rp->dispatch_x = 0;
@@ -1388,7 +1356,7 @@ ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 							creation.depth_stencil_texture);
 	}
 
-	return handle;
+	return rp->handle;
 }
 
 void DestroyVkRenderPass(const ResourceHandle &handle,
@@ -1396,7 +1364,6 @@ void DestroyVkRenderPass(const ResourceHandle &handle,
 						 ResourceData &resource_data)
 {
 	RenderPass *rp = Access<RenderPass>(resource_data, handle);
-	INFO("resource %s delete, handle %d", rp->name, handle.index);
 	if (rp)
 	{
 		if (rp->num_render_targets)
@@ -1409,8 +1376,8 @@ void DestroyVkRenderPass(const ResourceHandle &handle,
 			vkDestroyRenderPass(
 				device_data.device, rp->vk_render_pass, resource_data.allocation_callback);
 		}
-		ReleaseResource(resource_data, handle);
 	}
+	ReleaseResourceBase(resource_data, rp);
 }
 
 void *DynamicAllocate(DynamicBuffer &dynamic_buffer, uint32_t size)
@@ -1476,9 +1443,9 @@ void DestroyResource(RuntimeLoopData &rl_data,
 {
 	auto &container = rl_data.resource_deletion_queue;
 
-	for (auto &update_iter : container)
+	for (int i = (int)container.size() - 1; i >= 0; --i)
 	{
-		ResourceUpdate &res_to_delete = update_iter;
+		ResourceUpdate &res_to_delete = container[i];
 
 		if (res_to_delete.current_frame != InvalidFrameID)
 		{
@@ -1488,7 +1455,6 @@ void DestroyResource(RuntimeLoopData &rl_data,
 				const auto &handle = res_to_delete.handle;
 				iter->second(res_to_delete.handle, device_data, resource_data);
 				container.pop_back();
-				continue;
 			}
 			else
 			{
@@ -1501,7 +1467,6 @@ void DestroyResource(RuntimeLoopData &rl_data,
 			assert(false);
 		}
 	}
-	container.clear();
 	assert(container.empty());
 
 	auto &rp_cache = resource_data.render_pass_cache;
@@ -1529,6 +1494,14 @@ ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type)
 
 void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle)
 { GetResourcePool(resource_data, handle.type).ReleaseResource(handle.index); }
+
+void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res)
+{
+	if (!res)
+		return;
+	INFO("resource %s delete, handle %d", res->name, res->handle.index);
+	ReleaseResource(resource_data, res->handle);
+}
 
 void update_descriptor_set_instance(DeviceData &device_data,
 									RuntimeLoopData &rl_data,
