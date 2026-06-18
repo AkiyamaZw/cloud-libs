@@ -76,9 +76,15 @@ struct ResourceTraits<RenderPass>
 	static constexpr ResourceType type = ResourceType::RenderPass;
 };
 
+template <>
+struct ResourceTraits<DescriptorSet>
+{
+	static constexpr ResourceType type = ResourceType::DescriptorSet;
+};
+
 template <typename T>
 ResourcePool &GetResourcePool(DeviceResourcePoolData &pools)
-{ return pools.resource_pool_array[ResourceTraits<T>::type]; }
+{ return pools.resource_pool_array[std::to_underlying(ResourceTraits<T>::type)]; }
 
 template <typename T>
 ResourceHandle FetchResource(DeviceResourcePoolData &pools)
@@ -86,7 +92,7 @@ ResourceHandle FetchResource(DeviceResourcePoolData &pools)
 
 template <typename T>
 T *Access(DeviceResourcePoolData &pools, const ResourceHandle &handle)
-{ return static_cast<T *>(GetResourcePool<T>(handle.index)); }
+{ return static_cast<T *>(GetResourcePool<T>(pools).Access(handle.index)); }
 
 template <typename T>
 T *AllocResource(DeviceResourcePoolData &pools, const char *name)
@@ -101,4 +107,15 @@ T *AllocResource(DeviceResourcePoolData &pools, const char *name)
 	return res;
 }
 
+template<typename T>
+void ReleaseResource(DeviceResourcePoolData &pools, const ResourceHandle &handle)
+{ 
+	GetResourcePool<T>(pools).ReleaseResource(handle.index);
+}
+
+template <typename T>
+void ReleaseResource(DeviceResourcePoolData &pools, const ResourceBase *res)
+{
+	INFO("Resource \"%s\" destrooed with handle %d", res->name, res->handle.index);
+	ReleaseResource<T>(pools, res->handle); }
 } // namespace cloud::vulkan

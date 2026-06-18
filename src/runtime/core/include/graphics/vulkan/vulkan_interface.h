@@ -135,36 +135,10 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 /*  dynamic mapping buffer start end */
 
 /* resource traits function */
-ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type);
 
-template <typename T>
-T *Access(ResourceData &resource_data, const ResourceHandle &handle)
-{
-	return static_cast<T *>(
-		resource_data.pool_data.resource_pool_array[std::to_underlying(handle.type)].Access(
-			handle.index));
-}
+void PendingToQueue(RuntimeLoopData &resource_data, ResourceHandle &handle);
 
-template <typename T>
-T *AllocResource(ResourceData &rd, ResourceType type, const char *name)
-{
-	ResourceHandle handle = FetchResource(rd, type);
-	if (handle.index == ResourcePool::INVALID_NUM)
-		return nullptr;
-	T *res = Access<T>(rd, handle);
-	res->handle = handle;
-	res->name = name;
-	INFO("Resource \"%s\" created with handle %d", name, handle.index);
-	return res;
-}
-
-void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
-
-void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle);
-
-void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res);
-
-void DestroyResource(RuntimeLoopData &rl_data,
+void DestroyResourceInQueue(RuntimeLoopData &rl_data,
 					 const DeviceData &device_data,
 					 ResourceData &resource_data);
 /* resource traits function */

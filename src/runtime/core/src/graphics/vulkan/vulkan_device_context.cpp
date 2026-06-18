@@ -65,11 +65,11 @@ void DestoryDefaultResource(VulkanDeviceContext &vdc)
 {
 	DynamicBuffer &db = vdc.resource_data.dynamic_buffer;
 	infra::UnMapBuffer({db.buffer, 0, 0}, db, vdc.resource_data);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.dynamic_buffer.buffer);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.swapchain_pass);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.texture_depth_handle);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.fullscreen_vertex_buffer);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.default_sampler);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.dynamic_buffer.buffer);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.swapchain_pass);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.texture_depth_handle);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.fullscreen_vertex_buffer);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.default_sampler);
 }
 
 void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
@@ -103,7 +103,7 @@ void Shutdown(VulkanDeviceContext &vdc)
 	DestroyVkDescriptorPool(vdc.device_data, vdc.resource_data);
 	DestroyVkSwapchain(vdc.device_data, vdc.window_data);
 
-	DestroyResource(vdc.runtime_data, vdc.device_data, vdc.resource_data);
+	DestroyResourceInQueue(vdc.runtime_data, vdc.device_data, vdc.resource_data);
 
 	/* resource should be clear upper */
 	DestroyVmaAllocator(vdc.resource_data);
@@ -221,8 +221,7 @@ void present(VulkanDeviceContext &vdc) {
 	}
 	AdvanceFrameCounter(frame_counter);
 
-	infra::DestroyResource(vdc.runtime_data, vdc.device_data, vdc.resource_data);
-
+	infra::DestroyResourceInQueue(vdc.runtime_data, vdc.device_data, vdc.resource_data);
 }
 
 } // namespace cloud::vulkan

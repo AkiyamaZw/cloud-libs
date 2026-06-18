@@ -5,6 +5,8 @@
 #include "core/runtime_log.h"
 #include "graphics/vulkan/device_data.h"
 #include "core/data_structure/memory.h"
+#include "graphics/vulkan/resource.h"
+
 
 #define COPY_MEMBER(obj_left, obj_right, member) obj_left.member = obj_right.member
 
@@ -748,7 +750,7 @@ ResourceHandle CreateVkSampler(const DeviceData &device_data,
 							   ResourceData &resource_data,
 							   const SamplerCreation &creation)
 {
-	Sampler *sampler = AllocResource<Sampler>(resource_data, ResourceType::Sampler, creation.name);
+	Sampler *sampler = AllocResource<Sampler>(resource_data.pool_data, creation.name);
 	VkSamplerCreateInfo create_info{};
 	TranslateSamplerCreation(creation, create_info);
 	auto succ = vkCreateSampler(device_data.device, &create_info, nullptr, &sampler->sampler);
@@ -764,19 +766,19 @@ void DestroyVkSampler(const ResourceHandle &handle,
 					  const DeviceData &device_data,
 					  ResourceData &resource_data)
 {
-	auto sampler = Access<Sampler>(resource_data, handle);
+	auto sampler = Access<Sampler>(resource_data.pool_data, handle);
 	if (sampler)
 	{
 		vkDestroySampler(device_data.device, sampler->sampler, nullptr);
 	}
-	ReleaseResourceBase(resource_data, sampler);
+	ReleaseResource<Sampler>(resource_data.pool_data, sampler);
 }
 
 ResourceHandle CreateVkBuffer(const BufferCreation &creation,
 							  const DeviceData &device_data,
 							  ResourceData &resource_data)
 {
-	Buffer *buffer = AllocResource<Buffer>(resource_data, ResourceType::Buffer, creation.name);
+	Buffer *buffer = AllocResource<Buffer>(resource_data.pool_data, creation.name);
 	buffer->size = creation.size;
 	buffer->usage_type = creation.usage_type;
 	buffer->usage_flags = creation.usage_flags;
@@ -823,12 +825,12 @@ void DestroyVkBuffer(const ResourceHandle &handle,
 					 const DeviceData &device_data,
 					 ResourceData &resource_data)
 {
-	Buffer *buffer = Access<Buffer>(resource_data, handle);
+	Buffer *buffer = Access<Buffer>(resource_data.pool_data, handle);
 	if (buffer && buffer->parent_handle.index == ResourcePool::INVALID_NUM)
 	{
 		vmaDestroyBuffer(resource_data.vma_allocator, buffer->buffer, buffer->allocation);
 	}
-	ReleaseResourceBase(resource_data, buffer);
+	ReleaseResource<Buffer>(resource_data.pool_data, buffer);
 }
 
 void CreateVkTextureInner(const DeviceData &device_data,
@@ -911,7 +913,7 @@ ResourceHandle CreateVkTexture(const DeviceData &device_data,
 							   const TextureCreation &creation,
 							   ResourceData &resource_data)
 {
-	Texture *texture = AllocResource<Texture>(resource_data, ResourceType::Texture, creation.name);
+	Texture *texture = AllocResource<Texture>(resource_data.pool_data, creation.name);
 	CreateVkTextureInner(device_data, creation, resource_data, texture->handle, *texture);
 	if (creation.initial_data)
 	{
@@ -1008,13 +1010,13 @@ void DestroyVkTexture(const ResourceHandle &handle,
 					  const DeviceData &device_data,
 					  ResourceData &resource_data)
 {
-	Texture *tex = Access<Texture>(resource_data, handle);
+	Texture *tex = Access<Texture>(resource_data.pool_data, handle);
 	if (tex)
 	{
 		vkDestroyImageView(device_data.device, tex->view, device_data.allocation_callback);
 		vmaDestroyImage(resource_data.vma_allocator, tex->image, tex->allocation);
 	}
-	ReleaseResourceBase(resource_data, tex);
+	ReleaseResource<Texture>(resource_data.pool_data, tex);
 }
 
 void CreateVkSwapchainRenderPass(const DeviceData &device_data,
@@ -1038,7 +1040,7 @@ void CreateVkSwapchainRenderPass(const DeviceData &device_data,
 	color_attach_ref.attachment = 0;
 	color_attach_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	Texture *depth_tex = Access<Texture>(resource_data, resource_data.texture_depth_handle);
+	Texture *depth_tex = Access<Texture>(resource_data.pool_data, resource_data.texture_depth_handle);
 	VkAttachmentDescription depth_attach{};
 	depth_attach.format = depth_tex->format;
 	depth_attach.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -1143,12 +1145,12 @@ void CreateVkFrameBuffer(const DeviceData &device_data,
 	uint32_t active_attachs = 0;
 	for (; active_attachs < num_rt; ++active_attachs)
 	{
-		Texture *tex = Access<Texture>(resource_data, out_textures[active_attachs]);
+		Texture *tex = Access<Texture>(resource_data.pool_data, out_textures[active_attachs]);
 		fb_attchs[active_attachs] = tex->view;
 	}
 	if (depth_stencil_tex.index != ResourcePool::INVALID_NUM)
 	{
-		Texture *tex = Access<Texture>(resource_data, depth_stencil_tex);
+		Texture *tex = Access<Texture>(resource_data.pool_data, depth_stencil_tex);
 		fb_attchs[active_attachs++] = tex->view;
 	}
 	fb_info.pAttachments = fb_attchs;
@@ -1165,12 +1167,12 @@ RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
 	out.Reset();
 	for (uint32_t i = 0; i < creation.num_render_targets; ++i)
 	{
-		Texture *tex = Access<Texture>(resource_data, creation.output_textures[i]);
+		Texture *tex = Access<Texture>(resource_data.pool_data, creation.output_textures[i]);
 		out.SetColorFormat(tex->format);
 	}
 	if (creation.depth_stencil_texture.index != ResourcePool::INVALID_NUM)
 	{
-		Texture *tex = Access<Texture>(resource_data, creation.depth_stencil_texture);
+		Texture *tex = Access<Texture>(resource_data.pool_data, creation.depth_stencil_texture);
 		out.SetDepthFormat(tex->format);
 	}
 	out.color_operation = creation.color_op;
@@ -1314,7 +1316,7 @@ ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 {
 
 	RenderPass *rp =
-		AllocResource<RenderPass>(resource_data, ResourceType::RenderPass, creation.name);
+		AllocResource<RenderPass>(resource_data.pool_data, creation.name);
 	rp->type = creation.type;
 	rp->num_render_targets = creation.num_render_targets;
 	rp->dispatch_x = 0;
@@ -1329,7 +1331,7 @@ ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
 	uint32_t index = 0;
 	for (; index < creation.num_render_targets; index++)
 	{
-		Texture *tex = Access<Texture>(resource_data, creation.output_textures[index]);
+		Texture *tex = Access<Texture>(resource_data.pool_data, creation.output_textures[index]);
 		rp->width = tex->width;
 		rp->height = tex->height;
 		rp->out_textures[index] = creation.output_textures[index];
@@ -1363,7 +1365,7 @@ void DestroyVkRenderPass(const ResourceHandle &handle,
 						 const DeviceData &device_data,
 						 ResourceData &resource_data)
 {
-	RenderPass *rp = Access<RenderPass>(resource_data, handle);
+	RenderPass *rp = Access<RenderPass>(resource_data.pool_data, handle);
 	if (rp)
 	{
 		if (rp->num_render_targets)
@@ -1377,7 +1379,7 @@ void DestroyVkRenderPass(const ResourceHandle &handle,
 				device_data.device, rp->vk_render_pass, resource_data.allocation_callback);
 		}
 	}
-	ReleaseResourceBase(resource_data, rp);
+	ReleaseResource<RenderPass>(resource_data.pool_data, rp);
 }
 
 void *DynamicAllocate(DynamicBuffer &dynamic_buffer, uint32_t size)
@@ -1393,7 +1395,7 @@ void *MapBuffer(const DynamicBuffer::MapBufferParameters &param,
 {
 	if (param.handle.index == ResourcePool::INVALID_NUM)
 		return nullptr;
-	Buffer *buffer = Access<Buffer>(resource_data, param.handle);
+	Buffer *buffer = Access<Buffer>(resource_data.pool_data, param.handle);
 	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
 	{
 		buffer->global_offset = dynamic_buffer.allocated_size;
@@ -1410,7 +1412,7 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 {
 	if (param.handle.index == ResourcePool::INVALID_NUM)
 		return;
-	Buffer *buffer = Access<Buffer>(resource_data, param.handle);
+	Buffer *buffer = Access<Buffer>(resource_data.pool_data, param.handle);
 	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
 		return;
 	vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
@@ -1420,12 +1422,12 @@ void DestroyVkDescriptorSet(const ResourceHandle &handle,
 							const DeviceData &device_data,
 							ResourceData &resource_data)
 {
-	DescriptorSet *res = Access<DescriptorSet>(resource_data, handle);
+	DescriptorSet *res = Access<DescriptorSet>(resource_data.pool_data, handle);
 	if (res && res->resources)
 	{
 		assert(false);
 	}
-	ReleaseResource(resource_data, handle);
+	ReleaseResource<DescriptorSet>(resource_data.pool_data, handle);
 }
 
 using instance_delete_handler =
@@ -1437,9 +1439,9 @@ std::unordered_map<ResourceType, instance_delete_handler> s_delete_map = {
 	{ResourceType::RenderPass, DestroyVkRenderPass},
 	{ResourceType::DescriptorSet, DestroyVkDescriptorSet}};
 
-void DestroyResource(RuntimeLoopData &rl_data,
-					 const DeviceData &device_data,
-					 ResourceData &resource_data)
+void DestroyResourceInQueue(RuntimeLoopData &rl_data,
+							const DeviceData &device_data,
+							ResourceData &resource_data)
 {
 	auto &container = rl_data.resource_deletion_queue;
 
@@ -1480,37 +1482,18 @@ void DestroyResource(RuntimeLoopData &rl_data,
 	rp_cache.clear();
 }
 
-void PendingToDestroy(RuntimeLoopData &rl_data, ResourceHandle &handle)
+void PendingToQueue(RuntimeLoopData &rl_data, ResourceHandle &handle)
 { rl_data.resource_deletion_queue.emplace_back(handle, rl_data.frame_counter.current_frame); }
-
-ResourcePool &GetResourcePool(ResourceData &resource_data, ResourceType type)
-{
-	assert(type < ResourceType::Count && "invalid resource type!");
-	return resource_data.pool_data.resource_pool_array[std::to_underlying(type)];
-}
-
-ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type)
-{ return ResourceHandle{GetResourcePool(resource_data, type).FetchResource(), type}; }
-
-void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle)
-{ GetResourcePool(resource_data, handle.type).ReleaseResource(handle.index); }
-
-void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res)
-{
-	if (!res)
-		return;
-	INFO("resource %s delete, handle %d", res->name, res->handle.index);
-	ReleaseResource(resource_data, res->handle);
-}
 
 void update_descriptor_set_instance(DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									ResourceData &resource_data,
 									const DescriptorSetUpdate &update)
 {
-	ResourceHandle handle = FetchResource(resource_data, ResourceType::DescriptorSet);
-	DescriptorSet *dummy_res = Access<DescriptorSet>(resource_data, handle);
-	DescriptorSet *descriptor_set = Access<DescriptorSet>(resource_data, update.handle);
+	ResourceHandle handle =
+		FetchResource<DescriptorSet>(resource_data.pool_data);
+	DescriptorSet *dummy_res = Access<DescriptorSet>(resource_data.pool_data, handle);
+	DescriptorSet *descriptor_set = Access<DescriptorSet>(resource_data.pool_data, update.handle);
 	const DescriptorSetLayout *descriptor_set_layout = descriptor_set->layout;
 
 	dummy_res->vk_descriptor_set = descriptor_set->vk_descriptor_set;
@@ -1519,13 +1502,13 @@ void update_descriptor_set_instance(DeviceData &device_data,
 	dummy_res->samplers = nullptr;
 	dummy_res->num_resources = 0;
 
-	PendingToDestroy(rl_data, handle);
+	PendingToQueue(rl_data, handle);
 
 	VkWriteDescriptorSet descriptor_write[8];
 	VkDescriptorBufferInfo buffer_info[8];
 	VkDescriptorImageInfo image_info[8];
 
-	Sampler *sampler = Access<Sampler>(resource_data, resource_data.default_sampler);
+	Sampler *sampler = Access<Sampler>(resource_data.pool_data, resource_data.default_sampler);
 
 	VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
 	alloc_info.descriptorPool = resource_data.pool_data.vk_descriptor_pool;
