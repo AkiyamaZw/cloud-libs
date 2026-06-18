@@ -49,16 +49,20 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	vdc.resource_data.swapchain_pass = infra::CreateVkRenderPass(
 		rpc, vdc.device_data, vdc.runtime_data, vdc.window_data, vdc.resource_data);
 
-	BufferCreation dynamic_bc = {};
-	dynamic_bc.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-							 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	dynamic_bc.usage_type = ResourceUsageType::Immutable;
-	dynamic_bc.size = 1024 * 1024 * 10 * MaxSwapchainImages;
-	dynamic_bc.name = "dynamic_buffer";
-	DynamicBuffer &dynamic_buffer = vdc.resource_data.dynamic_buffer;
-	dynamic_buffer.buffer = infra::CreateVkBuffer(dynamic_bc, vdc.device_data, vdc.resource_data);
-	dynamic_buffer.mapped_memory = (uint8_t *)infra::MapBuffer(
-		{dynamic_buffer.buffer, 0, 0}, dynamic_buffer, vdc.resource_data);
+	{
+		DynamicBuffer &db = vdc.resource_data.dynamic_buffer;
+		db.Init(MaxSwapchainImages, 1024 * 1024 * 10,
+				static_cast<uint32_t>(vdc.device_data.ubo_alignment));
+		BufferCreation bc{};
+		bc.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+						 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		bc.usage_type = ResourceUsageType::Immutable;
+		bc.size = db.per_frame_size * db.slot_count;
+		bc.name = "dynamic_buffer";
+		db.buffer = infra::CreateVkBuffer(bc, vdc.device_data, vdc.resource_data);
+		db.mapped_memory = static_cast<uint8_t *>(
+			infra::MapBuffer({db.buffer, 0, 0}, db, vdc.resource_data));
+	}
 }
 
 void DestoryDefaultResource(VulkanDeviceContext &vdc)
@@ -138,12 +142,7 @@ void StartFrame(VulkanDeviceContext &vdc) {
 	}
 
 	vdc.runtime_data.command_buffer_ring.Reset(device, time_counter.current_frame);
-	DynamicBuffer *dynamic_buffer = &vdc.resource_data.dynamic_buffer;
-
-	const uint32_t used_size = dynamic_buffer->allocated_size -
-							   (dynamic_buffer->per_frame_size * time_counter.previous_frame);
-	dynamic_buffer->max_per_frame_size = std::max(used_size, dynamic_buffer->max_per_frame_size);
-	dynamic_buffer->allocated_size = dynamic_buffer->per_frame_size * time_counter.current_frame;
+	vdc.resource_data.dynamic_buffer.AdvanceSlot(time_counter.previous_frame, time_counter.current_frame);
 
 	auto &descriptor_set_container = vdc.runtime_data.descriptor_set_updates;
 	if (!descriptor_set_container.empty())

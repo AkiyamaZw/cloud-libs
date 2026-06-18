@@ -1271,7 +1271,6 @@ VkRenderPass CreateVkRenderPassInner(const DeviceData &device_data,
 	for (; active_attach < output.num_color_formats; ++active_attach)
 	{
 		attachs[active_attach] = color_attachs[active_attach];
-		++active_attach;
 	}
 	subpass.pDepthStencilAttachment = nullptr;
 	uint32_t depth_stencil_count = 0;
@@ -1456,7 +1455,6 @@ void DestroyResourceInQueue(RuntimeLoopData &rl_data,
 			{
 				const auto &handle = res_to_delete.handle;
 				iter->second(res_to_delete.handle, device_data, resource_data);
-				container.pop_back();
 			}
 			else
 			{
@@ -1469,7 +1467,7 @@ void DestroyResourceInQueue(RuntimeLoopData &rl_data,
 			assert(false);
 		}
 	}
-	assert(container.empty());
+	container.clear();
 
 	auto &rp_cache = resource_data.render_pass_cache;
 	auto rp_cache_iter = rp_cache.begin();
@@ -1484,6 +1482,11 @@ void DestroyResourceInQueue(RuntimeLoopData &rl_data,
 
 void PendingToQueue(RuntimeLoopData &rl_data, ResourceHandle &handle)
 { rl_data.resource_deletion_queue.emplace_back(handle, rl_data.frame_counter.current_frame); }
+
+
+/* delete resource from queue after some frames safety guard */
+static constexpr uint32_t k_delete_frame_delay = MaxSwapchainImages;
+
 
 void update_descriptor_set_instance(DeviceData &device_data,
 									RuntimeLoopData &rl_data,

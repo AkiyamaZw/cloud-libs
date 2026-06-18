@@ -1,7 +1,6 @@
 #pragma once
 #include "graphics/device.h"
 #include "core/utility/SingletonSystem.h"
-#include "core/data_structure/resource_manager.h"
 #include "graphics/core/gpu_enum.h"
 #include <string_view>
 

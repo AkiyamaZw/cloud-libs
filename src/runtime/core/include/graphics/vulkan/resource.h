@@ -1,5 +1,6 @@
 #pragma once
 #include <utility>
+#include <array>
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
 #include "core/data_structure/resource_pool.h"
