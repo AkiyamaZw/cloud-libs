@@ -1,9 +1,15 @@
 #pragma once
+#include <array>
 #include <utility>
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
 #include "core/data_structure/resource_pool.h"
 #include "core/runtime_log.h"
+#include "graphics/vulkan/resource/buffer.h"
+#include "graphics/vulkan/resource/texture.h"
+#include "graphics/vulkan/resource/sampler.h"
+#include "graphics/vulkan/resource/renderpass.h"
+#include "graphics/vulkan/resource/descriptorset.h"
 
 namespace cloud::vulkan
 {
@@ -50,33 +56,6 @@ struct DeviceResourcePoolData
 };
 
 template <typename T>
-struct ResourceTraits;
-
-template <>
-struct ResourceTraits<Buffer>
-{
-	static constexpr ResourceType type = ResourceType::Buffer;
-};
-
-template <>
-struct ResourceTraits<Texture>
-{
-	static constexpr ResourceType type = ResourceType::Texture;
-};
-
-template <>
-struct ResourceTraits<Sampler>
-{
-	static constexpr ResourceType type = ResourceType::Sampler;
-};
-
-template <>
-struct ResourceTraits<RenderPass>
-{
-	static constexpr ResourceType type = ResourceType::RenderPass;
-};
-
-template <typename T>
 ResourcePool &GetResourcePool(DeviceResourcePoolData &pools)
 { return pools.resource_pool_array[ResourceTraits<T>::type]; }
 
@@ -100,5 +79,11 @@ T *AllocResource(DeviceResourcePoolData &pools, const char *name)
 	INFO("Resource \"%s\" created with handle %d", name, handle.index);
 	return res;
 }
+
+struct RuntimeLoopData;
+struct DeviceData;
+void DestroyResource(RuntimeLoopData &rl_data,
+					 const DeviceData &device_data,
+					 ResourceData &resource_data);
 
 } // namespace cloud::vulkan

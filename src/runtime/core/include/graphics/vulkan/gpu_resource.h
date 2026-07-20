@@ -9,6 +9,9 @@ namespace cloud::vulkan
 {
 using ResourceType = render::ResourceType;
 
+template <typename T>
+struct ResourceTraits;
+
 struct RenderPassOutput
 {
 	VkFormat color_formats[MaxSwapchainImages];
@@ -49,125 +52,6 @@ struct ResourceBase
 	const char *name{nullptr};
 };
 
-struct BufferCreation
-{
-	VkBufferUsageFlags usage_flags{0};
-	ResourceUsageType usage_type{ResourceUsageType::Immutable};
-	uint32_t size{0};
-	void *initial_data{nullptr};
-	const char *name;
-};
-
-struct Buffer : public ResourceBase
-{
-	ResourceHandle parent_handle;
-	VkBuffer buffer;
-	VmaAllocation allocation;
-	VkDeviceMemory memory;
-	VkDeviceSize device_size;
-	VkBufferUsageFlags usage_flags{0};
-	ResourceUsageType usage_type{ResourceUsageType::Immutable};
-	uint32_t size = 0;
-	uint32_t global_offset{0};
-	bool ready{false};
-	uint8_t *mapped_data{nullptr};
-};
-
-struct Sampler : public ResourceBase
-{
-	VkSampler sampler;
-	VkFilter min_filter{VK_FILTER_NEAREST};
-	VkFilter mag_filter{VK_FILTER_NEAREST};
-	VkSamplerMipmapMode mipmap_mode{VK_SAMPLER_MIPMAP_MODE_NEAREST};
-	VkSamplerAddressMode address_mode_u{VK_SAMPLER_ADDRESS_MODE_REPEAT};
-	VkSamplerAddressMode address_mode_v{VK_SAMPLER_ADDRESS_MODE_REPEAT};
-	VkSamplerAddressMode address_mode_w{VK_SAMPLER_ADDRESS_MODE_REPEAT};
-	VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
-};
-
-struct SamplerCreation
-{
-	const char *name;
-	VkFilter min_filter{VK_FILTER_NEAREST};
-	VkFilter mag_filter{VK_FILTER_NEAREST};
-	VkSamplerMipmapMode mip_filter{VK_SAMPLER_MIPMAP_MODE_NEAREST};
-	VkSamplerAddressMode address_mode_u{VK_SAMPLER_ADDRESS_MODE_REPEAT};
-	VkSamplerAddressMode address_mode_v{VK_SAMPLER_ADDRESS_MODE_REPEAT};
-	VkSamplerAddressMode address_mode_w{VK_SAMPLER_ADDRESS_MODE_REPEAT};
-	VkSamplerReductionMode reduction_mode{VK_SAMPLER_REDUCTION_MODE_WEIGHTED_AVERAGE};
-};
-
-struct TextureCreation
-{
-	void *initial_data{nullptr};
-	uint16_t width = 1;
-	uint16_t height = 1;
-	uint16_t depth = 1;
-	uint8_t mipmaps = 1;
-	uint8_t flags = 1; // bitmask
-	VkFormat format{VK_FORMAT_UNDEFINED};
-	TextureType type{TextureType::Texture2D};
-	const char *name{nullptr};
-};
-
-struct Texture : public ResourceBase
-{
-	ResourceHandle parent_handle;
-	VkImage image;
-	VkImageView view;
-	VkFormat format;
-	VkImageLayout layout;
-	VkImageUsageFlags usage_flags;
-	VmaAllocation allocation;
-	ResourceState state{ResourceState::RESOURCE_STATE_UNDEFINED};
-	uint16_t width{1};
-	uint16_t height{1};
-	uint16_t depth{1};
-	uint8_t mipmaps{1};
-	uint8_t flags{0};
-	uint16_t mip_base_levels{0};
-	uint16_t array_base_layer{0};
-	bool sparse{false};
-	TextureType type{TextureType::Texture2D};
-	Sampler *sampler;
-};
-
-struct RenderPassCreation
-{
-	uint16_t num_render_targets{0};
-	RenderPassType type{RenderPassType::Geometry};
-	ResourceHandle output_textures[MaxSwapchainImages];
-	ResourceHandle depth_stencil_texture;
-	float scale_x{1.f};
-	float scale_y{1.f};
-	uint8_t resize = 1;
-	RenderPassOperation color_op{RenderPassOperation::DontCare};
-	RenderPassOperation depth_op{RenderPassOperation::DontCare};
-	RenderPassOperation stencil_op{RenderPassOperation::DontCare};
-	const char *name{nullptr};
-};
-
-struct RenderPass : public ResourceBase
-{
-	VkRenderPass vk_render_pass;
-	VkFramebuffer vk_frame_buffer;
-	RenderPassOutput output;
-	ResourceHandle out_textures[MaxSwapchainImages];
-	ResourceHandle out_depth;
-	float scale_x{1.f};
-	float scale_y{1.f};
-	uint16_t width{0};
-	uint16_t height{0};
-	uint16_t dispatch_x{1};
-	uint16_t dispatch_y{1};
-	uint16_t dispatch_z{1};
-	uint8_t resize{1};
-	RenderPassType type;
-
-	uint8_t num_render_targets{0};
-	uint32_t multiview_mask{0};
-};
-
 struct DescriptorBinding
 {
 	VkDescriptorType descriptor_type;
@@ -184,16 +68,6 @@ struct DescriptorSetLayout : public ResourceBase
 	DescriptorBinding *descriptor_bindings{nullptr};
 	uint16_t num_bindings{0};
 	uint16_t set_index{0};
-};
-
-struct DescriptorSet
-{
-	VkDescriptorSet vk_descriptor_set;
-	ResourceHandle *resources{nullptr};
-	ResourceHandle *samplers{nullptr};
-	uint16_t *bindings{nullptr};
-	const DescriptorSetLayout *layout{nullptr};
-	uint32_t num_resources{0};
 };
 
 struct ShaderState

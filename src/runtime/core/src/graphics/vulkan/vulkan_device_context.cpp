@@ -15,8 +15,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	sc.mag_filter = VK_FILTER_LINEAR;
 	sc.mip_filter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	sc.name = "default_sampler";
-	vdc.resource_data.default_sampler =
-		infra::CreateVkSampler(vdc.device_data, vdc.resource_data, sc);
+	vdc.resource_data.default_sampler = CreateVkSampler(vdc.device_data, vdc.resource_data, sc);
 
 	BufferCreation bc{};
 	bc.usage_flags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -24,7 +23,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	bc.initial_data = nullptr;
 	bc.name = "fullscreen_vb";
 	vdc.resource_data.fullscreen_vertex_buffer =
-		infra::CreateVkBuffer(bc, vdc.device_data, vdc.resource_data);
+		CreateVkBuffer(bc, vdc.device_data, vdc.resource_data);
 
 	TextureCreation tc{};
 	tc.initial_data = nullptr;
@@ -37,7 +36,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	tc.type = TextureType::Texture2D;
 	tc.name = "depth_texture";
 	vdc.resource_data.texture_depth_handle =
-		infra::CreateVkTexture(vdc.device_data, vdc.runtime_data, tc, vdc.resource_data);
+		CreateVkTexture(vdc.device_data, vdc.runtime_data, tc, vdc.resource_data);
 
 	vdc.window_data.swapchain_output.SetDepthFormat(VK_FORMAT_D32_SFLOAT);
 	RenderPassCreation rpc = {};
@@ -46,7 +45,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	rpc.color_op = RenderPassOperation::Clear;
 	rpc.depth_op = RenderPassOperation::Clear;
 	rpc.stencil_op = RenderPassOperation::Clear;
-	vdc.resource_data.swapchain_pass = infra::CreateVkRenderPass(
+	vdc.resource_data.swapchain_pass = CreateVkRenderPass(
 		rpc, vdc.device_data, vdc.runtime_data, vdc.window_data, vdc.resource_data);
 
 	BufferCreation dynamic_bc = {};
@@ -56,7 +55,7 @@ void InitDefaultResource(VulkanDeviceContext &vdc)
 	dynamic_bc.size = 1024 * 1024 * 10 * MaxSwapchainImages;
 	dynamic_bc.name = "dynamic_buffer";
 	DynamicBuffer &dynamic_buffer = vdc.resource_data.dynamic_buffer;
-	dynamic_buffer.buffer = infra::CreateVkBuffer(dynamic_bc, vdc.device_data, vdc.resource_data);
+	dynamic_buffer.buffer = CreateVkBuffer(dynamic_bc, vdc.device_data, vdc.resource_data);
 	dynamic_buffer.mapped_memory = (uint8_t *)infra::MapBuffer(
 		{dynamic_buffer.buffer, 0, 0}, dynamic_buffer, vdc.resource_data);
 }
@@ -112,9 +111,10 @@ void Shutdown(VulkanDeviceContext &vdc)
 	DestroyVkInstance(vdc.instance_data);
 }
 
-void StartFrame(VulkanDeviceContext &vdc) {
+void StartFrame(VulkanDeviceContext &vdc)
+{
 	auto &sync_signal = vdc.runtime_data.sync_signal;
-	FrameAdanceCounter &time_counter= vdc.runtime_data.frame_counter;
+	FrameAdanceCounter &time_counter = vdc.runtime_data.frame_counter;
 	auto &device = vdc.device_data.device;
 	VkFence *render_complete_fence = &sync_signal.command_buffer_fence[time_counter.current_frame];
 	if (vkGetFenceStatus(device, *render_complete_fence) != VK_SUCCESS)
@@ -126,14 +126,14 @@ void StartFrame(VulkanDeviceContext &vdc) {
 	VkSemaphore image_accuired_semaphore =
 		sync_signal.image_acquired_semaphore[time_counter.current_frame];
 	VkResult succ = vkAcquireNextImageKHR(device,
-						  vdc.window_data.vk_swapchain,
-						  UINT64_MAX,
-						  image_accuired_semaphore,
-						  VK_NULL_HANDLE,
-						  &vdc.window_data.vulkan_image_index);
+										  vdc.window_data.vk_swapchain,
+										  UINT64_MAX,
+										  image_accuired_semaphore,
+										  VK_NULL_HANDLE,
+										  &vdc.window_data.vulkan_image_index);
 	if (succ == VK_ERROR_OUT_OF_DATE_KHR)
 	{
-		//infra::resize_swapchain();
+		// infra::resize_swapchain();
 		assert(false);
 	}
 
@@ -151,15 +151,17 @@ void StartFrame(VulkanDeviceContext &vdc) {
 		for (uint32_t i = descriptor_set_container.size() - 1; i >= 0; --i)
 		{
 			DescriptorSetUpdate &update = descriptor_set_container[i];
-			
-			infra::update_descriptor_set_instance(vdc.device_data, vdc.runtime_data, vdc.resource_data, update);
+
+			infra::update_descriptor_set_instance(
+				vdc.device_data, vdc.runtime_data, vdc.resource_data, update);
 			update.current_frame = UINT32_MAX;
 			descriptor_set_container.pop_back();
 		}
 	}
 }
 
-void present(VulkanDeviceContext &vdc) {
+void present(VulkanDeviceContext &vdc)
+{
 	FrameAdanceCounter &frame_counter = vdc.runtime_data.frame_counter;
 	SyncSignal &sync_signal = vdc.runtime_data.sync_signal;
 	uint32_t current_frame = frame_counter.current_frame;
@@ -194,7 +196,7 @@ void present(VulkanDeviceContext &vdc) {
 
 	vkQueueSubmit(vdc.device_data.queue, 1, &submit_info, *render_complete_fence);
 
-	VkPresentInfoKHR present_info {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+	VkPresentInfoKHR present_info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores = render_complete_semaphore;
 
@@ -221,8 +223,7 @@ void present(VulkanDeviceContext &vdc) {
 	}
 	AdvanceFrameCounter(frame_counter);
 
-	infra::DestroyResource(vdc.runtime_data, vdc.device_data, vdc.resource_data);
-
+	DestroyResource(vdc.runtime_data, vdc.device_data, vdc.resource_data);
 }
 
 } // namespace cloud::vulkan

@@ -5,6 +5,7 @@
 
 namespace cloud::vulkan
 {
+struct RenderPass;
 struct CommandBuffer
 {
 	VkCommandBuffer vk_command_buffer{nullptr};

@@ -4,6 +4,8 @@
 #include "graphics/vulkan/device_data.h"
 #include "core/runtime_log.h"
 
+#define COPY_MEMBER(obj_left, obj_right, member) obj_left.member = obj_right.member
+
 namespace cloud::vulkan::infra
 {
 void InitVulkanInterface(VkDevice device, bool debug_message = true);
@@ -60,69 +62,15 @@ void TransitionImageLayout(VkCommandBuffer command_buffer,
 						   VkImageLayout newLayout,
 						   bool is_depth);
 
-/* sampler start */
-ResourceHandle CreateVkSampler(const DeviceData &device_data,
-							   ResourceData &resource_data,
-							   const SamplerCreation &creation);
-
-void DestroyVkSampler(const ResourceHandle &handle,
-					  const DeviceData &device_data,
-					  ResourceData &resource_data);
-/* sampler end*/
-
 /* buffer start */
-ResourceHandle CreateVkBuffer(const BufferCreation &creation,
-							  const DeviceData &device_data,
-							  ResourceData &resource_data);
-
-void DestroyVkBuffer(const ResourceHandle &handle,
-					 const DeviceData &device_data,
-					 ResourceData &resource_data);
 /* buffer end */
 
 /* texture start */
-ResourceHandle CreateVkTexture(const DeviceData &device_data,
-							   RuntimeLoopData &rl_data,
-							   const TextureCreation &creation,
-							   ResourceData &resource_data);
-
-void DestroyVkTexture(const ResourceHandle &handle,
-					  const DeviceData &device_data,
-					  ResourceData &resource_data);
 
 /* texture end */
 
 /* render pass start*/
-void CreateVkFrameBuffer(const DeviceData &device_data,
-						 ResourceData &resource_data,
-						 RenderPass &rp,
-						 const ResourceHandle *out_textures,
-						 const uint32_t num_rt,
-						 const ResourceHandle &depth_stencil_tex);
 
-RenderPassOutput FillRenderPassOutput(const RenderPassCreation &creation,
-									  ResourceData &resource_data);
-
-void CreateVkSwapchainRenderPass(const DeviceData &device_data,
-								 RuntimeLoopData &rl_data,
-								 WindowData &window_data,
-								 ResourceData &resource_data,
-								 RenderPass &render_pass);
-
-VkRenderPass GetVkRenderPass(const DeviceData &device_data,
-							 ResourceData &resource_data,
-							 const RenderPassOutput &output,
-							 const char *name);
-
-ResourceHandle CreateVkRenderPass(const RenderPassCreation &creation,
-								  const DeviceData &device_data,
-								  RuntimeLoopData &rl_data,
-								  WindowData &window_data,
-								  ResourceData &resource_data);
-
-void DestroyVkRenderPass(const ResourceHandle &handle,
-						 const DeviceData &device_data,
-						 ResourceData &resource_data);
 /* render pass end*/
 
 /*  dynamic mapping buffer start */
@@ -145,6 +93,12 @@ T *Access(ResourceData &resource_data, const ResourceHandle &handle)
 			handle.index));
 }
 
+void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
+
+void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle);
+
+void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res);
+
 template <typename T>
 T *AllocResource(ResourceData &rd, ResourceType type, const char *name)
 {
@@ -157,16 +111,6 @@ T *AllocResource(ResourceData &rd, ResourceType type, const char *name)
 	INFO("Resource \"%s\" created with handle %d", name, handle.index);
 	return res;
 }
-
-void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
-
-void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle);
-
-void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res);
-
-void DestroyResource(RuntimeLoopData &rl_data,
-					 const DeviceData &device_data,
-					 ResourceData &resource_data);
 /* resource traits function */
 
 /* descriptor set update */
