@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <utility>
+#include <array>
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/gpu_resource.h"
 #include "core/data_structure/resource_pool.h"
@@ -57,7 +58,7 @@ struct DeviceResourcePoolData
 
 template <typename T>
 ResourcePool &GetResourcePool(DeviceResourcePoolData &pools)
-{ return pools.resource_pool_array[ResourceTraits<T>::type]; }
+{ return pools.resource_pool_array[std::to_underlying(ResourceTraits<T>::type)]; }
 
 template <typename T>
 ResourceHandle FetchResource(DeviceResourcePoolData &pools)
@@ -65,7 +66,7 @@ ResourceHandle FetchResource(DeviceResourcePoolData &pools)
 
 template <typename T>
 T *Access(DeviceResourcePoolData &pools, const ResourceHandle &handle)
-{ return static_cast<T *>(GetResourcePool<T>(handle.index)); }
+{ return static_cast<T *>(GetResourcePool<T>(pools).Access(handle.index)); }
 
 template <typename T>
 T *AllocResource(DeviceResourcePoolData &pools, const char *name)

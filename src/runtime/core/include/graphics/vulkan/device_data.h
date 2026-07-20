@@ -9,6 +9,7 @@
 #include "graphics/vulkan/minimal_extern.h"
 #include "graphics/vulkan/gpu_enums.h"
 #include "graphics/vulkan/resource.h"
+#include "graphics/vulkan/dynamic_buffer.h"
 
 namespace cloud::vulkan
 {
@@ -64,22 +65,6 @@ struct RenderPipelineData
 	// VkRenderPass render_pass;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
-};
-
-struct DynamicBuffer
-{
-	uint32_t max_per_frame_size{0};
-	ResourceHandle buffer;
-	uint8_t *mapped_memory{nullptr};
-	uint32_t allocated_size{0};
-	uint32_t per_frame_size{1024 * 1024 * 10};
-
-	struct MapBufferParameters
-	{
-		ResourceHandle handle;
-		uint32_t offset{0};
-		uint32_t size{0};
-	};
 };
 
 struct ResourceData

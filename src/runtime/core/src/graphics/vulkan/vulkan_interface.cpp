@@ -5,6 +5,7 @@
 #include "core/runtime_log.h"
 #include "graphics/vulkan/device_data.h"
 #include "core/data_structure/memory.h"
+#include "graphics/vulkan/resource.h"
 
 namespace cloud::vulkan::infra
 {
@@ -731,7 +732,7 @@ void *MapBuffer(const DynamicBuffer::MapBufferParameters &param,
 {
 	if (param.handle.index == ResourcePool::INVALID_NUM)
 		return nullptr;
-	Buffer *buffer = Access<Buffer>(resource_data, param.handle);
+	Buffer *buffer = Access<Buffer>(resource_data.pool_data, param.handle);
 	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
 	{
 		buffer->global_offset = dynamic_buffer.allocated_size;
@@ -748,7 +749,7 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 {
 	if (param.handle.index == ResourcePool::INVALID_NUM)
 		return;
-	Buffer *buffer = Access<Buffer>(resource_data, param.handle);
+	Buffer *buffer = Access<Buffer>(resource_data.pool_data, param.handle);
 	if (buffer->parent_handle.index == dynamic_buffer.buffer.index)
 		return;
 	vmaUnmapMemory(resource_data.vma_allocator, buffer->allocation);
@@ -757,34 +758,17 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 void PendingToDestroy(RuntimeLoopData &rl_data, ResourceHandle &handle)
 { rl_data.resource_deletion_queue.emplace_back(handle, rl_data.frame_counter.current_frame); }
 
-ResourcePool &GetResourcePool(ResourceData &resource_data, ResourceType type)
-{
-	assert(type < ResourceType::Count && "invalid resource type!");
-	return resource_data.pool_data.resource_pool_array[std::to_underlying(type)];
-}
-
-ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type)
-{ return ResourceHandle{GetResourcePool(resource_data, type).FetchResource(), type}; }
-
-void ReleaseResource(ResourceData &resource_data, const ResourceHandle &handle)
-{ GetResourcePool(resource_data, handle.type).ReleaseResource(handle.index); }
-
-void ReleaseResourceBase(ResourceData &resource_data, const ResourceBase *res)
-{
-	if (!res)
-		return;
-	INFO("resource %s delete, handle %d", res->name, res->handle.index);
-	ReleaseResource(resource_data, res->handle);
-}
+/* delete resource from queue after some frames safety guard */
+static constexpr uint32_t k_delete_frame_delay = MaxSwapchainImages;
 
 void update_descriptor_set_instance(DeviceData &device_data,
 									RuntimeLoopData &rl_data,
 									ResourceData &resource_data,
 									const DescriptorSetUpdate &update)
 {
-	ResourceHandle handle = FetchResource(resource_data, ResourceType::DescriptorSet);
-	DescriptorSet *dummy_res = Access<DescriptorSet>(resource_data, handle);
-	DescriptorSet *descriptor_set = Access<DescriptorSet>(resource_data, update.handle);
+	ResourceHandle handle = FetchResource<DescriptorSet>(resource_data.pool_data);
+	DescriptorSet *dummy_res = Access<DescriptorSet>(resource_data.pool_data, handle);
+	DescriptorSet *descriptor_set = Access<DescriptorSet>(resource_data.pool_data, update.handle);
 	const DescriptorSetLayout *descriptor_set_layout = descriptor_set->layout;
 
 	dummy_res->vk_descriptor_set = descriptor_set->vk_descriptor_set;
@@ -793,13 +777,13 @@ void update_descriptor_set_instance(DeviceData &device_data,
 	dummy_res->samplers = nullptr;
 	dummy_res->num_resources = 0;
 
-	PendingToDestroy(rl_data, handle);
+	PendingToQueue(rl_data, handle);
 
 	VkWriteDescriptorSet descriptor_write[8];
 	VkDescriptorBufferInfo buffer_info[8];
 	VkDescriptorImageInfo image_info[8];
 
-	Sampler *sampler = Access<Sampler>(resource_data, resource_data.default_sampler);
+	Sampler *sampler = Access<Sampler>(resource_data.pool_data, resource_data.default_sampler);
 
 	VkDescriptorSetAllocateInfo alloc_info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
 	alloc_info.descriptorPool = resource_data.pool_data.vk_descriptor_pool;

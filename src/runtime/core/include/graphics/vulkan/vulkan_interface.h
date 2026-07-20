@@ -83,15 +83,8 @@ void UnMapBuffer(const DynamicBuffer::MapBufferParameters &param,
 /*  dynamic mapping buffer start end */
 
 /* resource traits function */
-ResourceHandle FetchResource(ResourceData &resource_data, ResourceType type);
 
-template <typename T>
-T *Access(ResourceData &resource_data, const ResourceHandle &handle)
-{
-	return static_cast<T *>(
-		resource_data.pool_data.resource_pool_array[std::to_underlying(handle.type)].Access(
-			handle.index));
-}
+void PendingToQueue(RuntimeLoopData &resource_data, ResourceHandle &handle);
 
 void PendingToDestroy(RuntimeLoopData &resource_data, ResourceHandle &handle);
 

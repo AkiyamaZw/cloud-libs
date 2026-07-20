@@ -64,11 +64,11 @@ void DestoryDefaultResource(VulkanDeviceContext &vdc)
 {
 	DynamicBuffer &db = vdc.resource_data.dynamic_buffer;
 	infra::UnMapBuffer({db.buffer, 0, 0}, db, vdc.resource_data);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.dynamic_buffer.buffer);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.swapchain_pass);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.texture_depth_handle);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.fullscreen_vertex_buffer);
-	infra::PendingToDestroy(vdc.runtime_data, vdc.resource_data.default_sampler);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.dynamic_buffer.buffer);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.swapchain_pass);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.texture_depth_handle);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.fullscreen_vertex_buffer);
+	infra::PendingToQueue(vdc.runtime_data, vdc.resource_data.default_sampler);
 }
 
 void Init(VulkanDeviceContext &vdc, GpuCreateParam &param)
@@ -102,7 +102,7 @@ void Shutdown(VulkanDeviceContext &vdc)
 	DestroyVkDescriptorPool(vdc.device_data, vdc.resource_data);
 	DestroyVkSwapchain(vdc.device_data, vdc.window_data);
 
-	DestroyResource(vdc.runtime_data, vdc.device_data, vdc.resource_data);
+	DestroyResourceInQueue(vdc.runtime_data, vdc.device_data, vdc.resource_data);
 
 	/* resource should be clear upper */
 	DestroyVmaAllocator(vdc.resource_data);
@@ -138,12 +138,8 @@ void StartFrame(VulkanDeviceContext &vdc)
 	}
 
 	vdc.runtime_data.command_buffer_ring.Reset(device, time_counter.current_frame);
-	DynamicBuffer *dynamic_buffer = &vdc.resource_data.dynamic_buffer;
-
-	const uint32_t used_size = dynamic_buffer->allocated_size -
-							   (dynamic_buffer->per_frame_size * time_counter.previous_frame);
-	dynamic_buffer->max_per_frame_size = std::max(used_size, dynamic_buffer->max_per_frame_size);
-	dynamic_buffer->allocated_size = dynamic_buffer->per_frame_size * time_counter.current_frame;
+	vdc.resource_data.dynamic_buffer.AdvanceSlot(time_counter.previous_frame,
+												 time_counter.current_frame);
 
 	auto &descriptor_set_container = vdc.runtime_data.descriptor_set_updates;
 	if (!descriptor_set_container.empty())
